@@ -2,7 +2,7 @@ import {SolanaSwapModule} from "../SolanaSwapModule";
 import {SolanaSwapData} from "../SolanaSwapData";
 import {SolanaAction} from "../../base/SolanaAction";
 import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
-import {ChainSwapType, RelaySynchronizer, SwapDataVerificationError} from "crosslightning-base";
+import {ChainSwapType, RelaySynchronizer, SwapDataVerificationError} from "@atomiqlabs/base";
 import {PublicKey, SYSVAR_INSTRUCTIONS_PUBKEY} from "@solana/web3.js";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {SolanaBtcStoredHeader} from "../../btcrelay/headers/SolanaBtcStoredHeader";

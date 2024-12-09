@@ -1,4 +1,4 @@
-import {BtcHeader} from "crosslightning-base";
+import {BtcHeader} from "@atomiqlabs/base";
 import {Buffer} from "buffer";
 
 type SolanaBtcHeaderType = {

@@ -12,7 +12,7 @@ import * as programIdl from "./programIdl.json";
 import {
     IStorageManager, SwapContract, ChainSwapType, IntermediaryReputationType,
     SwapCommitStatus, TransactionConfirmationOptions, SignatureData, RelaySynchronizer
-} from "crosslightning-base";
+} from "@atomiqlabs/base";
 import {SolanaBtcStoredHeader} from "../btcrelay/headers/SolanaBtcStoredHeader";
 import {
     getAssociatedTokenAddressSync,

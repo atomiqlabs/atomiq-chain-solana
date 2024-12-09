@@ -2,7 +2,7 @@ import {SolanaSwapModule} from "../SolanaSwapModule";
 import {SolanaSwapData} from "../SolanaSwapData";
 import * as createHash from "create-hash";
 import {sign} from "tweetnacl";
-import {SignatureVerificationError, SwapDataVerificationError} from "crosslightning-base";
+import {SignatureVerificationError, SwapDataVerificationError} from "@atomiqlabs/base";
 import * as BN from "bn.js";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {

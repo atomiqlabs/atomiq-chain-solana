@@ -11,7 +11,7 @@ import {
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {tryWithRetries} from "../../../utils/Utils";
 import {SwapProgram} from "../programTypes";
-import { IntermediaryReputationType } from "crosslightning-base";
+import { IntermediaryReputationType } from "@atomiqlabs/base";
 import { IdlAccounts } from "@coral-xyz/anchor";
 
 export class SolanaLpVault extends SolanaSwapModule {

@@ -1,5 +1,5 @@
 import {ParsedAccountsModeBlockResponse, PublicKey, SystemProgram, Transaction} from "@solana/web3.js";
-import {SignatureVerificationError, SwapCommitStatus, SwapDataVerificationError} from "crosslightning-base";
+import {SignatureVerificationError, SwapCommitStatus, SwapDataVerificationError} from "@atomiqlabs/base";
 import * as BN from "bn.js";
 import {SolanaSwapData} from "../SolanaSwapData";
 import {SolanaAction} from "../../base/SolanaAction";

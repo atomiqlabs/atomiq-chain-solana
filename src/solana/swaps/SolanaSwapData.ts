@@ -1,6 +1,6 @@
 import {PublicKey} from "@solana/web3.js";
 import * as BN from "bn.js";
-import {SwapData, ChainSwapType} from "crosslightning-base";
+import {SwapData, ChainSwapType} from "@atomiqlabs/base";
 import {SwapProgram} from "./programTypes";
 import {IdlAccounts, IdlTypes} from "@coral-xyz/anchor";
 import {SwapTypeEnum} from "./SwapTypeEnum";

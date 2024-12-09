@@ -1,4 +1,4 @@
-import {ChainSwapType} from "crosslightning-base";
+import {ChainSwapType} from "@atomiqlabs/base";
 
 export class SwapTypeEnum {
 

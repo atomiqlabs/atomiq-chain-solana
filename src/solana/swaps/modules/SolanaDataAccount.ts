@@ -1,6 +1,6 @@
 import {SolanaSwapModule} from "../SolanaSwapModule";
 import {AccountInfo, PublicKey, Signer, SystemProgram} from "@solana/web3.js";
-import {IStorageManager, StorageObject} from "crosslightning-base";
+import {IStorageManager, StorageObject} from "@atomiqlabs/base";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaAction} from "../../base/SolanaAction";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";

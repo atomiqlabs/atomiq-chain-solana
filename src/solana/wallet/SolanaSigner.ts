@@ -1,5 +1,5 @@
 import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
-import {AbstractSigner} from "crosslightning-base";
+import {AbstractSigner} from "@atomiqlabs/base";
 import {PublicKey, Signer} from "@solana/web3.js";
 
 export class SolanaSigner implements AbstractSigner {

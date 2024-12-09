@@ -1,4 +1,4 @@
-import {ChainEvents, ClaimEvent, EventListener, InitializeEvent, RefundEvent, SwapEvent} from "crosslightning-base";
+import {ChainEvents, ClaimEvent, EventListener, InitializeEvent, RefundEvent, SwapEvent} from "@atomiqlabs/base";
 import {SolanaSwapData} from "../swaps/SolanaSwapData";
 import {AnchorProvider, IdlEvents} from "@coral-xyz/anchor";
 import {SolanaSwapProgram} from "../swaps/SolanaSwapProgram";

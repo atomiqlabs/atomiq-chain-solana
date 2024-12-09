@@ -1,4 +1,4 @@
-import {BtcStoredHeader, StatePredictorUtils} from "crosslightning-base";
+import {BtcStoredHeader, StatePredictorUtils} from "@atomiqlabs/base";
 import {SolanaBtcHeader} from "./SolanaBtcHeader";
 import {Buffer} from "buffer";
 

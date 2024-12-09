@@ -1,4 +1,4 @@
-import {ChainType} from "crosslightning-base";
+import {ChainType} from "@atomiqlabs/base";
 import {SolanaTx} from "./base/modules/SolanaTransactions";
 import {SolanaPreFetchData, SolanaPreFetchVerification} from "./swaps/modules/SwapInit";
 import {SolanaSigner} from "./wallet/SolanaSigner";
