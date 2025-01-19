@@ -27,6 +27,7 @@ export class SolanaFees {
     private readonly period: number;
     private useHeliusApi: "yes" | "no" | "auto";
     private heliusApiSupported: boolean = true;
+    private readonly heliusFeeLevel: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax";
     private readonly bribeData?: FeeBribeData;
     private readonly getStaticFee?: (original: BN) => BN;
 
@@ -43,6 +44,7 @@ export class SolanaFees {
         numSamples: number = 8,
         period: number = 150,
         useHeliusApi: "yes" | "no" | "auto" = "auto",
+        heliusFeeLevel: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax" = "veryHigh",
         getStaticFee?: (feeRate: BN) => BN,
         bribeData?: FeeBribeData,
     ) {
@@ -51,6 +53,7 @@ export class SolanaFees {
         this.numSamples = numSamples;
         this.period = period;
         this.useHeliusApi = useHeliusApi;
+        this.heliusFeeLevel = heliusFeeLevel;
         this.bribeData = bribeData;
         this.getStaticFee = getStaticFee;
     }
@@ -259,7 +262,7 @@ export class SolanaFees {
             //Try to use getPriorityFeeEstimate api of Helius
             const fees = await this.getPriorityFeeEstimate(mutableAccounts);
             if(fees!=null) {
-                const calculatedFee = BN.max(new BN(8000), new BN(fees.veryHigh));
+                const calculatedFee = BN.max(new BN(8000), new BN(fees[this.heliusFeeLevel]));
                 return BN.min(calculatedFee, this.maxFeeMicroLamports);
             }
             this.logger.warn("_getFeeRate(): tried fetching fees from Helius API, not supported," +

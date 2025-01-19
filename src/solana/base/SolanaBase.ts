@@ -26,7 +26,7 @@ export class SolanaBase {
     readonly retryPolicy: SolanaRetryPolicy;
 
     public readonly Blocks: SolanaBlocks;
-    public readonly Fees: SolanaFees;
+    public Fees: SolanaFees;
     public readonly Slots: SolanaSlots;
     public readonly Tokens: SolanaTokens;
     public readonly Transactions: SolanaTransactions;
