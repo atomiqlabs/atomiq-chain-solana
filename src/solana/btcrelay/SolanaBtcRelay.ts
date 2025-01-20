@@ -541,18 +541,19 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param feeRate
      */
     public async estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<BN> {
-        const tipData = await this.getTipData();
-        const currBlockheight = tipData.blockheight;
-
-        const blockheightDelta = requiredBlockheight-currBlockheight;
-
-        if(blockheightDelta<=0) return new BN(0);
-
-        const synchronizationFee = new BN(blockheightDelta).mul(await this.getFeePerBlock(feeRate));
-        this.logger.debug("estimateSynchronizeFee(): required blockheight: "+requiredBlockheight+
-            " blockheight delta: "+blockheightDelta+" fee: "+synchronizationFee.toString(10));
-
-        return synchronizationFee;
+        // const tipData = await this.getTipData();
+        // const currBlockheight = tipData.blockheight;
+        //
+        // const blockheightDelta = requiredBlockheight-currBlockheight;
+        //
+        // if(blockheightDelta<=0) return new BN(0);
+        //
+        // const synchronizationFee = new BN(blockheightDelta).mul(await this.getFeePerBlock(feeRate));
+        // this.logger.debug("estimateSynchronizeFee(): required blockheight: "+requiredBlockheight+
+        //     " blockheight delta: "+blockheightDelta+" fee: "+synchronizationFee.toString(10));
+        //
+        // return synchronizationFee;
+        return new BN(5000000);
     }
 
     /**
