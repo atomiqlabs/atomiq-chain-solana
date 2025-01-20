@@ -3,8 +3,7 @@ import {PublicKey, SystemProgram} from "@solana/web3.js";
 import {
     Account, createAssociatedTokenAccountInstruction,
     createCloseAccountInstruction, createSyncNativeInstruction, createTransferInstruction,
-    getAccount, getAssociatedTokenAddress,
-    getAssociatedTokenAddressSync,
+    getAccount, getAssociatedTokenAddressSync,
     TokenAccountNotFoundError
 } from "@solana/spl-token";
 import * as BN from "bn.js";
@@ -33,7 +32,7 @@ export class SolanaTokens extends SolanaModule {
      * @constructor
      */
     public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null {
-        const ata = getAssociatedTokenAddressSync(token, publicKey);
+        const ata = getAssociatedTokenAddressSync(token, publicKey, true);
         if(requiredAta!=null && !ata.equals(requiredAta)) return null;
         return new SolanaAction(
             signer,
@@ -57,7 +56,7 @@ export class SolanaTokens extends SolanaModule {
      * @constructor
      */
     public Wrap(publicKey: PublicKey, amount: BN, initAta: boolean): SolanaAction {
-        const ata = getAssociatedTokenAddressSync(this.WSOL_ADDRESS, publicKey);
+        const ata = getAssociatedTokenAddressSync(this.WSOL_ADDRESS, publicKey, true);
         const action = new SolanaAction(publicKey, this.root);
         if(initAta) action.addIx(
             createAssociatedTokenAccountInstruction(publicKey, ata, publicKey, this.WSOL_ADDRESS),
@@ -82,7 +81,7 @@ export class SolanaTokens extends SolanaModule {
      * @constructor
      */
     public Unwrap(publicKey: PublicKey): SolanaAction {
-        const ata = getAssociatedTokenAddressSync(this.WSOL_ADDRESS, publicKey);
+        const ata = getAssociatedTokenAddressSync(this.WSOL_ADDRESS, publicKey, true);
         return new SolanaAction(
             publicKey,
             this.root,
@@ -125,8 +124,8 @@ export class SolanaTokens extends SolanaModule {
      * @private
      */
     private Transfer(signer: PublicKey, recipient: PublicKey, token: PublicKey, amount: BN): SolanaAction {
-        const srcAta = getAssociatedTokenAddressSync(token, signer, false)
-        const dstAta = getAssociatedTokenAddressSync(token, recipient, false);
+        const srcAta = getAssociatedTokenAddressSync(token, signer, true)
+        const dstAta = getAssociatedTokenAddressSync(token, recipient, true);
         return new SolanaAction(signer, this.root,
             createTransferInstruction(
                 srcAta,
@@ -148,7 +147,7 @@ export class SolanaTokens extends SolanaModule {
      * @private
      */
     private async txsTransferSol(signer: PublicKey, amount: BN, recipient: PublicKey, feeRate?: string): Promise<SolanaTx[]> {
-        const wsolAta = getAssociatedTokenAddressSync(this.WSOL_ADDRESS, signer, false);
+        const wsolAta = getAssociatedTokenAddressSync(this.WSOL_ADDRESS, signer, true);
 
         const shouldUnwrap = await this.ataExists(wsolAta);
         const action = new SolanaAction(signer, this.root);
@@ -177,8 +176,8 @@ export class SolanaTokens extends SolanaModule {
      * @private
      */
     private async txsTransferTokens(signer: PublicKey, token: PublicKey, amount: BN, recipient: PublicKey, feeRate?: string) {
-        const srcAta = await getAssociatedTokenAddress(token, signer);
-        const dstAta = getAssociatedTokenAddressSync(token, recipient, false);
+        const srcAta = getAssociatedTokenAddressSync(token, signer, true);
+        const dstAta = getAssociatedTokenAddressSync(token, recipient, true);
 
         feeRate = feeRate || await this.root.Fees.getFeeRate([signer, srcAta, dstAta]);
 
@@ -250,7 +249,7 @@ export class SolanaTokens extends SolanaModule {
      * @param token
      */
     public async getTokenBalance(publicKey: PublicKey, token: PublicKey) {
-        const ata: PublicKey = getAssociatedTokenAddressSync(token, publicKey);
+        const ata: PublicKey = getAssociatedTokenAddressSync(token, publicKey, true);
         const [ataAccount, balance] = await Promise.all<[Promise<Account>, Promise<number>]>([
             this.getATAOrNull(ata),
             (token!=null && token.equals(this.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
