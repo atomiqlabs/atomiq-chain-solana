@@ -680,6 +680,13 @@ export class SolanaSwapProgram
     }
 
     /**
+     * Get the estimated solana fee of the commit transaction, without any deposits
+     */
+    getRawCommitFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
+        return this.Init.getRawInitFee(swapData, feeRate);
+    }
+
+    /**
      * Get the estimated solana transaction fee of the refund transaction
      */
     getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {

@@ -14,6 +14,7 @@ import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {tryWithRetries} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {SolanaTokens} from "../../base/modules/SolanaTokens";
 
 export type SolanaPreFetchVerification = {
     latestSlot?: {
@@ -603,17 +604,31 @@ export class SwapInit extends SolanaSwapModule {
      * Get the estimated solana fee of the init transaction, this includes the required deposit for creating swap PDA
      */
     async getInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        if(swapData==null) return new BN(this.root.ESCROW_STATE_RENT_EXEMPT+10000);
+        return new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(
+            await this.getRawInitFee(swapData, feeRate)
+        );
+    }
+
+    /**
+     * Get the estimated solana fee of the init transaction, without the required deposit for creating swap PDA
+     */
+    async getRawInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
+        if(swapData==null) return new BN(10000);
 
         feeRate = feeRate ||
             (swapData.payIn
                 ? await this.getInitPayInFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash)
                 : await this.getInitFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash));
 
-        const computeBudget = swapData.payIn ? SwapInit.CUCosts.INIT_PAY_IN : SwapInit.CUCosts.INIT;
+        let computeBudget = swapData.payIn ? SwapInit.CUCosts.INIT_PAY_IN : SwapInit.CUCosts.INIT;
+        if(swapData.payIn && this.shouldWrapOnInit(swapData, feeRate)) {
+            computeBudget += SolanaTokens.CUCosts.WRAP_SOL;
+            const data = this.extractAtaDataFromFeeRate(feeRate);
+            if(data.initAta) computeBudget += SolanaTokens.CUCosts.ATA_INIT;
+        }
         const baseFee = swapData.payIn ? 10000 : 10000 + 5000;
 
-        return new BN(this.root.ESCROW_STATE_RENT_EXEMPT+baseFee).add(
+        return new BN(baseFee).add(
             this.root.Fees.getPriorityFee(computeBudget, feeRate)
         );
     }
