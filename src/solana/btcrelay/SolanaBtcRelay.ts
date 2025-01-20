@@ -541,19 +541,18 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param feeRate
      */
     public async estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<BN> {
-        // const tipData = await this.getTipData();
-        // const currBlockheight = tipData.blockheight;
-        //
-        // const blockheightDelta = requiredBlockheight-currBlockheight;
-        //
-        // if(blockheightDelta<=0) return new BN(0);
-        //
-        // const synchronizationFee = new BN(blockheightDelta).mul(await this.getFeePerBlock(feeRate));
-        // this.logger.debug("estimateSynchronizeFee(): required blockheight: "+requiredBlockheight+
-        //     " blockheight delta: "+blockheightDelta+" fee: "+synchronizationFee.toString(10));
-        //
-        // return synchronizationFee;
-        return new BN(5000000);
+        const tipData = await this.getTipData();
+        const currBlockheight = tipData.blockheight;
+
+        const blockheightDelta = requiredBlockheight-currBlockheight;
+
+        if(blockheightDelta<=0) return new BN(0);
+
+        const synchronizationFee = new BN(blockheightDelta).mul(await this.getFeePerBlock(feeRate));
+        this.logger.debug("estimateSynchronizeFee(): required blockheight: "+requiredBlockheight+
+            " blockheight delta: "+blockheightDelta+" fee: "+synchronizationFee.toString(10));
+
+        return synchronizationFee;
     }
 
     /**
@@ -562,8 +561,9 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param feeRate
      */
     public async getFeePerBlock(feeRate?: string): Promise<BN> {
-        feeRate = feeRate || await this.getMainFeeRate(null);
-        return BASE_FEE_SOL_PER_BLOCKHEADER.add(this.Fees.getPriorityFee(200000, feeRate, false));
+        // feeRate = feeRate || await this.getMainFeeRate(null);
+        // return BASE_FEE_SOL_PER_BLOCKHEADER.add(this.Fees.getPriorityFee(200000, feeRate, false));
+        return new BN(50000);
     }
 
     /**
