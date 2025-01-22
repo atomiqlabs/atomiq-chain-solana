@@ -273,16 +273,16 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         return this.root.Fees.getFeeRate(accounts);
     }
     /**
-     * Get the estimated solana transaction fee of the claim transaction, this fee might be negative since it
-     *  includes the rebate for closing the swap PDA
+     * Get the estimated solana transaction fee of the claim transaction in the worst case scenario in case where the
+     *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
     getClaimFee(signer, swapData, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new BN(-this.root.ESCROW_STATE_RENT_EXEMPT).add(yield this.getRawClaimFee(signer, swapData, feeRate));
+            return new BN(swapData == null || swapData.payOut ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawClaimFee(signer, swapData, feeRate));
         });
     }
     /**
-     * Get the estimated solana transaction fee of the claim transaction, excluding any refunds from PDAs or ATAs
+     * Get the estimated solana transaction fee of the claim transaction, without
      */
     getRawClaimFee(signer, swapData, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -291,15 +291,6 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             feeRate = feeRate || (yield this.getClaimFeeRate(signer, swapData));
             //Include rent exempt in claim fee, to take into consideration worst case cost when user destroys ATA
             return new BN(5000).add(this.root.Fees.getPriorityFee(this.getComputeBudget(swapData), feeRate));
-        });
-    }
-    /**
-     * Get the estimated solana transaction fee of the claim transaction in the worst case scenario in case where the
-     *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
-     */
-    getWorstCaseClaimFee(signer, swapData, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT).add(yield this.getRawClaimFee(signer, swapData, feeRate));
         });
     }
 }

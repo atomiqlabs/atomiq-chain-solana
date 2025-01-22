@@ -235,13 +235,12 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
         return this.root.Fees.getFeeRate(accounts);
     }
     /**
-     * Get the estimated solana transaction fee of the refund transaction, this fee might be negative since it
-     *  includes the rebate for closing the swap PDA
+     * Get the estimated solana transaction fee of the refund transaction, in the worst case scenario in case where the
+     *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
     getRefundFee(swapData, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
-            const rawFee = yield this.getRawRefundFee(swapData, feeRate);
-            return rawFee.sub(new BN(this.root.ESCROW_STATE_RENT_EXEMPT));
+            return new BN(swapData == null || swapData.payIn ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawRefundFee(swapData, feeRate));
         });
     }
     /**

@@ -117,17 +117,12 @@ export declare class SwapClaim extends SolanaSwapModule {
     }, feeRate?: string): Promise<SolanaTx[] | null>;
     getClaimFeeRate(signer: PublicKey, swapData: SolanaSwapData): Promise<string>;
     /**
-     * Get the estimated solana transaction fee of the claim transaction, this fee might be negative since it
-     *  includes the rebate for closing the swap PDA
-     */
-    getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
-    /**
-     * Get the estimated solana transaction fee of the claim transaction, excluding any refunds from PDAs or ATAs
-     */
-    getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
-    /**
      * Get the estimated solana transaction fee of the claim transaction in the worst case scenario in case where the
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
-    getWorstCaseClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    /**
+     * Get the estimated solana transaction fee of the claim transaction, without
+     */
+    getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
 }

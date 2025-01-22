@@ -72,8 +72,8 @@ export declare class SwapRefund extends SolanaSwapModule {
     txsRefundWithAuthorization(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     getRefundFeeRate(swapData: SolanaSwapData): Promise<string>;
     /**
-     * Get the estimated solana transaction fee of the refund transaction, this fee might be negative since it
-     *  includes the rebate for closing the swap PDA
+     * Get the estimated solana transaction fee of the refund transaction, in the worst case scenario in case where the
+     *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
     getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
     /**
