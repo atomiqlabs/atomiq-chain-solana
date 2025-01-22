@@ -284,10 +284,10 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             if (inContract)
                 return yield this.getIntermediaryBalance(publicKey, token);
             let { balance, ataExists } = yield this.Tokens.getTokenBalance(publicKey, token);
-            // if(token.equals(this.Tokens.WSOL_ADDRESS) && !ataExists) {
-            //     const feeCosts = new BN(this.Tokens.SPL_ATA_RENT_EXEMPT);
-            //     balance = BN.max(balance.sub(feeCosts), new BN(0));
-            // }
+            if (token.equals(this.Tokens.WSOL_ADDRESS)) {
+                const accountRentExemptCost = new BN(1000000);
+                balance = BN.max(balance.sub(accountRentExemptCost), new BN(0));
+            }
             this.logger.debug("getBalance(): token balance, token: " + token.toBase58() + " balance: " + balance.toString(10));
             return balance;
         });
