@@ -602,11 +602,31 @@ export class SwapInit extends SolanaSwapModule {
 
     /**
      * Get the estimated solana fee of the init transaction, this includes the required deposit for creating swap PDA
+     *  and also deposit for ATAs
      */
     async getInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        return new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(
-            await this.getRawInitFee(swapData, feeRate)
-        );
+        if(swapData==null) return new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(await this.getRawInitFee(swapData, feeRate));
+
+        feeRate = feeRate ||
+            (swapData.payIn
+                ? await this.getInitPayInFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash)
+                : await this.getInitFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash));
+
+        const [rawFee, initAta] = await Promise.all([
+            this.getRawInitFee(swapData, feeRate),
+            swapData!=null && swapData.payOut ?
+                this.root.Tokens.getATAOrNull(getAssociatedTokenAddressSync(swapData.claimer, swapData.token)).then(acc => acc==null) :
+                Promise.resolve<null>(null)
+        ]);
+
+        let resultingFee = new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(rawFee);
+        if(initAta) resultingFee = resultingFee.add(new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT));
+
+        if(swapData.payIn && this.shouldWrapOnInit(swapData, feeRate) && this.extractAtaDataFromFeeRate(feeRate).initAta) {
+            resultingFee = resultingFee.add(new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT));
+        }
+
+        return resultingFee;
     }
 
     /**

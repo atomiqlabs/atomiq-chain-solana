@@ -1,0 +1,202 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.SolanaChainEventsBrowser = void 0;
+const base_1 = require("@atomiqlabs/base");
+const SolanaSwapData_1 = require("../swaps/SolanaSwapData");
+const Utils_1 = require("../../utils/Utils");
+const web3_js_1 = require("@solana/web3.js");
+const BN = require("bn.js");
+const SwapTypeEnum_1 = require("../swaps/SwapTypeEnum");
+const buffer_1 = require("buffer");
+/**
+ * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
+ *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
+ *  rely purely on events
+ */
+class SolanaChainEventsBrowser {
+    constructor(connection, solanaSwapContract) {
+        this.listeners = [];
+        this.eventListeners = [];
+        this.logger = (0, Utils_1.getLogger)("SolanaChainEventsBrowser: ");
+        this.connection = connection;
+        this.solanaSwapProgram = solanaSwapContract;
+    }
+    /**
+     * Fetches and parses transaction instructions
+     *
+     * @private
+     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     */
+    getTransactionInstructions(signature) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const transaction = yield (0, Utils_1.tryWithRetries)(() => __awaiter(this, void 0, void 0, function* () {
+                const res = yield this.connection.getParsedTransaction(signature, {
+                    commitment: "confirmed",
+                    maxSupportedTransactionVersion: 0
+                });
+                if (res == null)
+                    throw new Error("Transaction not found!");
+                return res;
+            }));
+            if (transaction == null)
+                return null;
+            if (transaction.meta.err != null)
+                return null;
+            return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
+        });
+    }
+    /**
+     * Converts initialize instruction data into {SolanaSwapData}
+     *
+     * @param initIx
+     * @param txoHash
+     * @private
+     * @returns {SolanaSwapData} converted and parsed swap data
+     */
+    instructionToSwapData(initIx, txoHash) {
+        const paymentHash = buffer_1.Buffer.from(initIx.data.swapData.hash);
+        let securityDeposit = new BN(0);
+        let claimerBounty = new BN(0);
+        let payIn = true;
+        if (initIx.name === "offererInitialize") {
+            payIn = false;
+            securityDeposit = initIx.data.securityDeposit;
+            claimerBounty = initIx.data.claimerBounty;
+        }
+        return new SolanaSwapData_1.SolanaSwapData(initIx.accounts.offerer, initIx.accounts.claimer, initIx.accounts.mint, initIx.data.swapData.amount, paymentHash.toString("hex"), initIx.data.swapData.sequence, initIx.data.swapData.expiry, initIx.data.swapData.nonce, initIx.data.swapData.confirmations, initIx.data.swapData.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind), payIn, initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default, initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default, securityDeposit, claimerBounty, txoHash);
+    }
+    /**
+     * Returns async getter for fetching on-demand initialize event swap data
+     *
+     * @param eventObject
+     * @param txoHash
+     * @private
+     * @returns {() => Promise<SolanaSwapData>} getter to be passed to InitializeEvent constructor
+     */
+    getSwapDataGetter(eventObject, txoHash) {
+        return () => __awaiter(this, void 0, void 0, function* () {
+            if (eventObject.instructions == null)
+                eventObject.instructions = yield this.getTransactionInstructions(eventObject.signature);
+            if (eventObject.instructions == null)
+                return null;
+            const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
+            if (initIx == null)
+                return null;
+            return this.instructionToSwapData(initIx, txoHash);
+        });
+    }
+    parseInitializeEvent(data, eventObject) {
+        const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
+        const txoHash = buffer_1.Buffer.from(data.txoHash).toString("hex");
+        this.logger.debug("InitializeEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) + " txoHash: " + txoHash);
+        return new base_1.InitializeEvent(paymentHash, data.sequence, txoHash, SwapTypeEnum_1.SwapTypeEnum.toChainSwapType(data.kind), (0, Utils_1.onceAsync)(this.getSwapDataGetter(eventObject, txoHash)));
+    }
+    parseRefundEvent(data) {
+        const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
+        this.logger.debug("RefundEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10));
+        return new base_1.RefundEvent(paymentHash, data.sequence);
+    }
+    parseClaimEvent(data) {
+        const secret = buffer_1.Buffer.from(data.secret).toString("hex");
+        const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
+        this.logger.debug("ClaimEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) + " secret: " + secret);
+        return new base_1.ClaimEvent(paymentHash, data.sequence, secret);
+    }
+    /**
+     * Processes event as received from the chain, parses it & calls event listeners
+     *
+     * @param eventObject
+     * @protected
+     */
+    processEvent(eventObject) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let parsedEvents = eventObject.events.map(event => {
+                let parsedEvent;
+                switch (event.name) {
+                    case "ClaimEvent":
+                        parsedEvent = this.parseClaimEvent(event.data);
+                        break;
+                    case "RefundEvent":
+                        parsedEvent = this.parseRefundEvent(event.data);
+                        break;
+                    case "InitializeEvent":
+                        parsedEvent = this.parseInitializeEvent(event.data, eventObject);
+                        break;
+                }
+                parsedEvent.meta = {
+                    timestamp: eventObject.blockTime,
+                    txId: eventObject.signature
+                };
+                return parsedEvent;
+            }).filter(parsedEvent => parsedEvent != null);
+            for (let listener of this.listeners) {
+                yield listener(parsedEvents);
+            }
+        });
+    }
+    /**
+     * Returns websocket event handler for specific event type
+     *
+     * @param name
+     * @protected
+     * @returns event handler to be passed to program's addEventListener function
+     */
+    getWsEventHandler(name) {
+        return (data, slotNumber, signature) => {
+            this.logger.debug("wsEventHandler: Process signature: ", signature);
+            this.processEvent({
+                events: [{ name, data: data }],
+                instructions: null,
+                blockTime: Math.floor(Date.now() / 1000),
+                signature
+            }).then(() => true).catch(e => {
+                console.error(e);
+                return false;
+            });
+        };
+    }
+    /**
+     * Sets up event handlers listening for swap events over websocket
+     *
+     * @protected
+     */
+    setupWebsocket() {
+        const program = this.solanaSwapProgram.program;
+        this.eventListeners.push(program.addEventListener("InitializeEvent", this.getWsEventHandler("InitializeEvent")));
+        this.eventListeners.push(program.addEventListener("ClaimEvent", this.getWsEventHandler("ClaimEvent")));
+        this.eventListeners.push(program.addEventListener("RefundEvent", this.getWsEventHandler("RefundEvent")));
+    }
+    init() {
+        this.setupWebsocket();
+        return Promise.resolve();
+    }
+    stop() {
+        return __awaiter(this, void 0, void 0, function* () {
+            for (let num of this.eventListeners) {
+                yield this.solanaSwapProgram.program.removeEventListener(num);
+            }
+            this.eventListeners = [];
+        });
+    }
+    registerListener(cbk) {
+        this.listeners.push(cbk);
+    }
+    unregisterListener(cbk) {
+        const index = this.listeners.indexOf(cbk);
+        if (index >= 0) {
+            this.listeners.splice(index, 1);
+            return true;
+        }
+        return false;
+    }
+}
+exports.SolanaChainEventsBrowser = SolanaChainEventsBrowser;

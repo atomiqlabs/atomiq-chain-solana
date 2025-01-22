@@ -359,11 +359,11 @@ export class SolanaSwapProgram
 
         if(inContract) return await this.getIntermediaryBalance(publicKey, token);
 
-        let balance = await this.Tokens.getTokenBalance(publicKey, token);
-        if(token.equals(this.Tokens.WSOL_ADDRESS)) {
-            const feeCosts = new BN(5000).add(await this.getCommitFee(null));
-            balance = BN.max(balance.sub(feeCosts), new BN(0));
-        }
+        let { balance, ataExists } = await this.Tokens.getTokenBalance(publicKey, token);
+        // if(token.equals(this.Tokens.WSOL_ADDRESS) && !ataExists) {
+        //     const feeCosts = new BN(this.Tokens.SPL_ATA_RENT_EXEMPT);
+        //     balance = BN.max(balance.sub(feeCosts), new BN(0));
+        // }
         this.logger.debug("getBalance(): token balance, token: "+token.toBase58()+" balance: "+balance.toString(10));
         return balance;
     }

@@ -248,7 +248,7 @@ export class SolanaTokens extends SolanaModule {
      * @param publicKey
      * @param token
      */
-    public async getTokenBalance(publicKey: PublicKey, token: PublicKey) {
+    public async getTokenBalance(publicKey: PublicKey, token: PublicKey): Promise<{balance: BN, ataExists: boolean}> {
         const ata: PublicKey = getAssociatedTokenAddressSync(token, publicKey, true);
         const [ataAccount, balance] = await Promise.all<[Promise<Account>, Promise<number>]>([
             this.getATAOrNull(ata),
@@ -270,7 +270,7 @@ export class SolanaTokens extends SolanaModule {
         this.logger.debug("getTokenBalance(): token balance fetched, token: "+token.toString()+
             " address: "+publicKey.toString()+" amount: "+sum.toString());
 
-        return sum;
+        return {balance: sum, ataExists};
     }
 
     /**

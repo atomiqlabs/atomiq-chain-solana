@@ -366,15 +366,15 @@ export class SwapClaim extends SolanaSwapModule {
     }
 
     /**
-     * Get the estimated solana transaction fee of the claim transaction, this fee might be negative since it
-     *  includes the rebate for closing the swap PDA
+     * Get the estimated solana transaction fee of the claim transaction
      */
     public async getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        if(swapData==null) return new BN(-this.root.ESCROW_STATE_RENT_EXEMPT+5000);
+        if(swapData==null) return new BN(5000);
 
         feeRate = feeRate || await this.getClaimFeeRate(signer, swapData);
 
-        return new BN(-this.root.ESCROW_STATE_RENT_EXEMPT+5000).add(
+        //Include rent exempt in claim fee, to take into consideration worst case cost when user destroys ATA
+        return new BN(5000).add(
             this.root.Fees.getPriorityFee(this.getComputeBudget(swapData), feeRate)
         );
     }
@@ -384,13 +384,8 @@ export class SwapClaim extends SolanaSwapModule {
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
     public async getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        if(swapData==null) return new BN(5000);
-
-        feeRate = feeRate || await this.getClaimFeeRate(signer, swapData);
-
-        //Include rent exempt in claim fee, to take into consideration worst case cost when user destroys ATA
-        return new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT+5000).add(
-            this.root.Fees.getPriorityFee(this.getComputeBudget(swapData), feeRate)
+        return new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT).add(
+            await this.getClaimFee(signer, swapData, feeRate)
         );
     }
 
