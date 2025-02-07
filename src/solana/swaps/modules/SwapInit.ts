@@ -615,7 +615,7 @@ export class SwapInit extends SolanaSwapModule {
         const [rawFee, initAta] = await Promise.all([
             this.getRawInitFee(swapData, feeRate),
             swapData!=null && swapData.payOut ?
-                this.root.Tokens.getATAOrNull(getAssociatedTokenAddressSync(swapData.claimer, swapData.token)).then(acc => acc==null) :
+                this.root.Tokens.getATAOrNull(getAssociatedTokenAddressSync(swapData.token, swapData.claimer)).then(acc => acc==null) :
                 Promise.resolve<null>(null)
         ]);
 

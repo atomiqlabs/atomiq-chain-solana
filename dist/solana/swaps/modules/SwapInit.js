@@ -500,7 +500,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             const [rawFee, initAta] = yield Promise.all([
                 this.getRawInitFee(swapData, feeRate),
                 swapData != null && swapData.payOut ?
-                    this.root.Tokens.getATAOrNull((0, spl_token_1.getAssociatedTokenAddressSync)(swapData.claimer, swapData.token)).then(acc => acc == null) :
+                    this.root.Tokens.getATAOrNull((0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.claimer)).then(acc => acc == null) :
                     Promise.resolve(null)
             ]);
             let resultingFee = new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(rawFee);
