@@ -254,7 +254,7 @@ export class SwapClaim extends SolanaSwapModule {
     ): Promise<SolanaTx[]> {
         //We need to be sure that this transaction confirms in time, otherwise we reveal the secret to the counterparty
         // and won't claim the funds
-        if(checkExpiry && this.root.isExpired(swapData.claimer.toString(), swapData)) {
+        if(checkExpiry && await this.root.isExpired(swapData.claimer.toString(), swapData)) {
             throw new SwapDataVerificationError("Not enough time to reliably pay the invoice");
         }
         const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);

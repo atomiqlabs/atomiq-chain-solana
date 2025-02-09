@@ -355,7 +355,7 @@ export class SwapInit extends SolanaSwapModule {
         const sender = swapData.isPayIn() ? swapData.offerer : swapData.claimer;
         const signer = swapData.isPayIn() ? swapData.claimer : swapData.offerer;
 
-        if(!swapData.isPayIn() && this.root.isExpired(sender.toString(), swapData)) {
+        if(!swapData.isPayIn() && await this.root.isExpired(sender.toString(), swapData)) {
             throw new SignatureVerificationError("Swap will expire too soon!");
         }
 

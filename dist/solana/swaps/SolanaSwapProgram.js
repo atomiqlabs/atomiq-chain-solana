@@ -110,11 +110,13 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      * @param data
      */
     isClaimable(signer, data) {
-        if (!data.isClaimer(signer))
-            return Promise.resolve(false);
-        if (this.isExpired(signer, data))
-            return Promise.resolve(false);
-        return this.isCommited(data);
+        return __awaiter(this, void 0, void 0, function* () {
+            if (!data.isClaimer(signer))
+                return false;
+            if (yield this.isExpired(signer, data))
+                return false;
+            return yield this.isCommited(data);
+        });
     }
     /**
      * Checks whether a swap is commited, i.e. the swap still exists on-chain and was not claimed nor refunded
@@ -153,12 +155,14 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      * @param data
      */
     isRequestRefundable(signer, data) {
-        //Swap can only be refunded by the offerer
-        if (!data.isOfferer(signer))
-            return Promise.resolve(false);
-        if (!this.isExpired(signer, data))
-            return Promise.resolve(false);
-        return this.isCommited(data);
+        return __awaiter(this, void 0, void 0, function* () {
+            //Swap can only be refunded by the offerer
+            if (!data.isOfferer(signer))
+                return false;
+            if (!(yield this.isExpired(signer, data)))
+                return false;
+            return yield this.isCommited(data);
+        });
     }
     /**
      * Get the swap payment hash to be used for an on-chain swap, this just uses a sha256 hash of the values
@@ -195,14 +199,17 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     getCommitStatus(signer, data) {
         return __awaiter(this, void 0, void 0, function* () {
             const escrowStateKey = this.SwapEscrowState(buffer_1.Buffer.from(data.paymentHash, "hex"));
-            const escrowState = yield this.program.account.escrowState.fetchNullable(escrowStateKey);
+            const [escrowState, isExpired] = yield Promise.all([
+                this.program.account.escrowState.fetchNullable(escrowStateKey),
+                this.isExpired(signer, data)
+            ]);
             if (escrowState != null) {
                 if (data.correctPDA(escrowState)) {
-                    if (data.isOfferer(signer) && this.isExpired(signer, data))
+                    if (data.isOfferer(signer) && isExpired)
                         return base_1.SwapCommitStatus.REFUNDABLE;
                     return base_1.SwapCommitStatus.COMMITED;
                 }
-                if (data.isOfferer(signer) && this.isExpired(signer, data))
+                if (data.isOfferer(signer) && isExpired)
                     return base_1.SwapCommitStatus.EXPIRED;
                 return base_1.SwapCommitStatus.NOT_COMMITED;
             }
@@ -216,14 +223,14 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 if (event.name === "RefundEvent") {
                     if (!event.data.sequence.eq(data.sequence))
                         return null;
-                    if (this.isExpired(signer, data))
+                    if (isExpired)
                         return base_1.SwapCommitStatus.EXPIRED;
                     return base_1.SwapCommitStatus.NOT_COMMITED;
                 }
             }));
             if (status != null)
                 return status;
-            if (this.isExpired(signer, data)) {
+            if (isExpired) {
                 return base_1.SwapCommitStatus.EXPIRED;
             }
             return base_1.SwapCommitStatus.NOT_COMMITED;
