@@ -145,9 +145,9 @@ exports.SolanaTxUtils = SolanaTxUtils;
 SolanaTxUtils.LOW_VALUE = 127; // 0x7f
 SolanaTxUtils.HIGH_VALUE = 16383; // 0x3fff
 function toClaimHash(paymentHash, nonce, confirmations) {
-    return this.paymentHash +
-        this.nonce.toString("hex", 8) +
-        this.confirmations.toString(16).padStart(4, "0");
+    return paymentHash +
+        nonce.toString("hex", 8) +
+        confirmations.toString(16).padStart(4, "0");
 }
 exports.toClaimHash = toClaimHash;
 function fromClaimHash(claimHash) {
@@ -162,8 +162,8 @@ function fromClaimHash(claimHash) {
 exports.fromClaimHash = fromClaimHash;
 function toEscrowHash(paymentHash, sequence) {
     return createHash("sha256").update(buffer_1.Buffer.concat([
-        buffer_1.Buffer.from(this.paymentHash, "hex"),
-        this.sequence.toBuffer("be", 8)
+        buffer_1.Buffer.from(paymentHash, "hex"),
+        sequence.toBuffer("be", 8)
     ])).digest().toString("hex");
 }
 exports.toEscrowHash = toEscrowHash;

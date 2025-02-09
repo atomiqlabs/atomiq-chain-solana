@@ -148,9 +148,9 @@ export class SolanaTxUtils {
 }
 
 export function toClaimHash(paymentHash: string, nonce: BN, confirmations: number): string {
-    return this.paymentHash+
-        this.nonce.toString("hex", 8)+
-        this.confirmations.toString(16).padStart(4, "0");
+    return paymentHash+
+        nonce.toString("hex", 8)+
+        confirmations.toString(16).padStart(4, "0");
 }
 
 export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: BN, confirmations: number} {
@@ -164,7 +164,7 @@ export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: B
 
 export function toEscrowHash(paymentHash: string, sequence: BN): string {
     return createHash("sha256").update(Buffer.concat([
-        Buffer.from(this.paymentHash, "hex"),
-        this.sequence.toBuffer("be", 8)
+        Buffer.from(paymentHash, "hex"),
+        sequence.toBuffer("be", 8)
     ])).digest().toString("hex");
 }
