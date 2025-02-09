@@ -109,7 +109,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @param confirmations
      * @param nonce swap nonce uniquely identifying the transaction to prevent replay attacks
      */
-    getHashForOnchain(outputScript: Buffer, amount: BN, confirmations: number, nonce: BN): Buffer;
+    getHashForOnchain(outputScript: Buffer, amount: BN, confirmations: number, nonce?: BN): Buffer;
     getHashForHtlc(swapHash: Buffer): Buffer;
     getHashForTxId(txId: string, confirmations: number): Buffer;
     /**

@@ -169,6 +169,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      * @param nonce swap nonce uniquely identifying the transaction to prevent replay attacks
      */
     getHashForOnchain(outputScript, amount, confirmations, nonce) {
+        nonce !== null && nonce !== void 0 ? nonce : (nonce = new BN(0));
         const paymentHash = createHash("sha256").update(buffer_1.Buffer.concat([
             buffer_1.Buffer.from(nonce.toArray("le", 8)),
             buffer_1.Buffer.from(amount.toArray("le", 8)),

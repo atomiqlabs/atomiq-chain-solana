@@ -213,7 +213,8 @@ export class SolanaSwapProgram
      * @param confirmations
      * @param nonce swap nonce uniquely identifying the transaction to prevent replay attacks
      */
-    getHashForOnchain(outputScript: Buffer, amount: BN, confirmations: number, nonce: BN): Buffer {
+    getHashForOnchain(outputScript: Buffer, amount: BN, confirmations: number, nonce?: BN): Buffer {
+        nonce ??= new BN(0);
         const paymentHash = createHash("sha256").update(Buffer.concat([
             Buffer.from(nonce.toArray("le", 8)),
             Buffer.from(amount.toArray("le", 8)),
