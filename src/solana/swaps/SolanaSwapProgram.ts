@@ -649,7 +649,8 @@ export class SolanaSwapProgram
 
     ////////////////////////////////////////////
     //// Fees
-    getInitPayInFeeRate(offerer?: string, claimer?: string, token?: string, paymentHash?: string): Promise<string> {
+    getInitPayInFeeRate(offerer?: string, claimer?: string, token?: string, claimHash?: string): Promise<string> {
+        const paymentHash = claimHash==null ? null : fromClaimHash(claimHash).paymentHash;
         return this.Init.getInitPayInFeeRate(
             toPublicKeyOrNull(offerer),
             toPublicKeyOrNull(claimer),
@@ -658,7 +659,8 @@ export class SolanaSwapProgram
         );
     }
 
-    getInitFeeRate(offerer?: string, claimer?: string, token?: string, paymentHash?: string): Promise<string> {
+    getInitFeeRate(offerer?: string, claimer?: string, token?: string, claimHash?: string): Promise<string> {
+        const paymentHash = claimHash==null ? null : fromClaimHash(claimHash).paymentHash;
         return this.Init.getInitFeeRate(
             toPublicKeyOrNull(offerer),
             toPublicKeyOrNull(claimer),

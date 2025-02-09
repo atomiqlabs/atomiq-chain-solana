@@ -464,10 +464,12 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     ////////////////////////////////////////////
     //// Fees
-    getInitPayInFeeRate(offerer, claimer, token, paymentHash) {
+    getInitPayInFeeRate(offerer, claimer, token, claimHash) {
+        const paymentHash = claimHash == null ? null : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
         return this.Init.getInitPayInFeeRate(toPublicKeyOrNull(offerer), toPublicKeyOrNull(claimer), toPublicKeyOrNull(token), paymentHash);
     }
-    getInitFeeRate(offerer, claimer, token, paymentHash) {
+    getInitFeeRate(offerer, claimer, token, claimHash) {
+        const paymentHash = claimHash == null ? null : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
         return this.Init.getInitFeeRate(toPublicKeyOrNull(offerer), toPublicKeyOrNull(claimer), toPublicKeyOrNull(token), paymentHash);
     }
     getRefundFeeRate(swapData) {

@@ -187,8 +187,8 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     deserializeTx(txData: string): Promise<SolanaTx>;
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;
     getTxStatus(tx: string): Promise<"not_found" | "pending" | "success" | "reverted">;
-    getInitPayInFeeRate(offerer?: string, claimer?: string, token?: string, paymentHash?: string): Promise<string>;
-    getInitFeeRate(offerer?: string, claimer?: string, token?: string, paymentHash?: string): Promise<string>;
+    getInitPayInFeeRate(offerer?: string, claimer?: string, token?: string, claimHash?: string): Promise<string>;
+    getInitFeeRate(offerer?: string, claimer?: string, token?: string, claimHash?: string): Promise<string>;
     getRefundFeeRate(swapData: SolanaSwapData): Promise<string>;
     getClaimFeeRate(signer: string, swapData: SolanaSwapData): Promise<string>;
     getClaimFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
