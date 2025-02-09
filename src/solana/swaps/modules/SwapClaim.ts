@@ -273,7 +273,7 @@ export class SwapClaim extends SolanaSwapModule {
         action.add(await this.Claim(signer, swapData, secret));
         if(shouldUnwrap) action.add(this.root.Tokens.Unwrap(signer));
 
-        this.logger.debug("txsClaimWithSecret(): creating claim transaction, swap: "+swapData.getHash()+
+        this.logger.debug("txsClaimWithSecret(): creating claim transaction, swap: "+swapData.getClaimHash()+
             " initializingAta: "+shouldInitAta+" unwrapping: "+shouldUnwrap);
 
         return [await action.tx(feeRate)];
@@ -296,8 +296,7 @@ export class SwapClaim extends SolanaSwapModule {
     async txsClaimWithTxData(
         signer: PublicKey | SolanaSigner,
         swapData: SolanaSwapData,
-        blockheight: number,
-        tx: { blockhash: string, confirmations: number, txid: string, hex: string },
+        tx: { blockhash: string, confirmations: number, txid: string, hex: string, height: number },
         vout: number,
         commitedHeader?: SolanaBtcStoredHeader,
         synchronizer?: RelaySynchronizer<any, SolanaTx, any>,
@@ -317,7 +316,7 @@ export class SwapClaim extends SolanaSwapModule {
 
         const txs: SolanaTx[] = [];
         if(commitedHeader==null) commitedHeader = await this.getCommitedHeaderAndSynchronize(
-            signerKey, blockheight, swapData.getConfirmations(),
+            signerKey, tx.height, swapData.confirmations,
             tx.blockhash, txs, synchronizer
         );
 
@@ -334,7 +333,7 @@ export class SwapClaim extends SolanaSwapModule {
         await claimAction.addToTxs(txs, feeRate);
         if(shouldUnwrap) await this.root.Tokens.Unwrap(signerKey).addToTxs(txs, feeRate);
 
-        this.logger.debug("txsClaimWithTxData(): creating claim transaction, swap: "+swapData.getHash()+
+        this.logger.debug("txsClaimWithTxData(): creating claim transaction, swap: "+swapData.getClaimHash()+
             " initializingAta: "+shouldInitAta+" unwrapping: "+shouldUnwrap+" num txns: "+txs.length);
 
         return txs;

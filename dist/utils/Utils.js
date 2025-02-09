@@ -9,8 +9,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaTxUtils = exports.tryWithRetries = exports.getLogger = exports.onceAsync = exports.timeoutPromise = void 0;
+exports.toEscrowHash = exports.fromClaimHash = exports.toClaimHash = exports.SolanaTxUtils = exports.tryWithRetries = exports.getLogger = exports.onceAsync = exports.timeoutPromise = void 0;
 const web3_js_1 = require("@solana/web3.js");
+const BN = require("bn.js");
+const buffer_1 = require("buffer");
+const createHash = require("create-hash");
 function timeoutPromise(timeoutMillis, abortSignal) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(resolve, timeoutMillis);
@@ -141,3 +144,26 @@ exports.SolanaTxUtils = SolanaTxUtils;
 // COMPACT ARRAY
 SolanaTxUtils.LOW_VALUE = 127; // 0x7f
 SolanaTxUtils.HIGH_VALUE = 16383; // 0x3fff
+function toClaimHash(paymentHash, nonce, confirmations) {
+    return this.paymentHash +
+        this.nonce.toString("hex", 8) +
+        this.confirmations.toString(16).padStart(4, "0");
+}
+exports.toClaimHash = toClaimHash;
+function fromClaimHash(claimHash) {
+    if (claimHash.length !== 84)
+        throw new Error("Claim hash invalid length: " + claimHash.length);
+    return {
+        paymentHash: claimHash.slice(0, 64),
+        nonce: new BN(claimHash.slice(64, 80), "le"),
+        confirmations: parseInt(claimHash.slice(80, 84), 16)
+    };
+}
+exports.fromClaimHash = fromClaimHash;
+function toEscrowHash(paymentHash, sequence) {
+    return createHash("sha256").update(buffer_1.Buffer.concat([
+        buffer_1.Buffer.from(this.paymentHash, "hex"),
+        this.sequence.toBuffer("be", 8)
+    ])).digest().toString("hex");
+}
+exports.toEscrowHash = toEscrowHash;

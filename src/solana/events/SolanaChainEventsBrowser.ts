@@ -4,7 +4,7 @@ import {AnchorProvider, IdlEvents} from "@coral-xyz/anchor";
 import {SolanaSwapProgram} from "../swaps/SolanaSwapProgram";
 import {
     getLogger,
-    onceAsync, tryWithRetries
+    onceAsync, toEscrowHash, tryWithRetries
 } from "../../utils/Utils";
 import {Connection, ParsedTransactionWithMeta, PublicKey} from "@solana/web3.js";
 import * as BN from "bn.js";
@@ -132,11 +132,11 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
     protected parseInitializeEvent(data: IdlEvents<SwapProgram>["InitializeEvent"], eventObject: EventObject): InitializeEvent<SolanaSwapData> {
         const paymentHash: string = Buffer.from(data.hash).toString("hex");
         const txoHash: string = Buffer.from(data.txoHash).toString("hex");
-        this.logger.debug("InitializeEvent paymentHash: "+paymentHash+" sequence: "+data.sequence.toString(10)+" txoHash: "+txoHash);
+        const escrowHash = toEscrowHash(paymentHash, data.sequence);
+        this.logger.debug("InitializeEvent paymentHash: "+paymentHash+" sequence: "+data.sequence.toString(10)+
+            " txoHash: "+txoHash+" escrowHash: "+escrowHash);
         return new InitializeEvent<SolanaSwapData>(
-            paymentHash,
-            data.sequence,
-            txoHash,
+            escrowHash,
             SwapTypeEnum.toChainSwapType(data.kind),
             onceAsync<SolanaSwapData>(this.getSwapDataGetter(eventObject, txoHash))
         );
@@ -144,15 +144,19 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
 
     protected parseRefundEvent(data: IdlEvents<SwapProgram>["RefundEvent"]): RefundEvent<SolanaSwapData> {
         const paymentHash: string = Buffer.from(data.hash).toString("hex");
-        this.logger.debug("RefundEvent paymentHash: "+paymentHash+" sequence: "+data.sequence.toString(10));
-        return new RefundEvent<SolanaSwapData>(paymentHash, data.sequence);
+        const escrowHash = toEscrowHash(paymentHash, data.sequence);
+        this.logger.debug("RefundEvent paymentHash: "+paymentHash+" sequence: "+data.sequence.toString(10)+
+            " escrowHash: "+escrowHash);
+        return new RefundEvent<SolanaSwapData>(escrowHash);
     }
 
     protected parseClaimEvent(data: IdlEvents<SwapProgram>["ClaimEvent"]): ClaimEvent<SolanaSwapData> {
         const secret: string = Buffer.from(data.secret).toString("hex");
         const paymentHash: string = Buffer.from(data.hash).toString("hex");
-        this.logger.debug("ClaimEvent paymentHash: "+paymentHash+" sequence: "+data.sequence.toString(10)+" secret: "+secret);
-        return new ClaimEvent<SolanaSwapData>(paymentHash, data.sequence, secret);
+        const escrowHash = toEscrowHash(paymentHash, data.sequence);
+        this.logger.debug("ClaimEvent paymentHash: "+paymentHash+" sequence: "+data.sequence.toString(10)+
+            " secret: "+secret+" escrowHash: "+escrowHash);
+        return new ClaimEvent<SolanaSwapData>(escrowHash, secret);
     }
 
     /**

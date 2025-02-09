@@ -107,11 +107,12 @@ export declare class SwapClaim extends SolanaSwapModule {
      * @param storageAccHolder an object holder filled in with the created data account where tx data is written
      * @param feeRate fee rate to be used for the transactions
      */
-    txsClaimWithTxData(signer: PublicKey | SolanaSigner, swapData: SolanaSwapData, blockheight: number, tx: {
+    txsClaimWithTxData(signer: PublicKey | SolanaSigner, swapData: SolanaSwapData, tx: {
         blockhash: string;
         confirmations: number;
         txid: string;
         hex: string;
+        height: number;
     }, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, storageAccHolder?: {
         storageAcc: PublicKey;
     }, feeRate?: string): Promise<SolanaTx[] | null>;

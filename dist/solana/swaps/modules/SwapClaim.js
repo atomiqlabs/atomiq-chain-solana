@@ -189,7 +189,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             action.add(yield this.Claim(signer, swapData, secret));
             if (shouldUnwrap)
                 action.add(this.root.Tokens.Unwrap(signer));
-            this.logger.debug("txsClaimWithSecret(): creating claim transaction, swap: " + swapData.getHash() +
+            this.logger.debug("txsClaimWithSecret(): creating claim transaction, swap: " + swapData.getClaimHash() +
                 " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap);
             return [yield action.tx(feeRate)];
         });
@@ -208,7 +208,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
      * @param storageAccHolder an object holder filled in with the created data account where tx data is written
      * @param feeRate fee rate to be used for the transactions
      */
-    txsClaimWithTxData(signer, swapData, blockheight, tx, vout, commitedHeader, synchronizer, initAta, storageAccHolder, feeRate) {
+    txsClaimWithTxData(signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, storageAccHolder, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
             const shouldInitAta = swapData.isPayOut() && !(yield this.root.Tokens.ataExists(swapData.claimerAta));
             if (shouldInitAta && !initAta)
@@ -220,7 +220,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             this.logger.debug("txsClaimWithTxData(): merkle proof computed: ", merkleProof);
             const txs = [];
             if (commitedHeader == null)
-                commitedHeader = yield this.getCommitedHeaderAndSynchronize(signerKey, blockheight, swapData.getConfirmations(), tx.blockhash, txs, synchronizer);
+                commitedHeader = yield this.getCommitedHeaderAndSynchronize(signerKey, tx.height, swapData.confirmations, tx.blockhash, txs, synchronizer);
             const storeDataKey = yield this.addTxsWriteTransactionData(signer, tx, vout, feeRate, txs);
             if (storageAccHolder != null)
                 storageAccHolder.storageAcc = storeDataKey;
@@ -235,7 +235,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             yield claimAction.addToTxs(txs, feeRate);
             if (shouldUnwrap)
                 yield this.root.Tokens.Unwrap(signerKey).addToTxs(txs, feeRate);
-            this.logger.debug("txsClaimWithTxData(): creating claim transaction, swap: " + swapData.getHash() +
+            this.logger.debug("txsClaimWithTxData(): creating claim transaction, swap: " + swapData.getClaimHash() +
                 " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap + " num txns: " + txs.length);
             return txs;
         });

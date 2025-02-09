@@ -92,7 +92,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @param signer
      * @param data
      */
-    isExpired(signer: string, data: SolanaSwapData): boolean;
+    isExpired(signer: string, data: SolanaSwapData): Promise<boolean>;
     /**
      * Checks if the swap is refundable by us, checks if we are offerer, if the swap is already expired & if the swap
      *  is still commited
@@ -106,9 +106,12 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      *
      * @param outputScript output script required to claim the swap
      * @param amount sats sent required to claim the swap
+     * @param confirmations
      * @param nonce swap nonce uniquely identifying the transaction to prevent replay attacks
      */
-    getHashForOnchain(outputScript: Buffer, amount: BN, nonce: BN): Buffer;
+    getHashForOnchain(outputScript: Buffer, amount: BN, confirmations: number, nonce: BN): Buffer;
+    getHashForHtlc(swapHash: Buffer): Buffer;
+    getHashForTxId(txId: string, confirmations: number): Buffer;
     /**
      * Gets the status of the specific swap, this also checks if we are offerer/claimer & checks for expiry (to see
      *  if swap is refundable)
@@ -120,17 +123,17 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     /**
      * Checks the status of the specific payment hash
      *
-     * @param paymentHash
+     * @param claimHash
      */
-    getPaymentHashStatus(paymentHash: string): Promise<SwapCommitStatus>;
+    getClaimHashStatus(claimHash: string): Promise<SwapCommitStatus>;
     /**
      * Returns the data committed for a specific payment hash, or null if no data is currently commited for
      *  the specific swap
      *
-     * @param paymentHashHex
+     * @param claimHashHex
      */
-    getCommitedData(paymentHashHex: string): Promise<SolanaSwapData>;
-    createSwapData(type: ChainSwapType, offerer: string, claimer: string, token: string, amount: BN, paymentHash: string, sequence: BN, expiry: BN, escrowNonce: BN, confirmations: number, payIn: boolean, payOut: boolean, securityDeposit: BN, claimerBounty: BN): Promise<SolanaSwapData>;
+    getCommitedData(claimHashHex: string): Promise<SolanaSwapData>;
+    createSwapData(type: ChainSwapType, offerer: string, claimer: string, token: string, amount: BN, claimHash: string, sequence: BN, expiry: BN, payIn: boolean, payOut: boolean, securityDeposit: BN, claimerBounty: BN): Promise<SolanaSwapData>;
     getBalance(signer: string, tokenAddress: string, inContract: boolean): Promise<BN>;
     getIntermediaryData(address: string, token: string): Promise<{
         balance: BN;
@@ -141,12 +144,13 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     isValidAddress(address: string): boolean;
     getNativeCurrencyAddress(): string;
     txsClaimWithSecret(signer: string | SolanaSigner, swapData: SolanaSwapData, secret: string, checkExpiry?: boolean, initAta?: boolean, feeRate?: string, skipAtaCheck?: boolean): Promise<SolanaTx[]>;
-    txsClaimWithTxData(signer: string | SolanaSigner, swapData: SolanaSwapData, blockheight: number, tx: {
+    txsClaimWithTxData(signer: string | SolanaSigner, swapData: SolanaSwapData, tx: {
         blockhash: string;
         confirmations: number;
         txid: string;
         hex: string;
-    }, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, feeRate?: string, storageAccHolder?: {
+        height: number;
+    }, requiredConfirmations: number, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, feeRate?: string, storageAccHolder?: {
         storageAcc: PublicKey;
     }): Promise<SolanaTx[] | null>;
     txsRefund(swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
@@ -155,30 +159,25 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
         prefix: any;
         signature: any;
     }, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
-    txsInitPayIn(swapData: SolanaSwapData, { timeout, prefix, signature }: {
-        timeout: any;
-        prefix: any;
-        signature: any;
-    }, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     txsInit(swapData: SolanaSwapData, { timeout, prefix, signature }: {
         timeout: any;
         prefix: any;
         signature: any;
-    }, txoHash?: Buffer, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    }, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     txsWithdraw(signer: string, token: string, amount: BN, feeRate?: string): Promise<SolanaTx[]>;
     txsDeposit(signer: string, token: string, amount: BN, feeRate?: string): Promise<SolanaTx[]>;
     txsTransfer(signer: string, token: string, amount: BN, dstAddress: string, feeRate?: string): Promise<SolanaTx[]>;
     claimWithSecret(signer: SolanaSigner, swapData: SolanaSwapData, secret: string, checkExpiry?: boolean, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
-    claimWithTxData(signer: SolanaSigner, swapData: SolanaSwapData, blockheight: number, tx: {
+    claimWithTxData(signer: SolanaSigner, swapData: SolanaSwapData, tx: {
         blockhash: string;
         confirmations: number;
         txid: string;
         hex: string;
-    }, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+        height: number;
+    }, requiredConfirmations: number, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
     refund(signer: SolanaSigner, swapData: SolanaSwapData, check?: boolean, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
     refundWithAuthorization(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, check?: boolean, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
-    initPayIn(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, skipChecks?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
-    init(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, txoHash?: Buffer, skipChecks?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    init(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, skipChecks?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
     initAndClaimWithSecret(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, secret: string, skipChecks?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string[]>;
     withdraw(signer: SolanaSigner, token: string, amount: BN, txOptions?: TransactionConfirmationOptions): Promise<string>;
     deposit(signer: SolanaSigner, token: string, amount: BN, txOptions?: TransactionConfirmationOptions): Promise<string>;
@@ -219,4 +218,5 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     isValidToken(tokenIdentifier: string): boolean;
     randomAddress(): string;
     randomSigner(): SolanaSigner;
+    getExtraData(outputScript: Buffer, amount: BN, confirmations: number, nonce?: BN): Buffer;
 }

@@ -7,6 +7,7 @@ const base_1 = require("@atomiqlabs/base");
 const SwapTypeEnum_1 = require("./SwapTypeEnum");
 const buffer_1 = require("buffer");
 const spl_token_1 = require("@solana/spl-token");
+const Utils_1 = require("../../utils/Utils");
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 class SolanaSwapData extends base_1.SwapData {
     constructor(offererOrData, claimer, token, amount, paymentHash, sequence, expiry, nonce, confirmations, payOut, kind, payIn, offererAta, claimerAta, securityDeposit, claimerBounty, txoHash) {
@@ -107,10 +108,10 @@ class SolanaSwapData extends base_1.SwapData {
             return null;
         return this.expiry;
     }
-    getConfirmations() {
+    getConfirmationsHint() {
         return this.confirmations;
     }
-    getEscrowNonce() {
+    getNonceHint() {
         return this.nonce;
     }
     isPayIn() {
@@ -119,16 +120,22 @@ class SolanaSwapData extends base_1.SwapData {
     isPayOut() {
         return this.payOut;
     }
-    getHash() {
-        return this.paymentHash;
+    getClaimHash() {
+        return (0, Utils_1.toClaimHash)(this.paymentHash, this.nonce, this.confirmations);
+    }
+    getEscrowHash() {
+        return (0, Utils_1.toEscrowHash)(this.paymentHash, this.sequence);
     }
     getSequence() {
         return this.sequence;
     }
-    getTxoHash() {
+    getTxoHashHint() {
         return this.txoHash;
     }
-    setTxoHash(txoHash) {
+    getExtraData() {
+        return this.txoHash;
+    }
+    setExtraData(txoHash) {
         this.txoHash = txoHash;
     }
     getSecurityDeposit() {

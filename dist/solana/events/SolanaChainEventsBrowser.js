@@ -97,19 +97,25 @@ class SolanaChainEventsBrowser {
     parseInitializeEvent(data, eventObject) {
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
         const txoHash = buffer_1.Buffer.from(data.txoHash).toString("hex");
-        this.logger.debug("InitializeEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) + " txoHash: " + txoHash);
-        return new base_1.InitializeEvent(paymentHash, data.sequence, txoHash, SwapTypeEnum_1.SwapTypeEnum.toChainSwapType(data.kind), (0, Utils_1.onceAsync)(this.getSwapDataGetter(eventObject, txoHash)));
+        const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
+        this.logger.debug("InitializeEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) +
+            " txoHash: " + txoHash + " escrowHash: " + escrowHash);
+        return new base_1.InitializeEvent(escrowHash, SwapTypeEnum_1.SwapTypeEnum.toChainSwapType(data.kind), (0, Utils_1.onceAsync)(this.getSwapDataGetter(eventObject, txoHash)));
     }
     parseRefundEvent(data) {
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
-        this.logger.debug("RefundEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10));
-        return new base_1.RefundEvent(paymentHash, data.sequence);
+        const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
+        this.logger.debug("RefundEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) +
+            " escrowHash: " + escrowHash);
+        return new base_1.RefundEvent(escrowHash);
     }
     parseClaimEvent(data) {
         const secret = buffer_1.Buffer.from(data.secret).toString("hex");
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
-        this.logger.debug("ClaimEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) + " secret: " + secret);
-        return new base_1.ClaimEvent(paymentHash, data.sequence, secret);
+        const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
+        this.logger.debug("ClaimEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) +
+            " secret: " + secret + " escrowHash: " + escrowHash);
+        return new base_1.ClaimEvent(escrowHash, secret);
     }
     /**
      * Processes event as received from the chain, parses it & calls event listeners

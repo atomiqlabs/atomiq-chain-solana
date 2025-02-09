@@ -1,4 +1,7 @@
 import {ComputeBudgetProgram, PublicKey, Transaction} from "@solana/web3.js";
+import * as BN from "bn.js";
+import {Buffer} from "buffer";
+import * as createHash from "create-hash";
 
 export function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -142,4 +145,26 @@ export class SolanaTxUtils {
             ixsSize
         );
     };
+}
+
+export function toClaimHash(paymentHash: string, nonce: BN, confirmations: number): string {
+    return this.paymentHash+
+        this.nonce.toString("hex", 8)+
+        this.confirmations.toString(16).padStart(4, "0");
+}
+
+export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: BN, confirmations: number} {
+    if(claimHash.length!==84) throw new Error("Claim hash invalid length: "+claimHash.length);
+    return {
+        paymentHash: claimHash.slice(0, 64),
+        nonce: new BN(claimHash.slice(64, 80), "le"),
+        confirmations: parseInt(claimHash.slice(80, 84), 16)
+    }
+}
+
+export function toEscrowHash(paymentHash: string, sequence: BN): string {
+    return createHash("sha256").update(Buffer.concat([
+        Buffer.from(this.paymentHash, "hex"),
+        this.sequence.toBuffer("be", 8)
+    ])).digest().toString("hex");
 }

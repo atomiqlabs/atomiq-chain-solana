@@ -376,7 +376,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             if (!skipChecks) {
                 const [_, payStatus] = yield Promise.all([
                     (0, Utils_1.tryWithRetries)(() => this.isSignatureValid(swapData, timeout, prefix, signature, feeRate), this.retryPolicy, (e) => e instanceof base_1.SignatureVerificationError),
-                    (0, Utils_1.tryWithRetries)(() => this.root.getPaymentHashStatus(swapData.paymentHash), this.retryPolicy)
+                    (0, Utils_1.tryWithRetries)(() => this.root.getClaimHashStatus(swapData.getClaimHash()), this.retryPolicy)
                 ]);
                 if (payStatus !== base_1.SwapCommitStatus.NOT_COMMITED)
                     throw new base_1.SwapDataVerificationError("Invoice already being paid for or paid");
@@ -399,7 +399,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             const initTx = yield (yield this.InitPayIn(swapData, new BN(timeout), feeRate)).tx(feeRate, block);
             initTx.tx.addSignature(swapData.claimer, buffer_1.Buffer.from(signatureStr, "hex"));
             txs.push(initTx);
-            this.logger.debug("txsInitPayIn(): create swap init TX, swap: " + swapData.getHash() +
+            this.logger.debug("txsInitPayIn(): create swap init TX, swap: " + swapData.getClaimHash() +
                 " wrapping client-side: " + isWrapping + " feerate: " + feeRate);
             return txs;
         });
@@ -423,7 +423,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             const block = yield (0, Utils_1.tryWithRetries)(() => this.root.Blocks.getParsedBlock(parseInt(slotNumber)), this.retryPolicy);
             const initTx = yield (yield this.InitNotPayIn(swapData, new BN(timeout))).tx(feeRate, block);
             initTx.tx.addSignature(swapData.offerer, buffer_1.Buffer.from(signatureStr, "hex"));
-            this.logger.debug("txsInit(): create swap init TX, swap: " + swapData.getHash() + " feerate: " + feeRate);
+            this.logger.debug("txsInit(): create swap init TX, swap: " + swapData.getClaimHash() + " feerate: " + feeRate);
             return [initTx];
         });
     }

@@ -6,6 +6,7 @@ import {IdlAccounts, IdlTypes} from "@coral-xyz/anchor";
 import {SwapTypeEnum} from "./SwapTypeEnum";
 import {Buffer} from "buffer";
 import {getAssociatedTokenAddressSync} from "@solana/spl-token";
+import {toClaimHash, toEscrowHash} from "../../utils/Utils";
 
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 
@@ -182,11 +183,11 @@ export class SolanaSwapData extends SwapData {
         return this.expiry;
     }
 
-    getConfirmations(): number {
+    getConfirmationsHint(): number {
         return this.confirmations;
     }
 
-    getEscrowNonce(): BN {
+    getNonceHint(): BN {
         return this.nonce;
     }
 
@@ -198,19 +199,27 @@ export class SolanaSwapData extends SwapData {
         return this.payOut;
     }
 
-    getHash(): string {
-        return this.paymentHash;
+    getClaimHash(): string {
+        return toClaimHash(this.paymentHash, this.nonce, this.confirmations);
+    }
+
+    getEscrowHash(): string {
+        return toEscrowHash(this.paymentHash, this.sequence);
     }
 
     getSequence(): BN {
         return this.sequence;
     }
 
-    getTxoHash(): string {
+    getTxoHashHint(): string {
         return this.txoHash;
     }
 
-    setTxoHash(txoHash: string): void {
+    getExtraData(): string {
+        return this.txoHash;
+    }
+
+    setExtraData(txoHash: string): void {
         this.txoHash = txoHash;
     }
 

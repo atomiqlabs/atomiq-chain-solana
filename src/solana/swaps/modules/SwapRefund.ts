@@ -211,7 +211,7 @@ export class SwapRefund extends SolanaSwapModule {
         action.add(await this.Refund(swapData));
         if(shouldUnwrap) action.add(this.root.Tokens.Unwrap(swapData.offerer));
 
-        this.logger.debug("txsRefund(): creating claim transaction, swap: "+swapData.getHash()+
+        this.logger.debug("txsRefund(): creating claim transaction, swap: "+swapData.getClaimHash()+
             " initializingAta: "+shouldInitAta+" unwrapping: "+shouldUnwrap);
 
         return [await action.tx(feeRate)];
@@ -262,7 +262,7 @@ export class SwapRefund extends SolanaSwapModule {
         }
         if(shouldUnwrap) action.add(this.root.Tokens.Unwrap(swapData.offerer));
 
-        this.logger.debug("txsRefundWithAuthorization(): creating claim transaction, swap: "+swapData.getHash()+
+        this.logger.debug("txsRefundWithAuthorization(): creating claim transaction, swap: "+swapData.getClaimHash()+
             " initializingAta: "+shouldInitAta+" unwrapping: "+shouldUnwrap+
             " auth expiry: "+timeout+" signature: "+signature);
 

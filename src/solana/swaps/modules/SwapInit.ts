@@ -470,7 +470,7 @@ export class SwapInit extends SolanaSwapModule {
                     () => this.isSignatureValid(swapData, timeout, prefix, signature, feeRate),
                     this.retryPolicy, (e) => e instanceof SignatureVerificationError
                 ),
-                tryWithRetries(() => this.root.getPaymentHashStatus(swapData.paymentHash), this.retryPolicy)
+                tryWithRetries(() => this.root.getClaimHashStatus(swapData.getClaimHash()), this.retryPolicy)
             ]);
             if(payStatus!==SwapCommitStatus.NOT_COMMITED) throw new SwapDataVerificationError("Invoice already being paid for or paid");
         }
@@ -504,7 +504,7 @@ export class SwapInit extends SolanaSwapModule {
         initTx.tx.addSignature(swapData.claimer, Buffer.from(signatureStr, "hex"));
         txs.push(initTx);
 
-        this.logger.debug("txsInitPayIn(): create swap init TX, swap: "+swapData.getHash()+
+        this.logger.debug("txsInitPayIn(): create swap init TX, swap: "+swapData.getClaimHash()+
             " wrapping client-side: "+isWrapping+" feerate: "+feeRate);
 
         return txs;
@@ -538,7 +538,7 @@ export class SwapInit extends SolanaSwapModule {
         const initTx = await (await this.InitNotPayIn(swapData, new BN(timeout))).tx(feeRate, block);
         initTx.tx.addSignature(swapData.offerer, Buffer.from(signatureStr, "hex"));
 
-        this.logger.debug("txsInit(): create swap init TX, swap: "+swapData.getHash()+" feerate: "+feeRate);
+        this.logger.debug("txsInit(): create swap init TX, swap: "+swapData.getClaimHash()+" feerate: "+feeRate);
 
         return [initTx];
     }
