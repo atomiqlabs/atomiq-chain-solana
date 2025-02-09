@@ -157,7 +157,7 @@ export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: B
     if(claimHash.length!==84) throw new Error("Claim hash invalid length: "+claimHash.length);
     return {
         paymentHash: claimHash.slice(0, 64),
-        nonce: new BN(claimHash.slice(64, 80), "le"),
+        nonce: new BN(claimHash.slice(64, 80), "hex"),
         confirmations: parseInt(claimHash.slice(80, 84), 16)
     }
 }
