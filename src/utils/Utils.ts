@@ -149,7 +149,7 @@ export class SolanaTxUtils {
 
 export function toClaimHash(paymentHash: string, nonce: BN, confirmations: number): string {
     return paymentHash+
-        nonce.toString("hex", 8)+
+        nonce.toString("hex", 16)+
         confirmations.toString(16).padStart(4, "0");
 }
 

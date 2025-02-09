@@ -146,7 +146,7 @@ SolanaTxUtils.LOW_VALUE = 127; // 0x7f
 SolanaTxUtils.HIGH_VALUE = 16383; // 0x3fff
 function toClaimHash(paymentHash, nonce, confirmations) {
     return paymentHash +
-        nonce.toString("hex", 8) +
+        nonce.toString("hex", 16) +
         confirmations.toString(16).padStart(4, "0");
 }
 exports.toClaimHash = toClaimHash;
