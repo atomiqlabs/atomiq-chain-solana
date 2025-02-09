@@ -163,7 +163,7 @@ exports.fromClaimHash = fromClaimHash;
 function toEscrowHash(paymentHash, sequence) {
     return createHash("sha256").update(buffer_1.Buffer.concat([
         buffer_1.Buffer.from(paymentHash, "hex"),
-        sequence.toBuffer("be", 8)
+        sequence.toArrayLike(buffer_1.Buffer, "be", 8)
     ])).digest().toString("hex");
 }
 exports.toEscrowHash = toEscrowHash;

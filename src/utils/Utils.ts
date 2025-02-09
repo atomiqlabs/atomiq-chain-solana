@@ -165,6 +165,6 @@ export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: B
 export function toEscrowHash(paymentHash: string, sequence: BN): string {
     return createHash("sha256").update(Buffer.concat([
         Buffer.from(paymentHash, "hex"),
-        sequence.toBuffer("be", 8)
+        sequence.toArrayLike(Buffer, "be", 8)
     ])).digest().toString("hex");
 }
