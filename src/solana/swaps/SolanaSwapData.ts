@@ -212,6 +212,7 @@ export class SolanaSwapData extends SwapData {
     }
 
     getTxoHashHint(): string {
+        if(this.txoHash==="0000000000000000000000000000000000000000000000000000000000000000") return null; //Txo hash opt-out flag
         return this.txoHash;
     }
 

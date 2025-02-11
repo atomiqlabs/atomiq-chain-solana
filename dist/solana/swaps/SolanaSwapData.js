@@ -130,6 +130,8 @@ class SolanaSwapData extends base_1.SwapData {
         return this.sequence;
     }
     getTxoHashHint() {
+        if (this.txoHash === "0000000000000000000000000000000000000000000000000000000000000000")
+            return null; //Txo hash opt-out flag
         return this.txoHash;
     }
     getExtraData() {
