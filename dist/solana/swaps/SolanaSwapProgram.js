@@ -289,7 +289,11 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     ////////////////////////////////////////////
     //// Swap data initializer
-    createSwapData(type, offerer, claimer, token, amount, claimHash, sequence, expiry, payIn, payOut, securityDeposit, claimerBounty) {
+    createSwapData(type, offerer, claimer, token, amount, claimHash, sequence, expiry, payIn, payOut, securityDeposit, claimerBounty, depositToken) {
+        if (depositToken != null) {
+            if (!new web3_js_1.PublicKey(depositToken).equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS))
+                throw new Error("Only SOL supported as deposit token!");
+        }
         const tokenAddr = new web3_js_1.PublicKey(token);
         const offererKey = offerer == null ? null : new web3_js_1.PublicKey(offerer);
         const claimerKey = claimer == null ? null : new web3_js_1.PublicKey(claimer);

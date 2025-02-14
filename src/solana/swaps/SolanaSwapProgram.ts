@@ -350,8 +350,12 @@ export class SolanaSwapProgram
         payIn: boolean,
         payOut: boolean,
         securityDeposit: BN,
-        claimerBounty: BN
+        claimerBounty: BN,
+        depositToken?: string
     ): Promise<SolanaSwapData> {
+        if(depositToken!=null) {
+            if(!new PublicKey(depositToken).equals(SolanaTokens.WSOL_ADDRESS)) throw new Error("Only SOL supported as deposit token!");
+        }
         const tokenAddr: PublicKey = new PublicKey(token);
         const offererKey = offerer==null ? null : new PublicKey(offerer);
         const claimerKey = claimer==null ? null : new PublicKey(claimer);

@@ -133,7 +133,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @param claimHashHex
      */
     getCommitedData(claimHashHex: string): Promise<SolanaSwapData>;
-    createSwapData(type: ChainSwapType, offerer: string, claimer: string, token: string, amount: BN, claimHash: string, sequence: BN, expiry: BN, payIn: boolean, payOut: boolean, securityDeposit: BN, claimerBounty: BN): Promise<SolanaSwapData>;
+    createSwapData(type: ChainSwapType, offerer: string, claimer: string, token: string, amount: BN, claimHash: string, sequence: BN, expiry: BN, payIn: boolean, payOut: boolean, securityDeposit: BN, claimerBounty: BN, depositToken?: string): Promise<SolanaSwapData>;
     getBalance(signer: string, tokenAddress: string, inContract: boolean): Promise<BN>;
     getIntermediaryData(address: string, token: string): Promise<{
         balance: BN;
