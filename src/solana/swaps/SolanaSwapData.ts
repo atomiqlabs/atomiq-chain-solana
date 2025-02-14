@@ -370,6 +370,10 @@ export class SolanaSwapData extends SwapData {
         return SolanaTokens.WSOL_ADDRESS.toString();
     }
 
+    isDepositToken(token: string): boolean {
+        return SolanaTokens.WSOL_ADDRESS.equals(new PublicKey(token));
+    }
+
 }
 
 SwapData.deserializers["sol"] = SolanaSwapData;

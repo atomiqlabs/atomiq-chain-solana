@@ -55,4 +55,5 @@ export declare class SolanaSwapData extends SwapData {
     isClaimer(address: string): boolean;
     isOfferer(address: string): boolean;
     getDepositToken(): string;
+    isDepositToken(token: string): boolean;
 }

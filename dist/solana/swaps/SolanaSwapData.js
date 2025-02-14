@@ -259,6 +259,9 @@ class SolanaSwapData extends base_1.SwapData {
     getDepositToken() {
         return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.toString();
     }
+    isDepositToken(token) {
+        return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.equals(new web3_js_1.PublicKey(token));
+    }
 }
 exports.SolanaSwapData = SolanaSwapData;
 base_1.SwapData.deserializers["sol"] = SolanaSwapData;
