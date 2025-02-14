@@ -54,4 +54,5 @@ export declare class SolanaSwapData extends SwapData {
     static kindToType(value: number): ChainSwapType;
     isClaimer(address: string): boolean;
     isOfferer(address: string): boolean;
+    getDepositToken(): string;
 }

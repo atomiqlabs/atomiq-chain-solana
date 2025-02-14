@@ -7,6 +7,7 @@ import {SwapTypeEnum} from "./SwapTypeEnum";
 import {Buffer} from "buffer";
 import {getAssociatedTokenAddressSync} from "@solana/spl-token";
 import {toClaimHash, toEscrowHash} from "../../utils/Utils";
+import {SolanaTokens} from "../base/modules/SolanaTokens";
 
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 
@@ -363,6 +364,10 @@ export class SolanaSwapData extends SwapData {
 
     isOfferer(address: string) {
         return this.offerer.equals(new PublicKey(address));
+    }
+
+    getDepositToken(): string {
+        return SolanaTokens.WSOL_ADDRESS.toString();
     }
 
 }

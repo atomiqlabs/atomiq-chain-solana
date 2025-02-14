@@ -485,7 +485,7 @@ export class SwapInit extends SolanaSwapModule {
 
         let isWrapping: boolean = false;
         const isWrappedInSignedTx = feeRate!=null && feeRate.split("#").length>1;
-        if(!isWrappedInSignedTx && swapData.token.equals(this.root.Tokens.WSOL_ADDRESS)) {
+        if(!isWrappedInSignedTx && swapData.token.equals(SolanaTokens.WSOL_ADDRESS)) {
             const ataAcc = await tryWithRetries<Account>(
                 () => this.root.Tokens.getATAOrNull(swapData.offererAta),
                 this.retryPolicy
@@ -563,7 +563,7 @@ export class SwapInit extends SolanaSwapModule {
         }
         if (paymentHash != null) accounts.push(this.root.SwapEscrowState(Buffer.from(paymentHash, "hex")));
 
-        const shouldCheckWSOLAta = token != null && offerer != null && token.equals(this.root.Tokens.WSOL_ADDRESS);
+        const shouldCheckWSOLAta = token != null && offerer != null && token.equals(SolanaTokens.WSOL_ADDRESS);
         let [feeRate, _account] = await Promise.all([
             this.root.Fees.getFeeRate(accounts),
             shouldCheckWSOLAta ?
@@ -620,10 +620,10 @@ export class SwapInit extends SolanaSwapModule {
         ]);
 
         let resultingFee = new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(rawFee);
-        if(initAta) resultingFee = resultingFee.add(new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT));
+        if(initAta) resultingFee = resultingFee.add(new BN(SolanaTokens.SPL_ATA_RENT_EXEMPT));
 
         if(swapData.payIn && this.shouldWrapOnInit(swapData, feeRate) && this.extractAtaDataFromFeeRate(feeRate).initAta) {
-            resultingFee = resultingFee.add(new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT));
+            resultingFee = resultingFee.add(new BN(SolanaTokens.SPL_ATA_RENT_EXEMPT));
         }
 
         return resultingFee;

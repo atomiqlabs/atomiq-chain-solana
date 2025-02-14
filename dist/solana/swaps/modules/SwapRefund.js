@@ -20,6 +20,7 @@ const spl_token_1 = require("@solana/spl-token");
 const SolanaAction_1 = require("../../base/SolanaAction");
 const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
+const SolanaTokens_1 = require("../../base/modules/SolanaTokens");
 class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
     /**
      * Action for generic Refund instruction
@@ -102,7 +103,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      */
     shouldUnwrap(swapData) {
         return swapData.isPayIn() &&
-            swapData.token.equals(this.root.Tokens.WSOL_ADDRESS) &&
+            swapData.token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS) &&
             swapData.offerer.equals(swapData.offerer);
     }
     signSwapRefund(signer, swapData, authorizationTimeout) {
@@ -240,7 +241,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      */
     getRefundFee(swapData, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new BN(swapData == null || swapData.payIn ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawRefundFee(swapData, feeRate));
+            return new BN(swapData == null || swapData.payIn ? SolanaTokens_1.SolanaTokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawRefundFee(swapData, feeRate));
         });
     }
     /**

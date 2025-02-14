@@ -386,7 +386,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             const txs = [];
             let isWrapping = false;
             const isWrappedInSignedTx = feeRate != null && feeRate.split("#").length > 1;
-            if (!isWrappedInSignedTx && swapData.token.equals(this.root.Tokens.WSOL_ADDRESS)) {
+            if (!isWrappedInSignedTx && swapData.token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS)) {
                 const ataAcc = yield (0, Utils_1.tryWithRetries)(() => this.root.Tokens.getATAOrNull(swapData.offererAta), this.retryPolicy);
                 const balance = ataAcc == null ? new BN(0) : new BN(ataAcc.amount.toString());
                 if (balance.lt(swapData.amount)) {
@@ -450,7 +450,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             }
             if (paymentHash != null)
                 accounts.push(this.root.SwapEscrowState(buffer_1.Buffer.from(paymentHash, "hex")));
-            const shouldCheckWSOLAta = token != null && offerer != null && token.equals(this.root.Tokens.WSOL_ADDRESS);
+            const shouldCheckWSOLAta = token != null && offerer != null && token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS);
             let [feeRate, _account] = yield Promise.all([
                 this.root.Fees.getFeeRate(accounts),
                 shouldCheckWSOLAta ?
@@ -505,9 +505,9 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             ]);
             let resultingFee = new BN(this.root.ESCROW_STATE_RENT_EXEMPT).add(rawFee);
             if (initAta)
-                resultingFee = resultingFee.add(new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT));
+                resultingFee = resultingFee.add(new BN(SolanaTokens_1.SolanaTokens.SPL_ATA_RENT_EXEMPT));
             if (swapData.payIn && this.shouldWrapOnInit(swapData, feeRate) && this.extractAtaDataFromFeeRate(feeRate).initAta) {
-                resultingFee = resultingFee.add(new BN(this.root.Tokens.SPL_ATA_RENT_EXEMPT));
+                resultingFee = resultingFee.add(new BN(SolanaTokens_1.SolanaTokens.SPL_ATA_RENT_EXEMPT));
             }
             return resultingFee;
         });

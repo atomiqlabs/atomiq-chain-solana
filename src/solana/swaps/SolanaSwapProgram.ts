@@ -31,6 +31,7 @@ import {Buffer} from "buffer";
 import {SolanaSigner} from "../wallet/SolanaSigner";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
 import {fromClaimHash, toClaimHash} from "../../utils/Utils";
+import {SolanaTokens} from "../base/modules/SolanaTokens";
 
 function toPublicKeyOrNull(str: string | null): PublicKey | null {
     return str==null ? null : new PublicKey(str);
@@ -385,7 +386,7 @@ export class SolanaSwapProgram
         if(inContract) return await this.getIntermediaryBalance(publicKey, token);
 
         let { balance, ataExists } = await this.Tokens.getTokenBalance(publicKey, token);
-        if(token.equals(this.Tokens.WSOL_ADDRESS)) {
+        if(token.equals(SolanaTokens.WSOL_ADDRESS)) {
             const accountRentExemptCost = new BN(1000000);
             balance = BN.max(balance.sub(accountRentExemptCost), new BN(0));
         }

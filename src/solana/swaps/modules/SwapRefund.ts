@@ -18,6 +18,7 @@ import {SolanaAction} from "../../base/SolanaAction";
 import {tryWithRetries} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {SolanaTokens} from "../../base/modules/SolanaTokens";
 
 
 export class SwapRefund extends SolanaSwapModule {
@@ -135,7 +136,7 @@ export class SwapRefund extends SolanaSwapModule {
      */
     private shouldUnwrap(swapData: SolanaSwapData): boolean {
         return swapData.isPayIn() &&
-            swapData.token.equals(this.root.Tokens.WSOL_ADDRESS) &&
+            swapData.token.equals(SolanaTokens.WSOL_ADDRESS) &&
             swapData.offerer.equals(swapData.offerer);
     }
 
@@ -294,7 +295,7 @@ export class SwapRefund extends SolanaSwapModule {
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
     async getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        return new BN(swapData==null || swapData.payIn ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(
+        return new BN(swapData==null || swapData.payIn ? SolanaTokens.SPL_ATA_RENT_EXEMPT : 0).add(
             await this.getRawRefundFee(swapData, feeRate)
         );
     }

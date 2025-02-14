@@ -39,8 +39,8 @@ export declare class SolanaTokens extends SolanaModule {
      * @constructor
      */
     Unwrap(publicKey: PublicKey): SolanaAction;
-    readonly WSOL_ADDRESS: PublicKey;
-    readonly SPL_ATA_RENT_EXEMPT = 2039280;
+    static readonly WSOL_ADDRESS: PublicKey;
+    static readonly SPL_ATA_RENT_EXEMPT = 2039280;
     /**
      * Action for transferring the native SOL token, uses provider's public key as a sender
      *

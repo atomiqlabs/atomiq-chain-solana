@@ -18,6 +18,7 @@ const web3_js_1 = require("@solana/web3.js");
 const Utils_1 = require("../../../utils/Utils");
 const BN = require("bn.js");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
+const SolanaTokens_1 = require("../../base/modules/SolanaTokens");
 class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
     Claim(signer, swapData, secretOrDataKey) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -151,7 +152,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
      */
     shouldUnwrap(signer, swapData) {
         return swapData.isPayOut() &&
-            swapData.token.equals(this.root.Tokens.WSOL_ADDRESS) &&
+            swapData.token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS) &&
             swapData.claimer.equals(signer);
     }
     /**
@@ -278,7 +279,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
      */
     getClaimFee(signer, swapData, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
-            return new BN(swapData == null || swapData.payOut ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawClaimFee(signer, swapData, feeRate));
+            return new BN(swapData == null || swapData.payOut ? SolanaTokens_1.SolanaTokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawClaimFee(signer, swapData, feeRate));
         });
     }
     /**

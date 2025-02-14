@@ -11,6 +11,7 @@ import {SolanaBtcRelay} from "../../btcrelay/SolanaBtcRelay";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import * as BN from "bn.js";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {SolanaTokens} from "../../base/modules/SolanaTokens";
 
 export class SwapClaim extends SolanaSwapModule {
 
@@ -227,7 +228,7 @@ export class SwapClaim extends SolanaSwapModule {
      */
     private shouldUnwrap(signer: PublicKey, swapData: SolanaSwapData): boolean {
         return swapData.isPayOut() &&
-            swapData.token.equals(this.root.Tokens.WSOL_ADDRESS) &&
+            swapData.token.equals(SolanaTokens.WSOL_ADDRESS) &&
             swapData.claimer.equals(signer);
     }
 
@@ -369,7 +370,7 @@ export class SwapClaim extends SolanaSwapModule {
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
     public async getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        return new BN(swapData==null || swapData.payOut ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(
+        return new BN(swapData==null || swapData.payOut ? SolanaTokens.SPL_ATA_RENT_EXEMPT : 0).add(
             await this.getRawClaimFee(signer, swapData, feeRate)
         );
     }

@@ -28,6 +28,7 @@ const buffer_1 = require("buffer");
 const SolanaSigner_1 = require("../wallet/SolanaSigner");
 const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
 const Utils_1 = require("../../utils/Utils");
+const SolanaTokens_1 = require("../base/modules/SolanaTokens");
 function toPublicKeyOrNull(str) {
     return str == null ? null : new web3_js_1.PublicKey(str);
 }
@@ -304,7 +305,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             if (inContract)
                 return yield this.getIntermediaryBalance(publicKey, token);
             let { balance, ataExists } = yield this.Tokens.getTokenBalance(publicKey, token);
-            if (token.equals(this.Tokens.WSOL_ADDRESS)) {
+            if (token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS)) {
                 const accountRentExemptCost = new BN(1000000);
                 balance = BN.max(balance.sub(accountRentExemptCost), new BN(0));
             }

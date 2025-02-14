@@ -13,6 +13,7 @@ import {tryWithRetries} from "../../../utils/Utils";
 import {SwapProgram} from "../programTypes";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
 import { IdlAccounts } from "@coral-xyz/anchor";
+import {SolanaTokens} from "../../base/modules/SolanaTokens";
 
 export class SolanaLpVault extends SolanaSwapModule {
 
@@ -159,7 +160,7 @@ export class SolanaLpVault extends SolanaSwapModule {
             action.add(this.root.Tokens.InitAta(signer, signer, token));
         }
         action.add(await this.Withdraw(signer, token, amount));
-        const shouldUnwrap = token.equals(this.root.Tokens.WSOL_ADDRESS);
+        const shouldUnwrap = token.equals(SolanaTokens.WSOL_ADDRESS);
         if(shouldUnwrap) action.add(this.root.Tokens.Unwrap(signer));
 
         this.logger.debug("txsWithdraw(): withdraw TX created, token: "+token.toString()+
@@ -184,7 +185,7 @@ export class SolanaLpVault extends SolanaSwapModule {
         const action = new SolanaAction(signer, this.root);
 
         let wrapping: boolean = false;
-        if(token.equals(this.root.Tokens.WSOL_ADDRESS)) {
+        if(token.equals(SolanaTokens.WSOL_ADDRESS)) {
             const account = await tryWithRetries<Account>(
                 () => this.root.Tokens.getATAOrNull(ata),
                 this.retryPolicy

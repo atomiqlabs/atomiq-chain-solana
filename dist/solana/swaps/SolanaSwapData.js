@@ -8,6 +8,7 @@ const SwapTypeEnum_1 = require("./SwapTypeEnum");
 const buffer_1 = require("buffer");
 const spl_token_1 = require("@solana/spl-token");
 const Utils_1 = require("../../utils/Utils");
+const SolanaTokens_1 = require("../base/modules/SolanaTokens");
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 class SolanaSwapData extends base_1.SwapData {
     constructor(offererOrData, claimer, token, amount, paymentHash, sequence, expiry, nonce, confirmations, payOut, kind, payIn, offererAta, claimerAta, securityDeposit, claimerBounty, txoHash) {
@@ -254,6 +255,9 @@ class SolanaSwapData extends base_1.SwapData {
     }
     isOfferer(address) {
         return this.offerer.equals(new web3_js_1.PublicKey(address));
+    }
+    getDepositToken() {
+        return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.toString();
     }
 }
 exports.SolanaSwapData = SolanaSwapData;

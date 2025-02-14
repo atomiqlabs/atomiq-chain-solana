@@ -17,11 +17,6 @@ const BN = require("bn.js");
 const SolanaAction_1 = require("../SolanaAction");
 const Utils_1 = require("../../../utils/Utils");
 class SolanaTokens extends SolanaModule_1.SolanaModule {
-    constructor() {
-        super(...arguments);
-        this.WSOL_ADDRESS = new web3_js_1.PublicKey("So11111111111111111111111111111111111111112");
-        this.SPL_ATA_RENT_EXEMPT = 2039280;
-    }
     /**
      * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
      *  public key
@@ -47,10 +42,10 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @constructor
      */
     Wrap(publicKey, amount, initAta) {
-        const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(this.WSOL_ADDRESS, publicKey, true);
+        const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, publicKey, true);
         const action = new SolanaAction_1.SolanaAction(publicKey, this.root);
         if (initAta)
-            action.addIx((0, spl_token_1.createAssociatedTokenAccountInstruction)(publicKey, ata, publicKey, this.WSOL_ADDRESS), SolanaTokens.CUCosts.ATA_INIT);
+            action.addIx((0, spl_token_1.createAssociatedTokenAccountInstruction)(publicKey, ata, publicKey, SolanaTokens.WSOL_ADDRESS), SolanaTokens.CUCosts.ATA_INIT);
         action.addIx(web3_js_1.SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: ata,
@@ -66,7 +61,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @constructor
      */
     Unwrap(publicKey) {
-        const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(this.WSOL_ADDRESS, publicKey, true);
+        const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, publicKey, true);
         return new SolanaAction_1.SolanaAction(publicKey, this.root, (0, spl_token_1.createCloseAccountInstruction)(ata, publicKey, publicKey), SolanaTokens.CUCosts.ATA_CLOSE);
     }
     /**
@@ -111,7 +106,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      */
     txsTransferSol(signer, amount, recipient, feeRate) {
         return __awaiter(this, void 0, void 0, function* () {
-            const wsolAta = (0, spl_token_1.getAssociatedTokenAddressSync)(this.WSOL_ADDRESS, signer, true);
+            const wsolAta = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, signer, true);
             const shouldUnwrap = yield this.ataExists(wsolAta);
             const action = new SolanaAction_1.SolanaAction(signer, this.root);
             if (shouldUnwrap) {
@@ -196,7 +191,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * Returns the rent exempt deposit required to initiate the ATA
      */
     getATARentExemptLamports() {
-        return Promise.resolve(new BN(this.SPL_ATA_RENT_EXEMPT));
+        return Promise.resolve(new BN(SolanaTokens.SPL_ATA_RENT_EXEMPT));
     }
     /**
      * Returns the token balance of the public key
@@ -209,7 +204,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
             const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(token, publicKey, true);
             const [ataAccount, balance] = yield Promise.all([
                 this.getATAOrNull(ata),
-                (token != null && token.equals(this.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
+                (token != null && token.equals(SolanaTokens.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
             ]);
             let ataExists = ataAccount != null;
             let sum = new BN(0);
@@ -232,7 +227,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * Returns the native currency address, we use WSOL address as placeholder for SOL
      */
     getNativeCurrencyAddress() {
-        return this.WSOL_ADDRESS;
+        return SolanaTokens.WSOL_ADDRESS;
     }
     /**
      * Parses string base58 representation of the token address to a PublicKey object
@@ -253,7 +248,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param feeRate fee rate to use for the transaction
      */
     txsTransfer(signer, token, amount, dstAddress, feeRate) {
-        if (this.WSOL_ADDRESS.equals(token)) {
+        if (SolanaTokens.WSOL_ADDRESS.equals(token)) {
             return this.txsTransferSol(signer, amount, dstAddress, feeRate);
         }
         return this.txsTransferTokens(signer, token, amount, dstAddress, feeRate);
@@ -267,3 +262,5 @@ SolanaTokens.CUCosts = {
     TRANSFER: 50000,
     TRANSFER_SOL: 5000
 };
+SolanaTokens.WSOL_ADDRESS = new web3_js_1.PublicKey("So11111111111111111111111111111111111111112");
+SolanaTokens.SPL_ATA_RENT_EXEMPT = 2039280;
