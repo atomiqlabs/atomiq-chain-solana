@@ -1,4 +1,12 @@
-import {BitcoinNetwork, BitcoinRpc, ChainData, IStorageManager, StorageObject} from "@atomiqlabs/base";
+import {
+    BaseTokenType,
+    BitcoinNetwork,
+    BitcoinRpc,
+    ChainData,
+    ChainInitializer,
+    IStorageManager,
+    StorageObject
+} from "@atomiqlabs/base";
 import {Connection} from "@solana/web3.js";
 import {StoredDataAccount} from "./swaps/modules/SolanaDataAccount";
 import {SolanaRetryPolicy} from "./base/SolanaBase";
@@ -12,7 +20,8 @@ import {SolanaSwapData} from "./swaps/SolanaSwapData";
 
 const chainId = "SOLANA" as const;
 
-const SolanaAssets = {
+export type SolanaAssetsType = BaseTokenType<"WBTC" | "USDC" | "USDT" | "SOL" | "BONK">;
+const SolanaAssets: SolanaAssetsType = {
     WBTC: {
         address: "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
         decimals: 8
@@ -34,8 +43,6 @@ const SolanaAssets = {
         decimals: 5
     }
 } as const;
-
-export type SolanaAssetsType = typeof SolanaAssets;
 
 export type SolanaSwapperOptions = {
     rpcUrl: string | Connection,
@@ -81,12 +88,11 @@ export function initializeSolana(
     };
 }
 
-export const SolanaInitializer = {
+export type SolanaInitializerType = ChainInitializer<SolanaSwapperOptions, SolanaChainType, SolanaAssetsType>;
+export const SolanaInitializer: SolanaInitializerType = {
     chainId,
     chainType: null as SolanaChainType,
     initializer: initializeSolana,
     tokens: SolanaAssets,
     options: null as SolanaSwapperOptions
 } as const;
-
-export type SolanaInitializerType = typeof SolanaInitializer;
