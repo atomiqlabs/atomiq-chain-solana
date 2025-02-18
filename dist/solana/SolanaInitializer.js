@@ -41,17 +41,16 @@ function initializeSolana(options, bitcoinRpc, network, storageCtor) {
     const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(connection, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), (_c = options.swapContract) !== null && _c !== void 0 ? _c : SolanaChains_1.SolanaChains[network].addresses.swapContract, (_d = options.retryPolicy) !== null && _d !== void 0 ? _d : { transactionResendInterval: 1000 }, Fees);
     const chainEvents = new SolanaChainEventsBrowser_1.SolanaChainEventsBrowser(connection, swapContract);
     return {
+        chainId,
         btcRelay,
         swapContract,
         chainEvents,
         swapDataConstructor: SolanaSwapData_1.SolanaSwapData,
         //These are defined here to keep the data from old SolLightning-sdk, not needed for other chains
-        storagePrefix: "SOLv4-" + network + "-",
-        chainId
+        storagePrefix: "SOLv4-" + network + "-"
     };
 }
 exports.initializeSolana = initializeSolana;
-;
 exports.SolanaInitializer = {
     chainId,
     chainType: null,

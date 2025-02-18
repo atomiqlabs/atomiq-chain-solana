@@ -25,4 +25,5 @@ export * from "./solana/swaps/modules/SwapRefund";
 export * from "./solana/wallet/SolanaKeypairWallet";
 export * from "./solana/wallet/SolanaSigner";
 export * from "./solana/SolanaChainType";
+export * from "./solana/SolanaInitializer";
 export * from "./utils/Utils";

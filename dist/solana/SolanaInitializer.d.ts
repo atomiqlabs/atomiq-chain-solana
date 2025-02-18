@@ -29,7 +29,6 @@ declare const SolanaAssets: {
 export type SolanaAssetsType = typeof SolanaAssets;
 export type SolanaSwapperOptions = {
     rpcUrl: string | Connection;
-    dataAccountStorageCtor: (name: string) => IStorageManager<StoredDataAccount>;
     dataAccountStorage?: IStorageManager<StoredDataAccount>;
     retryPolicy?: SolanaRetryPolicy;
     btcRelayContract?: string;

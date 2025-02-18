@@ -39,7 +39,6 @@ export type SolanaAssetsType = typeof SolanaAssets;
 
 export type SolanaSwapperOptions = {
     rpcUrl: string | Connection,
-    dataAccountStorageCtor: (name: string) => IStorageManager<StoredDataAccount>,
     dataAccountStorage?: IStorageManager<StoredDataAccount>,
     retryPolicy?: SolanaRetryPolicy,
 
@@ -72,15 +71,15 @@ export function initializeSolana(
     const chainEvents = new SolanaChainEventsBrowser(connection, swapContract);
 
     return {
+        chainId,
         btcRelay,
         swapContract,
         chainEvents,
         swapDataConstructor: SolanaSwapData,
         //These are defined here to keep the data from old SolLightning-sdk, not needed for other chains
-        storagePrefix: "SOLv4-"+network+"-",
-        chainId
+        storagePrefix: "SOLv4-"+network+"-"
     };
-};
+}
 
 export const SolanaInitializer = {
     chainId,
