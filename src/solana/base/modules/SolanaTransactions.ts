@@ -223,7 +223,7 @@ export class SolanaTransactions extends SolanaModule {
      *  optionally waits for confirmation of a batch of solana transactions
      *
      * @param signer
-     * @param txs transactions to send
+     * @param _txs
      * @param waitForConfirmation whether to wait for transaction confirmations (this also makes sure the transactions
      *  are re-sent at regular intervals)
      * @param abortSignal abort signal to abort waiting for transaction confirmations
@@ -231,43 +231,48 @@ export class SolanaTransactions extends SolanaModule {
      *  are executed in order)
      * @param onBeforePublish a callback called before every transaction is published
      */
-    public async sendAndConfirm(signer: SolanaSigner, txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]> {
-        await this.prepareTransactions(signer, txs)
-        const signedTxs = await signer.wallet.signAllTransactions(txs.map(e => e.tx));
-        signedTxs.forEach((tx, index) => {
-            const solTx = txs[index];
-            tx.lastValidBlockHeight = solTx.tx.lastValidBlockHeight;
-            solTx.tx = tx
-        });
-
+    public async sendAndConfirm(signer: SolanaSigner, _txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]> {
         const options = {
             skipPreflight: true
         };
 
-        this.logger.debug("sendAndConfirm(): sending transactions, count: "+txs.length+
+        this.logger.debug("sendAndConfirm(): sending transactions, count: "+_txs.length+
             " waitForConfirmation: "+waitForConfirmation+" parallel: "+parallel);
 
         const signatures: string[] = [];
-        if(parallel) {
-            const promises: Promise<void>[] = [];
-            for(let solTx of txs) {
-                const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
-                if(waitForConfirmation) promises.push(this.confirmTransaction(solTx, abortSignal, "confirmed"));
-                signatures.push(signature);
-            }
-            if(promises.length>0) await Promise.all(promises);
-        } else {
-            for(let i=0;i<txs.length;i++) {
-                const solTx = txs[i];
-                const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
-                const confirmPromise = this.confirmTransaction(solTx, abortSignal, "confirmed");
-                //Don't await the last promise when !waitForConfirmation
-                if(i<txs.length-1 || waitForConfirmation) await confirmPromise;
-                signatures.push(signature);
+        for(let e=0;e<_txs.length;e+=50) {
+            const txs = _txs.slice(e, e+50);
+
+            await this.prepareTransactions(signer, txs)
+            const signedTxs = await signer.wallet.signAllTransactions(txs.map(e => e.tx));
+            signedTxs.forEach((tx, index) => {
+                const solTx = txs[index];
+                tx.lastValidBlockHeight = solTx.tx.lastValidBlockHeight;
+                solTx.tx = tx
+            });
+            this.logger.debug("sendAndConfirm(): sending transaction batch ("+e+".."+(e+50)+"), count: "+txs.length);
+
+            if(parallel) {
+                const promises: Promise<void>[] = [];
+                for(let solTx of txs) {
+                    const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
+                    if(waitForConfirmation) promises.push(this.confirmTransaction(solTx, abortSignal, "confirmed"));
+                    signatures.push(signature);
+                }
+                if(promises.length>0) await Promise.all(promises);
+            } else {
+                for(let i=0;i<txs.length;i++) {
+                    const solTx = txs[i];
+                    const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
+                    const confirmPromise = this.confirmTransaction(solTx, abortSignal, "confirmed");
+                    //Don't await the last promise when !waitForConfirmation
+                    if(i<txs.length-1 || e+50<_txs.length || waitForConfirmation) await confirmPromise;
+                    signatures.push(signature);
+                }
             }
         }
 
-        this.logger.info("sendAndConfirm(): sent transactions, count: "+txs.length+
+        this.logger.info("sendAndConfirm(): sent transactions, count: "+_txs.length+
             " waitForConfirmation: "+waitForConfirmation+" parallel: "+parallel);
 
         return signatures;
