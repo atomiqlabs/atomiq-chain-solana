@@ -32,13 +32,12 @@ const SolanaAssets = {
     }
 };
 function initializeSolana(options, bitcoinRpc, network, storageCtor) {
-    var _a, _b, _c, _d;
     const connection = typeof (options.rpcUrl) === "string" ?
         new web3_js_1.Connection(options.rpcUrl) :
         options.rpcUrl;
-    const Fees = (_a = options.fees) !== null && _a !== void 0 ? _a : new SolanaFees_1.SolanaFees(connection, 200000, 4, 100);
-    const btcRelay = new SolanaBtcRelay_1.SolanaBtcRelay(connection, bitcoinRpc, (_b = options.btcRelayContract) !== null && _b !== void 0 ? _b : SolanaChains_1.SolanaChains[network].addresses.btcRelayContract, Fees);
-    const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(connection, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), (_c = options.swapContract) !== null && _c !== void 0 ? _c : SolanaChains_1.SolanaChains[network].addresses.swapContract, (_d = options.retryPolicy) !== null && _d !== void 0 ? _d : { transactionResendInterval: 1000 }, Fees);
+    const Fees = options.fees ?? new SolanaFees_1.SolanaFees(connection, 200000, 4, 100);
+    const btcRelay = new SolanaBtcRelay_1.SolanaBtcRelay(connection, bitcoinRpc, options.btcRelayContract ?? SolanaChains_1.SolanaChains[network].addresses.btcRelayContract, Fees);
+    const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(connection, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), options.swapContract ?? SolanaChains_1.SolanaChains[network].addresses.swapContract, options.retryPolicy ?? { transactionResendInterval: 1000 }, Fees);
     const chainEvents = new SolanaChainEventsBrowser_1.SolanaChainEventsBrowser(connection, swapContract);
     return {
         chainId,

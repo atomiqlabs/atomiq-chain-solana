@@ -1,16 +1,6 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaFees = void 0;
-const BN = require("bn.js");
 const web3_js_1 = require("@solana/web3.js");
 const Utils_1 = require("../../../utils/Utils");
 const MAX_FEE_AGE = 5000;
@@ -20,7 +10,7 @@ class SolanaFees {
         this.logger = (0, Utils_1.getLogger)("SolanaFees: ");
         this.blockFeeCache = null;
         this.connection = connection;
-        this.maxFeeMicroLamports = new BN(maxFeeMicroLamports);
+        this.maxFeeMicroLamports = BigInt(maxFeeMicroLamports);
         this.numSamples = numSamples;
         this.period = period;
         this.useHeliusApi = useHeliusApi;
@@ -34,25 +24,23 @@ class SolanaFees {
      * @param slot
      * @private
      */
-    getBlockWithSignature(slot) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.connection._rpcRequest("getBlock", [
-                slot,
-                {
-                    encoding: "json",
-                    transactionDetails: "signatures",
-                    commitment: "confirmed",
-                    rewards: true
-                }
-            ]);
-            if (response.error != null) {
-                if (response.error.code === -32004 || response.error.code === -32007 || response.error.code === -32009 || response.error.code === -32014) {
-                    return null;
-                }
-                throw new Error(response.error.message);
+    async getBlockWithSignature(slot) {
+        const response = await this.connection._rpcRequest("getBlock", [
+            slot,
+            {
+                encoding: "json",
+                transactionDetails: "signatures",
+                commitment: "confirmed",
+                rewards: true
             }
-            return response.result;
-        });
+        ]);
+        if (response.error != null) {
+            if (response.error.code === -32004 || response.error.code === -32007 || response.error.code === -32009 || response.error.code === -32014) {
+                return null;
+            }
+            throw new Error(response.error.message);
+        }
+        return response.result;
     }
     /**
      * Returns fee estimate from Helius API - only works with Helius RPC, return null for all other RPC providers
@@ -60,36 +48,34 @@ class SolanaFees {
      * @param mutableAccounts
      * @private
      */
-    getPriorityFeeEstimate(mutableAccounts) {
-        return __awaiter(this, void 0, void 0, function* () {
-            //Try to use getPriorityFeeEstimate api of Helius
-            const response = yield this.connection._rpcRequest("getPriorityFeeEstimate", [
-                {
-                    "accountKeys": mutableAccounts.map(e => e.toBase58()),
-                    "options": {
-                        "includeAllPriorityFeeLevels": true
-                    }
+    async getPriorityFeeEstimate(mutableAccounts) {
+        //Try to use getPriorityFeeEstimate api of Helius
+        const response = await this.connection._rpcRequest("getPriorityFeeEstimate", [
+            {
+                "accountKeys": mutableAccounts.map(e => e.toBase58()),
+                "options": {
+                    "includeAllPriorityFeeLevels": true
                 }
-            ]).catch(e => {
-                //Catching not supported errors
-                if (e.message != null && (e.message.includes("-32601") || e.message.includes("-32600"))) {
-                    return {
-                        error: {
-                            code: -32601,
-                            message: e.message
-                        }
-                    };
-                }
-                throw e;
-            });
-            if (response.error != null) {
-                //Catching not supported errors
-                if (response.error.code !== -32601 && response.error.code !== -32600)
-                    throw new Error(response.error.message);
-                return null;
             }
-            return response.result.priorityFeeLevels;
+        ]).catch(e => {
+            //Catching not supported errors
+            if (e.message != null && (e.message.includes("-32601") || e.message.includes("-32600"))) {
+                return {
+                    error: {
+                        code: -32601,
+                        message: e.message
+                    }
+                };
+            }
+            throw e;
         });
+        if (response.error != null) {
+            //Catching not supported errors
+            if (response.error.code !== -32601 && response.error.code !== -32600)
+                throw new Error(response.error.message);
+            return null;
+        }
+        return response.result.priorityFeeLevels;
     }
     /**
      * Sends the transaction over Jito
@@ -99,32 +85,32 @@ class SolanaFees {
      * @private
      * @returns {Promise<string>} transaction signature
      */
-    sendJitoTx(tx, options) {
-        var _a;
-        return __awaiter(this, void 0, void 0, function* () {
-            if (((_a = this.bribeData) === null || _a === void 0 ? void 0 : _a.endpoint) == null)
-                throw new Error("Jito endpoint not specified!");
-            if (options == null)
-                options = {};
-            const request = yield fetch(this.bribeData.endpoint, {
-                method: "POST",
-                body: JSON.stringify({
-                    jsonrpc: "2.0",
-                    id: 1,
-                    method: "sendTransaction",
-                    params: [tx.toString("base64"), Object.assign(Object.assign({}, options), { encoding: "base64" })],
-                }),
-                headers: {
-                    "Content-Type": "application/json"
-                }
-            });
-            if (request.ok) {
-                const parsedResponse = yield request.json();
-                // console.log(parsedResponse);
-                return parsedResponse.result;
+    async sendJitoTx(tx, options) {
+        if (this.bribeData?.endpoint == null)
+            throw new Error("Jito endpoint not specified!");
+        if (options == null)
+            options = {};
+        const request = await fetch(this.bribeData.endpoint, {
+            method: "POST",
+            body: JSON.stringify({
+                jsonrpc: "2.0",
+                id: 1,
+                method: "sendTransaction",
+                params: [tx.toString("base64"), {
+                        ...options,
+                        encoding: "base64"
+                    }],
+            }),
+            headers: {
+                "Content-Type": "application/json"
             }
-            throw new Error(yield request.text());
         });
+        if (request.ok) {
+            const parsedResponse = await request.json();
+            // console.log(parsedResponse);
+            return parsedResponse.result;
+        }
+        throw new Error(await request.text());
     }
     /**
      * Checks whether the transaction should be sent over Jito, returns the fee paid to Jito in case the transaction
@@ -134,16 +120,15 @@ class SolanaFees {
      * @private
      */
     getJitoTxFee(parsedTx) {
-        var _a;
         const lastIx = parsedTx.instructions[parsedTx.instructions.length - 1];
         if (!lastIx.programId.equals(web3_js_1.SystemProgram.programId))
             return null;
         if (web3_js_1.SystemInstruction.decodeInstructionType(lastIx) !== "Transfer")
             return null;
         const decodedIxData = web3_js_1.SystemInstruction.decodeTransfer(lastIx);
-        if (decodedIxData.toPubkey.toBase58() !== ((_a = this.bribeData) === null || _a === void 0 ? void 0 : _a.address))
+        if (decodedIxData.toPubkey.toBase58() !== this.bribeData?.address)
             return null;
-        return new BN(decodedIxData.lamports.toString(10));
+        return decodedIxData.lamports;
     }
     /**
      * Gets the mean microLamports/CU fee rate for the block at a specific slot
@@ -151,24 +136,22 @@ class SolanaFees {
      * @param slot
      * @private
      */
-    getBlockMeanFeeRate(slot) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const block = yield this.getBlockWithSignature(slot);
-            if (block == null)
-                return null;
-            const blockComission = block.rewards.find(e => e.rewardType === "Fee");
-            const totalBlockFees = new BN(blockComission.lamports).mul(new BN(2));
-            //Subtract per-signature fees to get pure compute fees
-            const totalTransactionBaseFees = new BN(block.signatures.length).mul(new BN(5000));
-            const computeFees = totalBlockFees.sub(totalTransactionBaseFees);
-            //Total compute fees in micro lamports
-            const computeFeesMicroLamports = computeFees.mul(new BN(1000000));
-            //micro lamports per CU considering block was full (48M compute units)
-            const perCUMicroLamports = computeFeesMicroLamports.div(new BN(48000000));
-            this.logger.debug("getBlockMeanFeeRate(): slot: " + slot + " total reward: " + totalBlockFees.toString(10) +
-                " total transactions: " + block.signatures.length + " computed fee: " + perCUMicroLamports);
-            return perCUMicroLamports;
-        });
+    async getBlockMeanFeeRate(slot) {
+        const block = await this.getBlockWithSignature(slot);
+        if (block == null)
+            return null;
+        const blockComission = block.rewards.find(e => e.rewardType === "Fee");
+        const totalBlockFees = BigInt(blockComission.lamports) * 2n;
+        //Subtract per-signature fees to get pure compute fees
+        const totalTransactionBaseFees = BigInt(block.signatures.length) * 5000n;
+        const computeFees = totalBlockFees - totalTransactionBaseFees;
+        //Total compute fees in micro lamports
+        const computeFeesMicroLamports = computeFees * 1000000n;
+        //micro lamports per CU considering block was full (48M compute units)
+        const perCUMicroLamports = computeFeesMicroLamports / 48000000n;
+        this.logger.debug("getBlockMeanFeeRate(): slot: " + slot + " total reward: " + totalBlockFees.toString(10) +
+            " total transactions: " + block.signatures.length + " computed fee: " + perCUMicroLamports);
+        return perCUMicroLamports;
     }
     /**
      * Manually gets global fee rate by sampling random blocks over the last period
@@ -176,35 +159,33 @@ class SolanaFees {
      * @private
      * @returns {Promise<BN>} sampled mean microLamports/CU fee over the last period
      */
-    _getGlobalFeeRate() {
-        return __awaiter(this, void 0, void 0, function* () {
-            let slot = yield this.connection.getSlot();
-            const slots = [];
-            for (let i = 0; i < this.period; i++) {
-                slots.push(slot - i);
-            }
-            const promises = [];
-            for (let i = 0; i < this.numSamples; i++) {
-                promises.push((() => __awaiter(this, void 0, void 0, function* () {
-                    let feeRate = null;
-                    while (feeRate == null) {
-                        if (slots.length === 0)
-                            throw new Error("Ran out of slots to check!");
-                        const index = Math.floor(Math.random() * slots.length);
-                        const slotNumber = slots[index];
-                        slots.splice(index, 1);
-                        feeRate = yield this.getBlockMeanFeeRate(slotNumber);
-                    }
-                    return feeRate;
-                }))());
-            }
-            const meanFees = yield Promise.all(promises);
-            let min = null;
-            meanFees.forEach(e => min == null ? min = e : min = BN.min(min, e));
-            if (min != null)
-                this.logger.debug("_getGlobalFeeRate(): slot: " + slot + " global fee minimum: " + min.toString(10));
-            return min;
-        });
+    async _getGlobalFeeRate() {
+        let slot = await this.connection.getSlot();
+        const slots = [];
+        for (let i = 0; i < this.period; i++) {
+            slots.push(slot - i);
+        }
+        const promises = [];
+        for (let i = 0; i < this.numSamples; i++) {
+            promises.push((async () => {
+                let feeRate = null;
+                while (feeRate == null) {
+                    if (slots.length === 0)
+                        throw new Error("Ran out of slots to check!");
+                    const index = Math.floor(Math.random() * slots.length);
+                    const slotNumber = slots[index];
+                    slots.splice(index, 1);
+                    feeRate = await this.getBlockMeanFeeRate(slotNumber);
+                }
+                return feeRate;
+            })());
+        }
+        const meanFees = await Promise.all(promises);
+        let min = null;
+        meanFees.forEach(e => min == null || min > e ? min = e : 0);
+        if (min != null)
+            this.logger.debug("_getGlobalFeeRate(): slot: " + slot + " global fee minimum: " + min.toString(10));
+        return min;
     }
     /**
      * Gets the combined microLamports/CU fee rate (from localized & global fee market)
@@ -212,36 +193,44 @@ class SolanaFees {
      * @param mutableAccounts
      * @private
      */
-    _getFeeRate(mutableAccounts) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (this.useHeliusApi === "yes" || (this.useHeliusApi === "auto" && this.heliusApiSupported)) {
-                //Try to use getPriorityFeeEstimate api of Helius
-                const fees = yield this.getPriorityFeeEstimate(mutableAccounts);
-                if (fees != null) {
-                    const calculatedFee = BN.max(new BN(8000), new BN(fees[this.heliusFeeLevel]));
-                    return BN.min(calculatedFee, this.maxFeeMicroLamports);
-                }
-                this.logger.warn("_getFeeRate(): tried fetching fees from Helius API, not supported," +
-                    " falling back to client-side fee estimation");
-                this.heliusApiSupported = false;
+    async _getFeeRate(mutableAccounts) {
+        if (this.useHeliusApi === "yes" || (this.useHeliusApi === "auto" && this.heliusApiSupported)) {
+            //Try to use getPriorityFeeEstimate api of Helius
+            const fees = await this.getPriorityFeeEstimate(mutableAccounts);
+            if (fees != null) {
+                let calculatedFee = BigInt(fees[this.heliusFeeLevel]);
+                if (calculatedFee < 8000n)
+                    calculatedFee = 8000n;
+                if (calculatedFee > this.maxFeeMicroLamports)
+                    calculatedFee = this.maxFeeMicroLamports;
+                return calculatedFee;
             }
-            const [globalFeeRate, localFeeRate] = yield Promise.all([
-                this.getGlobalFeeRate(),
-                this.connection.getRecentPrioritizationFees({
-                    lockedWritableAccounts: mutableAccounts
-                }).then(resp => {
-                    let lamports = 0;
-                    for (let i = 20; i >= 0; i--) {
-                        const data = resp[resp.length - i - 1];
-                        if (data != null)
-                            lamports = Math.min(lamports, data.prioritizationFee);
-                    }
-                    return new BN(lamports);
-                })
-            ]);
-            const fee = BN.max(BN.max(globalFeeRate, localFeeRate), new BN(8000));
-            return BN.min(fee, this.maxFeeMicroLamports);
-        });
+            this.logger.warn("_getFeeRate(): tried fetching fees from Helius API, not supported," +
+                " falling back to client-side fee estimation");
+            this.heliusApiSupported = false;
+        }
+        const [globalFeeRate, localFeeRate] = await Promise.all([
+            this.getGlobalFeeRate(),
+            this.connection.getRecentPrioritizationFees({
+                lockedWritableAccounts: mutableAccounts
+            }).then(resp => {
+                let lamports = 0;
+                for (let i = 20; i >= 0; i--) {
+                    const data = resp[resp.length - i - 1];
+                    if (data != null)
+                        lamports = Math.min(lamports, data.prioritizationFee);
+                }
+                return BigInt(lamports);
+            })
+        ]);
+        let fee = globalFeeRate;
+        if (fee < localFeeRate)
+            fee = localFeeRate;
+        if (fee < 8000n)
+            fee = 8000n;
+        if (fee > this.maxFeeMicroLamports)
+            fee = this.maxFeeMicroLamports;
+        return fee;
     }
     /**
      * Gets global fee rate, with caching
@@ -270,25 +259,22 @@ class SolanaFees {
      * @param mutableAccounts
      * @private
      */
-    getFeeRate(mutableAccounts) {
-        var _a, _b;
-        return __awaiter(this, void 0, void 0, function* () {
-            let feeMicroLamportPerCU = yield this._getFeeRate(mutableAccounts);
-            if (((_a = this.bribeData) === null || _a === void 0 ? void 0 : _a.getBribeFee) != null)
-                feeMicroLamportPerCU = this.bribeData.getBribeFee(feeMicroLamportPerCU);
-            let fee = feeMicroLamportPerCU.toString(10);
-            if (this.getStaticFee != null) {
-                fee += ";" + this.getStaticFee(feeMicroLamportPerCU);
-            }
-            else {
-                fee += ";0";
-            }
-            if ((_b = this.bribeData) === null || _b === void 0 ? void 0 : _b.address) {
-                fee += ";" + this.bribeData.address;
-            }
-            this.logger.debug("getFeeRate(): calculated fee: " + fee);
-            return fee;
-        });
+    async getFeeRate(mutableAccounts) {
+        let feeMicroLamportPerCU = await this._getFeeRate(mutableAccounts);
+        if (this.bribeData?.getBribeFee != null)
+            feeMicroLamportPerCU = this.bribeData.getBribeFee(feeMicroLamportPerCU);
+        let fee = feeMicroLamportPerCU.toString(10);
+        if (this.getStaticFee != null) {
+            fee += ";" + this.getStaticFee(feeMicroLamportPerCU);
+        }
+        else {
+            fee += ";0";
+        }
+        if (this.bribeData?.address) {
+            fee += ";" + this.bribeData.address;
+        }
+        this.logger.debug("getFeeRate(): calculated fee: " + fee);
+        return fee;
     }
     /**
      * Calculates the total priority fee paid for a given compute budget at a given fee rate
@@ -299,15 +285,15 @@ class SolanaFees {
      */
     getPriorityFee(computeUnits, feeRate, includeStaticFee = true) {
         if (feeRate == null)
-            return new BN(0);
+            return 0n;
         const hashArr = feeRate.split("#");
         if (hashArr.length > 1) {
             feeRate = hashArr[0];
         }
         const arr = feeRate.split(";");
-        const cuPrice = new BN(arr[0]);
-        const staticFee = includeStaticFee ? new BN(arr[1]) : new BN(0);
-        return staticFee.add(cuPrice.mul(new BN(computeUnits)).div(new BN(1000000)));
+        const cuPrice = BigInt(arr[0]);
+        const staticFee = includeStaticFee ? BigInt(arr[1]) : 0n;
+        return staticFee + (cuPrice * BigInt(computeUnits) / 1000000n);
     }
     /**
      * Applies fee rate to a transaction at the beginning of the transaction (has to be called after

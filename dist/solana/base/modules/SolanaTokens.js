@@ -1,19 +1,9 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaTokens = void 0;
 const SolanaModule_1 = require("../SolanaModule");
 const web3_js_1 = require("@solana/web3.js");
 const spl_token_1 = require("@solana/spl-token");
-const BN = require("bn.js");
 const SolanaAction_1 = require("../SolanaAction");
 const Utils_1 = require("../../../utils/Utils");
 class SolanaTokens extends SolanaModule_1.SolanaModule {
@@ -49,7 +39,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
         action.addIx(web3_js_1.SystemProgram.transfer({
             fromPubkey: publicKey,
             toPubkey: ata,
-            lamports: BigInt(amount.toString(10))
+            lamports: amount
         }), SolanaTokens.CUCosts.WRAP_SOL);
         action.addIx((0, spl_token_1.createSyncNativeInstruction)(ata));
         return action;
@@ -77,7 +67,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
         return new SolanaAction_1.SolanaAction(signer, this.root, web3_js_1.SystemProgram.transfer({
             fromPubkey: signer,
             toPubkey: recipient,
-            lamports: BigInt(amount.toString(10))
+            lamports: amount
         }), SolanaTokens.CUCosts.TRANSFER_SOL);
     }
     /**
@@ -93,7 +83,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
     Transfer(signer, recipient, token, amount) {
         const srcAta = (0, spl_token_1.getAssociatedTokenAddressSync)(token, signer, true);
         const dstAta = (0, spl_token_1.getAssociatedTokenAddressSync)(token, recipient, true);
-        return new SolanaAction_1.SolanaAction(signer, this.root, (0, spl_token_1.createTransferInstruction)(srcAta, dstAta, signer, BigInt(amount.toString(10))), SolanaTokens.CUCosts.TRANSFER);
+        return new SolanaAction_1.SolanaAction(signer, this.root, (0, spl_token_1.createTransferInstruction)(srcAta, dstAta, signer, amount), SolanaTokens.CUCosts.TRANSFER);
     }
     /**
      * Creates transactions for sending SOL (the native token)
@@ -104,23 +94,21 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param feeRate fee rate to use for the transactions
      * @private
      */
-    txsTransferSol(signer, amount, recipient, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const wsolAta = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, signer, true);
-            const shouldUnwrap = yield this.ataExists(wsolAta);
-            const action = new SolanaAction_1.SolanaAction(signer, this.root);
-            if (shouldUnwrap) {
-                feeRate = feeRate || (yield this.root.Fees.getFeeRate([signer, recipient, wsolAta]));
-                action.add(this.Unwrap(signer));
-            }
-            else {
-                feeRate = feeRate || (yield this.root.Fees.getFeeRate([signer, recipient]));
-            }
-            action.add(this.SolTransfer(signer, recipient, amount));
-            this.logger.debug("txsTransferSol(): transfer native solana TX created, recipient: " + recipient.toString() +
-                " amount: " + amount.toString(10) + " unwrapping: " + shouldUnwrap);
-            return [yield action.tx(feeRate)];
-        });
+    async txsTransferSol(signer, amount, recipient, feeRate) {
+        const wsolAta = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, signer, true);
+        const shouldUnwrap = await this.ataExists(wsolAta);
+        const action = new SolanaAction_1.SolanaAction(signer, this.root);
+        if (shouldUnwrap) {
+            feeRate = feeRate || await this.root.Fees.getFeeRate([signer, recipient, wsolAta]);
+            action.add(this.Unwrap(signer));
+        }
+        else {
+            feeRate = feeRate || await this.root.Fees.getFeeRate([signer, recipient]);
+        }
+        action.add(this.SolTransfer(signer, recipient, amount));
+        this.logger.debug("txsTransferSol(): transfer native solana TX created, recipient: " + recipient.toString() +
+            " amount: " + amount.toString(10) + " unwrapping: " + shouldUnwrap);
+        return [await action.tx(feeRate)];
     }
     /**
      * Creates transactions for sending the over the tokens
@@ -132,21 +120,19 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param feeRate fee rate to use for the transactions
      * @private
      */
-    txsTransferTokens(signer, token, amount, recipient, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const srcAta = (0, spl_token_1.getAssociatedTokenAddressSync)(token, signer, true);
-            const dstAta = (0, spl_token_1.getAssociatedTokenAddressSync)(token, recipient, true);
-            feeRate = feeRate || (yield this.root.Fees.getFeeRate([signer, srcAta, dstAta]));
-            const initAta = !(yield this.ataExists(dstAta));
-            const action = new SolanaAction_1.SolanaAction(signer, this.root);
-            if (initAta) {
-                action.add(this.InitAta(signer, recipient, token));
-            }
-            action.add(this.Transfer(signer, recipient, token, amount));
-            this.logger.debug("txsTransferTokens(): transfer TX created, recipient: " + recipient.toString() +
-                " token: " + token.toString() + " amount: " + amount.toString(10) + " initAta: " + initAta);
-            return [yield action.tx(feeRate)];
-        });
+    async txsTransferTokens(signer, token, amount, recipient, feeRate) {
+        const srcAta = (0, spl_token_1.getAssociatedTokenAddressSync)(token, signer, true);
+        const dstAta = (0, spl_token_1.getAssociatedTokenAddressSync)(token, recipient, true);
+        feeRate = feeRate || await this.root.Fees.getFeeRate([signer, srcAta, dstAta]);
+        const initAta = !await this.ataExists(dstAta);
+        const action = new SolanaAction_1.SolanaAction(signer, this.root);
+        if (initAta) {
+            action.add(this.InitAta(signer, recipient, token));
+        }
+        action.add(this.Transfer(signer, recipient, token, amount));
+        this.logger.debug("txsTransferTokens(): transfer TX created, recipient: " + recipient.toString() +
+            " token: " + token.toString() + " amount: " + amount.toString(10) + " initAta: " + initAta);
+        return [await action.tx(feeRate)];
     }
     ///////////////////
     //// Tokens
@@ -181,17 +167,15 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      *
      * @param ata
      */
-    ataExists(ata) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const account = yield (0, Utils_1.tryWithRetries)(() => this.getATAOrNull(ata), this.retryPolicy);
-            return account != null;
-        });
+    async ataExists(ata) {
+        const account = await (0, Utils_1.tryWithRetries)(() => this.getATAOrNull(ata), this.retryPolicy);
+        return account != null;
     }
     /**
      * Returns the rent exempt deposit required to initiate the ATA
      */
     getATARentExemptLamports() {
-        return Promise.resolve(new BN(SolanaTokens.SPL_ATA_RENT_EXEMPT));
+        return Promise.resolve(BigInt(SolanaTokens.SPL_ATA_RENT_EXEMPT));
     }
     /**
      * Returns the token balance of the public key
@@ -199,29 +183,27 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param publicKey
      * @param token
      */
-    getTokenBalance(publicKey, token) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(token, publicKey, true);
-            const [ataAccount, balance] = yield Promise.all([
-                this.getATAOrNull(ata),
-                (token != null && token.equals(SolanaTokens.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
-            ]);
-            let ataExists = ataAccount != null;
-            let sum = new BN(0);
-            if (ataExists) {
-                sum = sum.add(new BN(ataAccount.amount.toString()));
-            }
-            if (balance != null) {
-                let balanceLamports = new BN(balance);
-                if (!ataExists)
-                    balanceLamports = balanceLamports.sub(yield this.getATARentExemptLamports());
-                if (!balanceLamports.isNeg())
-                    sum = sum.add(balanceLamports);
-            }
-            this.logger.debug("getTokenBalance(): token balance fetched, token: " + token.toString() +
-                " address: " + publicKey.toString() + " amount: " + sum.toString());
-            return { balance: sum, ataExists };
-        });
+    async getTokenBalance(publicKey, token) {
+        const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(token, publicKey, true);
+        const [ataAccount, balance] = await Promise.all([
+            this.getATAOrNull(ata),
+            (token != null && token.equals(SolanaTokens.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
+        ]);
+        let ataExists = ataAccount != null;
+        let sum = 0n;
+        if (ataExists) {
+            sum += ataAccount.amount;
+        }
+        if (balance != null) {
+            let balanceLamports = BigInt(balance);
+            if (!ataExists)
+                balanceLamports = balanceLamports - await this.getATARentExemptLamports();
+            if (balanceLamports >= 0n)
+                sum += balanceLamports;
+        }
+        this.logger.debug("getTokenBalance(): token balance fetched, token: " + token.toString() +
+            " address: " + publicKey.toString() + " amount: " + sum.toString());
+        return { balance: sum, ataExists };
     }
     /**
      * Returns the native currency address, we use WSOL address as placeholder for SOL

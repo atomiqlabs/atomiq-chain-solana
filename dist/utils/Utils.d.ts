@@ -42,10 +42,12 @@ export declare class SolanaTxUtils {
      */
     static getTxSize(tx: Transaction, feePayer: PublicKey): number;
 }
-export declare function toClaimHash(paymentHash: string, nonce: BN, confirmations: number): string;
+export declare function toClaimHash(paymentHash: string, nonce: bigint, confirmations: number): string;
 export declare function fromClaimHash(claimHash: string): {
     paymentHash: string;
     nonce: BN;
     confirmations: number;
 };
 export declare function toEscrowHash(paymentHash: string, sequence: BN): string;
+export declare function toBN(value: bigint): BN;
+export declare function toBigInt(value: BN): bigint;

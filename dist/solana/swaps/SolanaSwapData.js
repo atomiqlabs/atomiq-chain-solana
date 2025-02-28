@@ -93,7 +93,7 @@ class SolanaSwapData extends base_1.SwapData {
         };
     }
     getAmount() {
-        return this.amount;
+        return (0, Utils_1.toBigInt)(this.amount);
     }
     getToken() {
         return this.token.toString();
@@ -107,13 +107,13 @@ class SolanaSwapData extends base_1.SwapData {
     getExpiry() {
         if (this.expiry.lt(EXPIRY_BLOCKHEIGHT_THRESHOLD))
             return null;
-        return this.expiry;
+        return (0, Utils_1.toBigInt)(this.expiry);
     }
     getConfirmationsHint() {
         return this.confirmations;
     }
     getNonceHint() {
-        return this.nonce;
+        return (0, Utils_1.toBigInt)(this.nonce);
     }
     isPayIn() {
         return this.payIn;
@@ -122,13 +122,13 @@ class SolanaSwapData extends base_1.SwapData {
         return this.payOut;
     }
     getClaimHash() {
-        return (0, Utils_1.toClaimHash)(this.paymentHash, this.nonce, this.confirmations);
+        return (0, Utils_1.toClaimHash)(this.paymentHash, (0, Utils_1.toBigInt)(this.nonce), this.confirmations);
     }
     getEscrowHash() {
         return (0, Utils_1.toEscrowHash)(this.paymentHash, this.sequence);
     }
     getSequence() {
-        return this.sequence;
+        return (0, Utils_1.toBigInt)(this.sequence);
     }
     getTxoHashHint() {
         if (this.txoHash === "0000000000000000000000000000000000000000000000000000000000000000")
@@ -142,13 +142,13 @@ class SolanaSwapData extends base_1.SwapData {
         this.txoHash = txoHash;
     }
     getSecurityDeposit() {
-        return this.securityDeposit;
+        return (0, Utils_1.toBigInt)(this.securityDeposit);
     }
     getClaimerBounty() {
-        return this.claimerBounty;
+        return (0, Utils_1.toBigInt)(this.claimerBounty);
     }
     getTotalDeposit() {
-        return this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty;
+        return (0, Utils_1.toBigInt)(this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty);
     }
     toSwapDataStruct() {
         return {

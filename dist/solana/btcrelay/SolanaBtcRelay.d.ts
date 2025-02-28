@@ -3,7 +3,6 @@ import { Connection, PublicKey, Signer, Transaction } from "@solana/web3.js";
 import { SolanaBtcStoredHeader } from "./headers/SolanaBtcStoredHeader";
 import { BitcoinRpc, BtcBlock, BtcRelay } from "@atomiqlabs/base";
 import { SolanaProgramBase } from "../program/SolanaProgramBase";
-import * as BN from "bn.js";
 import { SolanaAction } from "../base/SolanaAction";
 import { Buffer } from "buffer";
 import { SolanaFees } from "../base/modules/SolanaFees";
@@ -211,13 +210,13 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param requiredBlockheight
      * @param feeRate
      */
-    estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<BN>;
+    estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<bigint>;
     /**
      * Returns fee required (in SOL) to synchronize a single block to btc relay
      *
      * @param feeRate
      */
-    getFeePerBlock(feeRate?: string): Promise<BN>;
+    getFeePerBlock(feeRate?: string): Promise<bigint>;
     /**
      * Gets fee rate required for submitting blockheaders to the main chain
      */

@@ -1,7 +1,6 @@
 /// <reference types="node" />
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaSwapData } from "../SolanaSwapData";
-import * as BN from "bn.js";
 import { SolanaTx } from "../../base/modules/SolanaTransactions";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
@@ -75,9 +74,9 @@ export declare class SwapRefund extends SolanaSwapModule {
      * Get the estimated solana transaction fee of the refund transaction, in the worst case scenario in case where the
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
-    getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
 }

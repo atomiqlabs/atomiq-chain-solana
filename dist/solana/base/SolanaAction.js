@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaAction = void 0;
 const web3_js_1 = require("@solana/web3.js");
@@ -61,36 +52,32 @@ class SolanaAction {
             this.feeRate = action.feeRate;
         return this;
     }
-    tx(feeRate, block) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const tx = new web3_js_1.Transaction();
-            tx.feePayer = this.mainSigner;
-            if (feeRate == null)
-                feeRate = this.feeRate;
-            if (feeRate == null)
-                feeRate = yield this.estimateFee();
-            let instructions = this.instructions;
-            if (instructions.length > 0 && this.firstIxBeforeComputeBudget) {
-                tx.add(this.instructions[0]);
-                instructions = this.instructions.slice(1);
-            }
-            this.root.Fees.applyFeeRateBegin(tx, this.computeBudget, feeRate);
-            instructions.forEach(ix => tx.add(ix));
-            this.root.Fees.applyFeeRateEnd(tx, this.computeBudget, feeRate);
-            if (block != null) {
-                tx.recentBlockhash = block.blockhash;
-                tx.lastValidBlockHeight = block.blockHeight + this.root.TX_SLOT_VALIDITY;
-            }
-            return {
-                tx,
-                signers: this.signers
-            };
-        });
+    async tx(feeRate, block) {
+        const tx = new web3_js_1.Transaction();
+        tx.feePayer = this.mainSigner;
+        if (feeRate == null)
+            feeRate = this.feeRate;
+        if (feeRate == null)
+            feeRate = await this.estimateFee();
+        let instructions = this.instructions;
+        if (instructions.length > 0 && this.firstIxBeforeComputeBudget) {
+            tx.add(this.instructions[0]);
+            instructions = this.instructions.slice(1);
+        }
+        this.root.Fees.applyFeeRateBegin(tx, this.computeBudget, feeRate);
+        instructions.forEach(ix => tx.add(ix));
+        this.root.Fees.applyFeeRateEnd(tx, this.computeBudget, feeRate);
+        if (block != null) {
+            tx.recentBlockhash = block.blockhash;
+            tx.lastValidBlockHeight = block.blockHeight + this.root.TX_SLOT_VALIDITY;
+        }
+        return {
+            tx,
+            signers: this.signers
+        };
     }
-    addToTxs(txs, feeRate, block) {
-        return __awaiter(this, void 0, void 0, function* () {
-            txs.push(yield this.tx(feeRate, block));
-        });
+    async addToTxs(txs, feeRate, block) {
+        txs.push(await this.tx(feeRate, block));
     }
     ixsLength() {
         return this.instructions.length;

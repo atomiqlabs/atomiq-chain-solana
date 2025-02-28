@@ -201,7 +201,7 @@ export class SolanaSwapData extends SwapData {
     }
 
     getClaimHash(): string {
-        return toClaimHash(this.paymentHash, this.nonce, this.confirmations);
+        return toClaimHash(this.paymentHash, toBigInt(this.nonce), this.confirmations);
     }
 
     getEscrowHash(): string {

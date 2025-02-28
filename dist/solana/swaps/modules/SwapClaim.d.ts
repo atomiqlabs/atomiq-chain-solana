@@ -6,7 +6,6 @@ import { SolanaTx } from "../../base/modules/SolanaTransactions";
 import { SolanaBtcStoredHeader } from "../../btcrelay/headers/SolanaBtcStoredHeader";
 import { SolanaBtcRelay } from "../../btcrelay/SolanaBtcRelay";
 import { SolanaSwapProgram } from "../SolanaSwapProgram";
-import * as BN from "bn.js";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
 export declare class SwapClaim extends SolanaSwapModule {
     private static readonly CUCosts;
@@ -121,9 +120,9 @@ export declare class SwapClaim extends SolanaSwapModule {
      * Get the estimated solana transaction fee of the claim transaction in the worst case scenario in case where the
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
-    getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
      * Get the estimated solana transaction fee of the claim transaction, without
      */
-    getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
 }

@@ -1,10 +1,9 @@
 /// <reference types="node" />
-import * as BN from "bn.js";
 import { Connection, PublicKey, SendOptions, Transaction } from "@solana/web3.js";
 export type FeeBribeData = {
     address: string;
     endpoint: string;
-    getBribeFee?: (original: BN) => BN;
+    getBribeFee?: (original: bigint) => bigint;
 };
 export declare class SolanaFees {
     private readonly connection;
@@ -18,7 +17,7 @@ export declare class SolanaFees {
     private readonly getStaticFee?;
     private readonly logger;
     private blockFeeCache;
-    constructor(connection: Connection, maxFeeMicroLamports?: number, numSamples?: number, period?: number, useHeliusApi?: "yes" | "no" | "auto", heliusFeeLevel?: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax", getStaticFee?: (feeRate: BN) => BN, bribeData?: FeeBribeData);
+    constructor(connection: Connection, maxFeeMicroLamports?: number, numSamples?: number, period?: number, useHeliusApi?: "yes" | "no" | "auto", heliusFeeLevel?: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax", getStaticFee?: (feeRate: bigint) => bigint, bribeData?: FeeBribeData);
     /**
      * Returns solana block with transactionDetails="signatures"
      *
@@ -76,7 +75,7 @@ export declare class SolanaFees {
      *
      * @returns {Promise<BN>} global fee rate microLamports/CU
      */
-    getGlobalFeeRate(): Promise<BN>;
+    getGlobalFeeRate(): Promise<bigint>;
     /**
      * Gets the combined microLamports/CU fee rate (from localized & global fee market), cached & adjusted as for
      *  when bribe and/or static fee should be included, format: <uLamports/CU>;<static fee lamport>[;<bribe address>]
@@ -92,7 +91,7 @@ export declare class SolanaFees {
      * @param feeRate
      * @param includeStaticFee whether the include the static/base part of the fee rate
      */
-    getPriorityFee(computeUnits: number, feeRate: string, includeStaticFee?: boolean): BN;
+    getPriorityFee(computeUnits: number, feeRate: string, includeStaticFee?: boolean): bigint;
     /**
      * Applies fee rate to a transaction at the beginning of the transaction (has to be called after
      *  feePayer is set for the tx), specifically adds the setComputeUnitLimit & setComputeUnitPrice instruction

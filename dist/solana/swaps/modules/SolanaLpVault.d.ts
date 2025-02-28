@@ -1,5 +1,4 @@
 import { SolanaSwapModule } from "../SolanaSwapModule";
-import * as BN from "bn.js";
 import { PublicKey } from "@solana/web3.js";
 import { SolanaTx } from "../../base/modules/SolanaTransactions";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
@@ -32,7 +31,7 @@ export declare class SolanaLpVault extends SolanaSwapModule {
      * @param token
      */
     getIntermediaryData(address: PublicKey, token: PublicKey): Promise<{
-        balance: BN;
+        balance: bigint;
         reputation: IntermediaryReputationType;
     }>;
     /**
@@ -48,7 +47,7 @@ export declare class SolanaLpVault extends SolanaSwapModule {
      * @param address
      * @param token
      */
-    getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<BN>;
+    getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint>;
     /**
      * Creates transactions for withdrawing funds from the LP vault, creates ATA if it doesn't exist and unwraps
      *  WSOL to SOL if required
@@ -58,7 +57,7 @@ export declare class SolanaLpVault extends SolanaSwapModule {
      * @param amount
      * @param feeRate
      */
-    txsWithdraw(signer: PublicKey, token: PublicKey, amount: BN, feeRate?: string): Promise<SolanaTx[]>;
+    txsWithdraw(signer: PublicKey, token: PublicKey, amount: bigint, feeRate?: string): Promise<SolanaTx[]>;
     /**
      * Creates transaction for depositing funds into the LP vault, wraps SOL to WSOL if required
      *
@@ -67,6 +66,6 @@ export declare class SolanaLpVault extends SolanaSwapModule {
      * @param amount
      * @param feeRate
      */
-    txsDeposit(signer: PublicKey, token: PublicKey, amount: BN, feeRate?: string): Promise<SolanaTx[]>;
+    txsDeposit(signer: PublicKey, token: PublicKey, amount: bigint, feeRate?: string): Promise<SolanaTx[]>;
     getFeeRate(signer: PublicKey, token: PublicKey): Promise<string>;
 }
