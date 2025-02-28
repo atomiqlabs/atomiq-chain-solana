@@ -1,4 +1,3 @@
-import {AnchorProvider} from "@coral-xyz/anchor";
 import {
     Connection,
     PublicKey,
@@ -12,15 +11,12 @@ import * as programIdl from "./program/programIdl.json";
 import {BitcoinRpc, BtcBlock, BtcRelay, StatePredictorUtils} from "@atomiqlabs/base";
 import {MethodsBuilder} from "@coral-xyz/anchor/dist/cjs/program/namespace/methods";
 import {SolanaProgramBase} from "../program/SolanaProgramBase";
-import * as BN from "bn.js";
 import {SolanaAction} from "../base/SolanaAction";
 import {Buffer} from "buffer";
 import {SolanaFees} from "../base/modules/SolanaFees";
 import {SolanaTx} from "../base/modules/SolanaTransactions";
 import {SolanaSigner} from "../wallet/SolanaSigner";
-import {sign} from "tweetnacl";
-
-const BASE_FEE_SOL_PER_BLOCKHEADER = new BN(5000);
+import * as BN from "bn.js";
 
 const MAX_CLOSE_IX_PER_TX = 10;
 
@@ -540,15 +536,15 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param requiredBlockheight
      * @param feeRate
      */
-    public async estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<BN> {
+    public async estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<bigint> {
         const tipData = await this.getTipData();
         const currBlockheight = tipData.blockheight;
 
         const blockheightDelta = requiredBlockheight-currBlockheight;
 
-        if(blockheightDelta<=0) return new BN(0);
+        if(blockheightDelta<=0) return 0n;
 
-        const synchronizationFee = new BN(blockheightDelta).mul(await this.getFeePerBlock(feeRate));
+        const synchronizationFee = BigInt(blockheightDelta) * await this.getFeePerBlock(feeRate);
         this.logger.debug("estimateSynchronizeFee(): required blockheight: "+requiredBlockheight+
             " blockheight delta: "+blockheightDelta+" fee: "+synchronizationFee.toString(10));
 
@@ -560,10 +556,10 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      *
      * @param feeRate
      */
-    public async getFeePerBlock(feeRate?: string): Promise<BN> {
+    public async getFeePerBlock(feeRate?: string): Promise<bigint> {
         // feeRate = feeRate || await this.getMainFeeRate(null);
         // return BASE_FEE_SOL_PER_BLOCKHEADER.add(this.Fees.getPriorityFee(200000, feeRate, false));
-        return new BN(50000);
+        return 50000n;
     }
 
     /**

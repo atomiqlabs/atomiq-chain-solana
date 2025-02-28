@@ -147,9 +147,9 @@ export class SolanaTxUtils {
     };
 }
 
-export function toClaimHash(paymentHash: string, nonce: BN, confirmations: number): string {
+export function toClaimHash(paymentHash: string, nonce: bigint, confirmations: number): string {
     return paymentHash+
-        nonce.toString("hex", 16)+
+        nonce.toString(16).padStart(16, "0")+
         confirmations.toString(16).padStart(4, "0");
 }
 
@@ -167,4 +167,14 @@ export function toEscrowHash(paymentHash: string, sequence: BN): string {
         Buffer.from(paymentHash, "hex"),
         sequence.toArrayLike(Buffer, "be", 8)
     ])).digest().toString("hex");
+}
+
+export function toBN(value: bigint): BN {
+    if(value==null) return null;
+    return new BN(value.toString(10));
+}
+
+export function toBigInt(value: BN): bigint {
+    if(value==null) return null;
+    return BigInt(value.toString(10));
 }

@@ -6,7 +6,6 @@ import {
     getAccount, getAssociatedTokenAddressSync,
     TokenAccountNotFoundError
 } from "@solana/spl-token";
-import * as BN from "bn.js";
 import {SolanaTx} from "./SolanaTransactions";
 import {SolanaAction} from "../SolanaAction";
 import {tryWithRetries} from "../../../utils/Utils";
@@ -55,7 +54,7 @@ export class SolanaTokens extends SolanaModule {
      * @param initAta whether we should also initialize the ATA before depositing SOL
      * @constructor
      */
-    public Wrap(publicKey: PublicKey, amount: BN, initAta: boolean): SolanaAction {
+    public Wrap(publicKey: PublicKey, amount: bigint, initAta: boolean): SolanaAction {
         const ata = getAssociatedTokenAddressSync(SolanaTokens.WSOL_ADDRESS, publicKey, true);
         const action = new SolanaAction(publicKey, this.root);
         if(initAta) action.addIx(
@@ -66,7 +65,7 @@ export class SolanaTokens extends SolanaModule {
             SystemProgram.transfer({
                 fromPubkey: publicKey,
                 toPubkey: ata,
-                lamports: BigInt(amount.toString(10))
+                lamports: amount
             }),
             SolanaTokens.CUCosts.WRAP_SOL
         );
@@ -102,12 +101,12 @@ export class SolanaTokens extends SolanaModule {
      * @constructor
      * @private
      */
-    private SolTransfer(signer: PublicKey, recipient: PublicKey, amount: BN): SolanaAction {
+    private SolTransfer(signer: PublicKey, recipient: PublicKey, amount: bigint): SolanaAction {
         return new SolanaAction(signer, this.root,
             SystemProgram.transfer({
                 fromPubkey: signer,
                 toPubkey: recipient,
-                lamports: BigInt(amount.toString(10))
+                lamports: amount
             }),
             SolanaTokens.CUCosts.TRANSFER_SOL
         );
@@ -123,7 +122,7 @@ export class SolanaTokens extends SolanaModule {
      * @constructor
      * @private
      */
-    private Transfer(signer: PublicKey, recipient: PublicKey, token: PublicKey, amount: BN): SolanaAction {
+    private Transfer(signer: PublicKey, recipient: PublicKey, token: PublicKey, amount: bigint): SolanaAction {
         const srcAta = getAssociatedTokenAddressSync(token, signer, true)
         const dstAta = getAssociatedTokenAddressSync(token, recipient, true);
         return new SolanaAction(signer, this.root,
@@ -131,7 +130,7 @@ export class SolanaTokens extends SolanaModule {
                 srcAta,
                 dstAta,
                 signer,
-                BigInt(amount.toString(10))
+                amount
             ),
             SolanaTokens.CUCosts.TRANSFER
         );
@@ -146,7 +145,7 @@ export class SolanaTokens extends SolanaModule {
      * @param feeRate fee rate to use for the transactions
      * @private
      */
-    private async txsTransferSol(signer: PublicKey, amount: BN, recipient: PublicKey, feeRate?: string): Promise<SolanaTx[]> {
+    private async txsTransferSol(signer: PublicKey, amount: bigint, recipient: PublicKey, feeRate?: string): Promise<SolanaTx[]> {
         const wsolAta = getAssociatedTokenAddressSync(SolanaTokens.WSOL_ADDRESS, signer, true);
 
         const shouldUnwrap = await this.ataExists(wsolAta);
@@ -175,7 +174,7 @@ export class SolanaTokens extends SolanaModule {
      * @param feeRate fee rate to use for the transactions
      * @private
      */
-    private async txsTransferTokens(signer: PublicKey, token: PublicKey, amount: BN, recipient: PublicKey, feeRate?: string) {
+    private async txsTransferTokens(signer: PublicKey, token: PublicKey, amount: bigint, recipient: PublicKey, feeRate?: string) {
         const srcAta = getAssociatedTokenAddressSync(token, signer, true);
         const dstAta = getAssociatedTokenAddressSync(token, recipient, true);
 
@@ -238,8 +237,8 @@ export class SolanaTokens extends SolanaModule {
     /**
      * Returns the rent exempt deposit required to initiate the ATA
      */
-    public getATARentExemptLamports(): Promise<BN> {
-        return Promise.resolve(new BN(SolanaTokens.SPL_ATA_RENT_EXEMPT));
+    public getATARentExemptLamports(): Promise<bigint> {
+        return Promise.resolve(BigInt(SolanaTokens.SPL_ATA_RENT_EXEMPT));
     }
 
     /**
@@ -248,7 +247,7 @@ export class SolanaTokens extends SolanaModule {
      * @param publicKey
      * @param token
      */
-    public async getTokenBalance(publicKey: PublicKey, token: PublicKey): Promise<{balance: BN, ataExists: boolean}> {
+    public async getTokenBalance(publicKey: PublicKey, token: PublicKey): Promise<{balance: bigint, ataExists: boolean}> {
         const ata: PublicKey = getAssociatedTokenAddressSync(token, publicKey, true);
         const [ataAccount, balance] = await Promise.all<[Promise<Account>, Promise<number>]>([
             this.getATAOrNull(ata),
@@ -256,15 +255,15 @@ export class SolanaTokens extends SolanaModule {
         ]);
 
         let ataExists: boolean = ataAccount!=null;
-        let sum: BN = new BN(0);
+        let sum: bigint = 0n;
         if(ataExists) {
-            sum = sum.add(new BN(ataAccount.amount.toString()));
+            sum += ataAccount.amount;
         }
 
         if(balance!=null) {
-            let balanceLamports: BN = new BN(balance);
-            if(!ataExists) balanceLamports = balanceLamports.sub(await this.getATARentExemptLamports());
-            if(!balanceLamports.isNeg()) sum = sum.add(balanceLamports);
+            let balanceLamports: bigint = BigInt(balance);
+            if(!ataExists) balanceLamports = balanceLamports - await this.getATARentExemptLamports();
+            if(balanceLamports >= 0n) sum += balanceLamports;
         }
 
         this.logger.debug("getTokenBalance(): token balance fetched, token: "+token.toString()+
@@ -299,7 +298,7 @@ export class SolanaTokens extends SolanaModule {
      * @param dstAddress destination address of the recipient
      * @param feeRate fee rate to use for the transaction
      */
-    public txsTransfer(signer:PublicKey, token: PublicKey, amount: BN, dstAddress: PublicKey, feeRate?: string): Promise<SolanaTx[]> {
+    public txsTransfer(signer:PublicKey, token: PublicKey, amount: bigint, dstAddress: PublicKey, feeRate?: string): Promise<SolanaTx[]> {
         if(SolanaTokens.WSOL_ADDRESS.equals(token)) {
             return this.txsTransferSol(signer, amount, dstAddress, feeRate);
         }

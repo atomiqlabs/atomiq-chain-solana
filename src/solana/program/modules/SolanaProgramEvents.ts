@@ -1,5 +1,5 @@
 import {SolanaEvents} from "../../base/modules/SolanaEvents";
-import {BorshCoder, DecodeType, Event, EventParser, Idl, IdlEvents, IdlTypes, Instruction} from "@coral-xyz/anchor";
+import {BorshCoder, DecodeType, Event, EventParser, Idl, IdlTypes, Instruction} from "@coral-xyz/anchor";
 import {IdlField, IdlInstruction} from "@coral-xyz/anchor/dist/cjs/idl";
 import {ConfirmedSignatureInfo, ParsedMessage, PartiallyDecodedInstruction, PublicKey} from "@solana/web3.js";
 import {SolanaProgramBase} from "../SolanaProgramBase";

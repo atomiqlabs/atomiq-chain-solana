@@ -3,7 +3,6 @@ import {SolanaSwapData} from "../SolanaSwapData";
 import * as createHash from "create-hash";
 import {sign} from "tweetnacl";
 import {SignatureVerificationError, SwapDataVerificationError} from "@atomiqlabs/base";
-import * as BN from "bn.js";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {
     Ed25519Program,
@@ -15,11 +14,11 @@ import {
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import {SolanaAction} from "../../base/SolanaAction";
-import {tryWithRetries} from "../../../utils/Utils";
+import {toBN, tryWithRetries} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {SolanaTokens} from "../../base/modules/SolanaTokens";
-
+import * as BN from "bn.js";
 
 export class SwapRefund extends SolanaSwapModule {
 
@@ -36,7 +35,7 @@ export class SwapRefund extends SolanaSwapModule {
      * @constructor
      * @private
      */
-    private async Refund(swapData: SolanaSwapData, refundAuthTimeout?: BN): Promise<SolanaAction> {
+    private async Refund(swapData: SolanaSwapData, refundAuthTimeout?: bigint): Promise<SolanaAction> {
         const accounts = {
             offerer: swapData.offerer,
             claimer: swapData.claimer,
@@ -45,13 +44,13 @@ export class SwapRefund extends SolanaSwapModule {
             ixSysvar: refundAuthTimeout!=null ? SYSVAR_INSTRUCTIONS_PUBKEY : null
         };
 
-        const useTimeout = refundAuthTimeout!=null ? refundAuthTimeout : new BN(0);
+        const useTimeout = refundAuthTimeout!=null ? refundAuthTimeout : 0n;
         if(swapData.isPayIn()) {
             const ata = getAssociatedTokenAddressSync(swapData.token, swapData.offerer);
 
             return new SolanaAction(swapData.offerer, this.root,
                 await this.program.methods
-                    .offererRefundPayIn(useTimeout)
+                    .offererRefundPayIn(toBN(useTimeout))
                     .accounts({
                         ...accounts,
                         offererAta: ata,
@@ -65,7 +64,7 @@ export class SwapRefund extends SolanaSwapModule {
         } else {
             return new SolanaAction(swapData.offerer, this.root,
                 await this.program.methods
-                    .offererRefund(useTimeout)
+                    .offererRefund(toBN(useTimeout))
                     .accounts({
                         ...accounts,
                         offererUserData: this.root.SwapUserVault(swapData.offerer, swapData.token)
@@ -103,7 +102,7 @@ export class SwapRefund extends SolanaSwapModule {
             null,
             true
         );
-        action.addAction(await this.Refund(swapData, new BN(timeout)));
+        action.addAction(await this.Refund(swapData, BigInt(timeout)));
         return action;
     }
 
@@ -164,10 +163,10 @@ export class SwapRefund extends SolanaSwapModule {
     public isSignatureValid(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string): Promise<Buffer> {
         if(prefix!=="refund") throw new SignatureVerificationError("Invalid prefix");
 
-        const expiryTimestamp = new BN(timeout);
-        const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
+        const expiryTimestamp = BigInt(timeout);
+        const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
 
-        const isExpired = expiryTimestamp.sub(currentTimestamp).lt(new BN(this.root.authGracePeriod));
+        const isExpired = (expiryTimestamp - currentTimestamp) < BigInt(this.root.authGracePeriod);
         if(isExpired) throw new SignatureVerificationError("Authorization expired!");
 
         const signatureBuffer = Buffer.from(signature, "hex");
@@ -294,25 +293,22 @@ export class SwapRefund extends SolanaSwapModule {
      * Get the estimated solana transaction fee of the refund transaction, in the worst case scenario in case where the
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
-    async getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        return new BN(swapData==null || swapData.payIn ? SolanaTokens.SPL_ATA_RENT_EXEMPT : 0).add(
-            await this.getRawRefundFee(swapData, feeRate)
-        );
+    async getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+        return BigInt(swapData==null || swapData.payIn ? SolanaTokens.SPL_ATA_RENT_EXEMPT : 0) +
+            await this.getRawRefundFee(swapData, feeRate);
     }
 
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    async getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        if(swapData==null) return new BN(10000);
+    async getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+        if(swapData==null) return 10000n;
 
         feeRate = feeRate || await this.getRefundFeeRate(swapData);
 
         const computeBudget = swapData.payIn ? SwapRefund.CUCosts.REFUND_PAY_OUT : SwapRefund.CUCosts.REFUND;
 
-        return new BN(10000).add(
-            this.root.Fees.getPriorityFee(computeBudget, feeRate)
-        );
+        return 10000n + this.root.Fees.getPriorityFee(computeBudget, feeRate);
     }
 
 }

@@ -9,9 +9,9 @@ import {SolanaBtcStoredHeader} from "../../btcrelay/headers/SolanaBtcStoredHeade
 import {tryWithRetries} from "../../../utils/Utils";
 import {SolanaBtcRelay} from "../../btcrelay/SolanaBtcRelay";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
-import * as BN from "bn.js";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {SolanaTokens} from "../../base/modules/SolanaTokens";
+import * as BN from "bn.js";
 
 export class SwapClaim extends SolanaSwapModule {
 
@@ -369,24 +369,21 @@ export class SwapClaim extends SolanaSwapModule {
      * Get the estimated solana transaction fee of the claim transaction in the worst case scenario in case where the
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
-    public async getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        return new BN(swapData==null || swapData.payOut ? SolanaTokens.SPL_ATA_RENT_EXEMPT : 0).add(
-            await this.getRawClaimFee(signer, swapData, feeRate)
-        );
+    public async getClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+        return BigInt(swapData==null || swapData.payOut ? SolanaTokens.SPL_ATA_RENT_EXEMPT : 0) +
+            await this.getRawClaimFee(signer, swapData, feeRate);
     }
 
     /**
      * Get the estimated solana transaction fee of the claim transaction, without
      */
-    public async getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<BN> {
-        if(swapData==null) return new BN(5000);
+    public async getRawClaimFee(signer: PublicKey, swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+        if(swapData==null) return 5000n;
 
         feeRate = feeRate || await this.getClaimFeeRate(signer, swapData);
 
         //Include rent exempt in claim fee, to take into consideration worst case cost when user destroys ATA
-        return new BN(5000).add(
-            this.root.Fees.getPriorityFee(this.getComputeBudget(swapData), feeRate)
-        );
+        return 5000n + this.root.Fees.getPriorityFee(this.getComputeBudget(swapData), feeRate);
     }
 
 }
