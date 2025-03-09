@@ -452,11 +452,13 @@ export class SolanaSwapProgram
         return this.Claim.txsClaimWithTxData(typeof(signer)==="string" ? new PublicKey(signer) : signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, storageAccHolder, feeRate);
     }
 
-    txsRefund(swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]> {
+    txsRefund(signer: string, swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]> {
+        if(!swapData.isOfferer(signer)) throw new Error("Only offerer can refund on Solana");
         return this.Refund.txsRefund(swapData, check, initAta, feeRate);
     }
 
-    txsRefundWithAuthorization(swapData: SolanaSwapData, {timeout, prefix, signature}, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]> {
+    txsRefundWithAuthorization(signer: string, swapData: SolanaSwapData, {timeout, prefix, signature}, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]> {
+        if(!swapData.isOfferer(signer)) throw new Error("Only offerer can refund on Solana");
         return this.Refund.txsRefundWithAuthorization(swapData,timeout,prefix,signature,check,initAta,feeRate);
     }
 
@@ -532,9 +534,7 @@ export class SolanaSwapProgram
         initAta?: boolean,
         txOptions?: TransactionConfirmationOptions
     ): Promise<string> {
-        if(!signer.getPublicKey().equals(swapData.offerer)) throw new Error("Invalid signer provided!");
-
-        let result = await this.txsRefund(swapData, check, initAta, txOptions?.feeRate);
+        let result = await this.txsRefund(signer.getAddress(), swapData, check, initAta, txOptions?.feeRate);
 
         const [signature] = await this.Transactions.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
 
@@ -549,9 +549,7 @@ export class SolanaSwapProgram
         initAta?: boolean,
         txOptions?: TransactionConfirmationOptions
     ): Promise<string> {
-        if(!signer.getPublicKey().equals(swapData.offerer)) throw new Error("Invalid signer provided!");
-
-        let result = await this.txsRefundWithAuthorization(swapData, signature, check, initAta, txOptions?.feeRate);
+        let result = await this.txsRefundWithAuthorization(signer.getAddress(), swapData, signature, check, initAta, txOptions?.feeRate);
 
         const [txSignature] = await this.Transactions.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
 

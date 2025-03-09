@@ -152,8 +152,8 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     }, requiredConfirmations: number, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, feeRate?: string, storageAccHolder?: {
         storageAcc: PublicKey;
     }): Promise<SolanaTx[] | null>;
-    txsRefund(swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
-    txsRefundWithAuthorization(swapData: SolanaSwapData, { timeout, prefix, signature }: {
+    txsRefund(signer: string, swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    txsRefundWithAuthorization(signer: string, swapData: SolanaSwapData, { timeout, prefix, signature }: {
         timeout: any;
         prefix: any;
         signature: any;
