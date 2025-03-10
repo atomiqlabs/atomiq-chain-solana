@@ -187,8 +187,8 @@ export class SolanaSwapProgram
      */
     isExpired(signer: string, data: SolanaSwapData): Promise<boolean> {
         let currentTimestamp: BN = new BN(Math.floor(Date.now()/1000));
-        if(data.isClaimer(signer)) currentTimestamp = currentTimestamp.sub(new BN(this.refundGracePeriod));
-        if(data.isOfferer(signer)) currentTimestamp = currentTimestamp.add(new BN(this.claimGracePeriod));
+        if(data.isClaimer(signer)) currentTimestamp = currentTimestamp.add(new BN(this.claimGracePeriod));
+        if(data.isOfferer(signer)) currentTimestamp = currentTimestamp.sub(new BN(this.refundGracePeriod));
         return Promise.resolve(data.expiry.lt(currentTimestamp));
     }
 
