@@ -3,7 +3,7 @@ import {SolanaFees} from "../base/modules/SolanaFees";
 import {SolanaBase, SolanaRetryPolicy} from "../base/SolanaBase";
 import {SolanaProgramEvents} from "./modules/SolanaProgramEvents";
 import {Connection, Keypair, PublicKey} from "@solana/web3.js";
-import * as createHash from "create-hash";
+import {sha256} from "@noble/hashes/sha2";
 import {Buffer} from "buffer";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
 
@@ -69,7 +69,7 @@ export class SolanaProgramBase<T extends Idl> extends SolanaBase {
     public keypair<T extends Array<any>>(func: (...args: T) => Buffer[]): (...args: T) => Keypair {
         return (...args: T) => {
             const res = func(...args);
-            const buff = createHash("sha256").update(Buffer.concat(res)).digest();
+            const buff = sha256(Buffer.concat(res));
             return Keypair.fromSeed(buff);
         }
     }

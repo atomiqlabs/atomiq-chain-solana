@@ -1,6 +1,6 @@
 import {SolanaSwapModule} from "../SolanaSwapModule";
 import {SolanaSwapData} from "../SolanaSwapData";
-import * as createHash from "create-hash";
+import {sha256} from "@noble/hashes/sha2";
 import {sign} from "tweetnacl";
 import {SignatureVerificationError, SwapDataVerificationError} from "@atomiqlabs/base";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
@@ -124,7 +124,7 @@ export class SwapRefund extends SolanaSwapModule {
             new BN(timeout).toArrayLike(Buffer, "le", 8)
         ];
 
-        return createHash("sha256").update(Buffer.concat(messageBuffers)).digest();
+        return Buffer.from(sha256(Buffer.concat(messageBuffers)));
     }
 
     /**

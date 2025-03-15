@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaSwapProgram = void 0;
 const SolanaSwapData_1 = require("./SolanaSwapData");
 const web3_js_1 = require("@solana/web3.js");
-const createHash = require("create-hash");
+const sha2_1 = require("@noble/hashes/sha2");
 const programIdl = require("./programIdl.json");
 const base_1 = require("@atomiqlabs/base");
 const spl_token_1 = require("@solana/spl-token");
@@ -158,11 +158,11 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      */
     getHashForOnchain(outputScript, amount, confirmations, nonce) {
         nonce ?? (nonce = 0n);
-        const paymentHash = createHash("sha256").update(buffer_1.Buffer.concat([
+        const paymentHash = buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat([
             base_1.BigIntBufferUtils.toBuffer(nonce, "le", 8),
             base_1.BigIntBufferUtils.toBuffer(amount, "le", 8),
             outputScript
-        ])).digest().toString("hex");
+        ]))).toString("hex");
         return buffer_1.Buffer.from((0, Utils_1.toClaimHash)(paymentHash, nonce, confirmations), "hex");
     }
     getHashForHtlc(swapHash) {
@@ -511,10 +511,10 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return new SolanaSigner_1.SolanaSigner(wallet, keypair);
     }
     getExtraData(outputScript, amount, confirmations, nonce) {
-        return createHash("sha256").update(buffer_1.Buffer.concat([
+        return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat([
             base_1.BigIntBufferUtils.toBuffer(amount, "le", 8),
             outputScript
-        ])).digest();
+        ])));
     }
 }
 exports.SolanaSwapProgram = SolanaSwapProgram;

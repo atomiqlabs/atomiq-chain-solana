@@ -5,8 +5,8 @@ import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaAction} from "../../base/SolanaAction";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {tryWithRetries} from "../../../utils/Utils";
-import * as randomBytes from "randombytes";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {randomBytes} from "@noble/hashes/utils";
 
 export class StoredDataAccount implements StorageObject {
 
@@ -267,7 +267,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
                 this.retryPolicy
             );
         } else {
-            const secret = randomBytes(32);
+            const secret = Buffer.from(randomBytes(32));
             txDataKey = this.SwapTxDataAltBuffer(reversedTxId, secret);
         }
 

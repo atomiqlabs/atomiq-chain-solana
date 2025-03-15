@@ -5,8 +5,8 @@ const SolanaSwapModule_1 = require("../SolanaSwapModule");
 const web3_js_1 = require("@solana/web3.js");
 const SolanaAction_1 = require("../../base/SolanaAction");
 const Utils_1 = require("../../../utils/Utils");
-const randomBytes = require("randombytes");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
+const utils_1 = require("@noble/hashes/utils");
 class StoredDataAccount {
     constructor(accountKeyOrData, owner) {
         if (accountKeyOrData instanceof web3_js_1.PublicKey) {
@@ -196,7 +196,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
             fetchedDataAccount = await (0, Utils_1.tryWithRetries)(() => this.connection.getAccountInfo(txDataKey.publicKey), this.retryPolicy);
         }
         else {
-            const secret = randomBytes(32);
+            const secret = Buffer.from((0, utils_1.randomBytes)(32));
             txDataKey = this.SwapTxDataAltBuffer(reversedTxId, secret);
         }
         const signerKey = signer instanceof SolanaSigner_1.SolanaSigner ? signer.getPublicKey() : signer;
