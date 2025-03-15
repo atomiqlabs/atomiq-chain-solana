@@ -1,9 +1,9 @@
 import {SolanaModule} from "../SolanaModule";
-import * as createHash from "create-hash";
 import {sign} from "tweetnacl";
 import {PublicKey} from "@solana/web3.js";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {sha256} from "@noble/hashes/sha2";
 
 export class SolanaSignatures extends SolanaModule {
 
@@ -18,7 +18,7 @@ export class SolanaSignatures extends SolanaModule {
      */
     getDataSignature(signer: SolanaSigner, data: Buffer): Promise<string> {
         if(signer.keypair==null) throw new Error("Unsupported");
-        const buff = createHash("sha256").update(data).digest();
+        const buff = sha256(data);
         const signature = sign.detached(buff, signer.keypair.secretKey);
 
         return Promise.resolve(Buffer.from(signature).toString("hex"));
@@ -33,7 +33,7 @@ export class SolanaSignatures extends SolanaModule {
      * @param publicKey public key of the signer
      */
     isValidDataSignature(data: Buffer, signature: string, publicKey: string): Promise<boolean> {
-        const hash = createHash("sha256").update(data).digest();
+        const hash = sha256(data);
         return Promise.resolve(sign.detached.verify(hash, Buffer.from(signature, "hex"), new PublicKey(publicKey).toBuffer()));
     }
 

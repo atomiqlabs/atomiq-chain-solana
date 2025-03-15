@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SwapRefund = void 0;
 const SolanaSwapModule_1 = require("../SolanaSwapModule");
-const createHash = require("create-hash");
+const sha2_1 = require("@noble/hashes/sha2");
 const tweetnacl_1 = require("tweetnacl");
 const base_1 = require("@atomiqlabs/base");
 const web3_js_1 = require("@solana/web3.js");
@@ -89,7 +89,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
             buffer_1.Buffer.from(swapData.paymentHash, "hex"),
             new BN(timeout).toArrayLike(buffer_1.Buffer, "le", 8)
         ];
-        return createHash("sha256").update(buffer_1.Buffer.concat(messageBuffers)).digest();
+        return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat(messageBuffers)));
     }
     /**
      * Checks whether we should unwrap the WSOL to SOL when refunding the swap

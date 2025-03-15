@@ -2,10 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaSignatures = void 0;
 const SolanaModule_1 = require("../SolanaModule");
-const createHash = require("create-hash");
 const tweetnacl_1 = require("tweetnacl");
 const web3_js_1 = require("@solana/web3.js");
 const buffer_1 = require("buffer");
+const sha2_1 = require("@noble/hashes/sha2");
 class SolanaSignatures extends SolanaModule_1.SolanaModule {
     ///////////////////
     //// Data signatures
@@ -19,7 +19,7 @@ class SolanaSignatures extends SolanaModule_1.SolanaModule {
     getDataSignature(signer, data) {
         if (signer.keypair == null)
             throw new Error("Unsupported");
-        const buff = createHash("sha256").update(data).digest();
+        const buff = (0, sha2_1.sha256)(data);
         const signature = tweetnacl_1.sign.detached(buff, signer.keypair.secretKey);
         return Promise.resolve(buffer_1.Buffer.from(signature).toString("hex"));
     }
@@ -32,7 +32,7 @@ class SolanaSignatures extends SolanaModule_1.SolanaModule {
      * @param publicKey public key of the signer
      */
     isValidDataSignature(data, signature, publicKey) {
-        const hash = createHash("sha256").update(data).digest();
+        const hash = (0, sha2_1.sha256)(data);
         return Promise.resolve(tweetnacl_1.sign.detached.verify(hash, buffer_1.Buffer.from(signature, "hex"), new web3_js_1.PublicKey(publicKey).toBuffer()));
     }
 }

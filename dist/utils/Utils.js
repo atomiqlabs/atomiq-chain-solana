@@ -4,7 +4,7 @@ exports.toBigInt = exports.toBN = exports.toEscrowHash = exports.fromClaimHash =
 const web3_js_1 = require("@solana/web3.js");
 const BN = require("bn.js");
 const buffer_1 = require("buffer");
-const createHash = require("create-hash");
+const sha2_1 = require("@noble/hashes/sha2");
 function timeoutPromise(timeoutMillis, abortSignal) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(resolve, timeoutMillis);
@@ -150,10 +150,10 @@ function fromClaimHash(claimHash) {
 }
 exports.fromClaimHash = fromClaimHash;
 function toEscrowHash(paymentHash, sequence) {
-    return createHash("sha256").update(buffer_1.Buffer.concat([
+    return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat([
         buffer_1.Buffer.from(paymentHash, "hex"),
         sequence.toArrayLike(buffer_1.Buffer, "be", 8)
-    ])).digest().toString("hex");
+    ]))).toString("hex");
 }
 exports.toEscrowHash = toEscrowHash;
 function toBN(value) {

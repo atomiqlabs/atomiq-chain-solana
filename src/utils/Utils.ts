@@ -1,7 +1,7 @@
 import {ComputeBudgetProgram, PublicKey, Transaction} from "@solana/web3.js";
 import * as BN from "bn.js";
 import {Buffer} from "buffer";
-import * as createHash from "create-hash";
+import {sha256} from "@noble/hashes/sha2";
 
 export function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -163,10 +163,10 @@ export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: B
 }
 
 export function toEscrowHash(paymentHash: string, sequence: BN): string {
-    return createHash("sha256").update(Buffer.concat([
+    return Buffer.from(sha256(Buffer.concat([
         Buffer.from(paymentHash, "hex"),
         sequence.toArrayLike(Buffer, "be", 8)
-    ])).digest().toString("hex");
+    ]))).toString("hex");
 }
 
 export function toBN(value: bigint): BN {

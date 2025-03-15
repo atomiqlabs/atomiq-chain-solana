@@ -5,7 +5,7 @@ import {
     PublicKey,
     SendOptions
 } from "@solana/web3.js";
-import * as createHash from "create-hash";
+import {sha256} from "@noble/hashes/sha2";
 import {SolanaBtcRelay} from "../btcrelay/SolanaBtcRelay";
 import * as programIdl from "./programIdl.json";
 import {
@@ -216,11 +216,11 @@ export class SolanaSwapProgram
      */
     getHashForOnchain(outputScript: Buffer, amount: bigint, confirmations: number, nonce?: bigint): Buffer {
         nonce ??= 0n;
-        const paymentHash = createHash("sha256").update(Buffer.concat([
+        const paymentHash = Buffer.from(sha256(Buffer.concat([
             BigIntBufferUtils.toBuffer(nonce, "le", 8),
             BigIntBufferUtils.toBuffer(amount, "le", 8),
             outputScript
-        ])).digest().toString("hex");
+        ]))).toString("hex");
         return Buffer.from(toClaimHash(paymentHash, nonce, confirmations), "hex");
     }
 
@@ -765,10 +765,10 @@ export class SolanaSwapProgram
     }
 
     getExtraData(outputScript: Buffer, amount: bigint, confirmations: number, nonce?: bigint): Buffer {
-        return createHash("sha256").update(Buffer.concat([
+        return Buffer.from(sha256(Buffer.concat([
             BigIntBufferUtils.toBuffer(amount, "le", 8),
             outputScript
-        ])).digest();
+        ])));
     }
 
 }
