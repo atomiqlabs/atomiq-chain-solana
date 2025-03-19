@@ -1,12 +1,12 @@
 /// <reference types="node" />
-import { Connection, PublicKey, Signer, Transaction } from "@solana/web3.js";
+import { PublicKey, Signer, Transaction } from "@solana/web3.js";
 import { SolanaBtcStoredHeader } from "./headers/SolanaBtcStoredHeader";
 import { BitcoinRpc, BtcBlock, BtcRelay } from "@atomiqlabs/base";
 import { SolanaProgramBase } from "../program/SolanaProgramBase";
-import { SolanaAction } from "../base/SolanaAction";
+import { SolanaAction } from "../chain/SolanaAction";
 import { Buffer } from "buffer";
-import { SolanaFees } from "../base/modules/SolanaFees";
 import { SolanaSigner } from "../wallet/SolanaSigner";
+import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> implements BtcRelay<SolanaBtcStoredHeader, {
     tx: Transaction;
     signers: Signer[];
@@ -43,7 +43,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
     readonly maxHeadersPerTx: number;
     readonly maxForkHeadersPerTx: number;
     readonly maxShortForkHeadersPerTx: number;
-    constructor(connection: Connection, bitcoinRpc: BitcoinRpc<B>, programAddress?: string, solanaFeeEstimator?: SolanaFees);
+    constructor(chainInterface: SolanaChainInterface, bitcoinRpc: BitcoinRpc<B>, programAddress?: string);
     /**
      * Gets set of block commitments representing current main chain from the mainState
      *

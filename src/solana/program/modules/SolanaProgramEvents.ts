@@ -1,8 +1,9 @@
-import {SolanaEvents} from "../../base/modules/SolanaEvents";
+import {SolanaEvents} from "../../chain/modules/SolanaEvents";
 import {BorshCoder, DecodeType, Event, EventParser, Idl, IdlTypes, Instruction} from "@coral-xyz/anchor";
 import {IdlField, IdlInstruction} from "@coral-xyz/anchor/dist/cjs/idl";
 import {ConfirmedSignatureInfo, ParsedMessage, PartiallyDecodedInstruction, PublicKey} from "@solana/web3.js";
 import {SolanaProgramBase} from "../SolanaProgramBase";
+import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
 
 type DecodedFieldOrNull<D, Defined> = D extends IdlField ? DecodeType<D["type"], Defined> : unknown;
 type ArgsTuple<A extends IdlField[], Defined> = {
@@ -25,16 +26,16 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
 
     private readonly programCoder: BorshCoder;
     private readonly eventParser: EventParser;
-    readonly root: SolanaProgramBase<any>;
+    private readonly program: SolanaProgramBase<IDL>;
     private readonly nameMappedInstructions: {[name: string]: IdlInstruction};
 
-    constructor(root: SolanaProgramBase<IDL>) {
-        super(root);
-        this.root = root;
-        this.programCoder = new BorshCoder(root.program.idl);
-        this.eventParser = new EventParser(root.program.programId, this.programCoder);
+    constructor(chain: SolanaChainInterface, program: SolanaProgramBase<IDL>) {
+        super(chain);
+        this.program = program;
+        this.programCoder = new BorshCoder(program.program.idl);
+        this.eventParser = new EventParser(program.program.programId, this.programCoder);
         this.nameMappedInstructions = {};
-        for(let ix of root.program.idl.instructions) {
+        for(let ix of program.program.idl.instructions) {
             this.nameMappedInstructions[ix.name] = ix;
         }
     }
@@ -94,7 +95,7 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
         const instructions: InstructionWithAccounts<IDL>[] = [];
 
         for(let _ix of transactionMessage.instructions) {
-            if(!_ix.programId.equals(this.root.program.programId)) {
+            if(!_ix.programId.equals(this.program.program.programId)) {
                 instructions.push(null);
                 continue;
             }

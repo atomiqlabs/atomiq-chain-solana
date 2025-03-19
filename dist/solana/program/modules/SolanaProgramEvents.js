@@ -1,16 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaProgramEvents = void 0;
-const SolanaEvents_1 = require("../../base/modules/SolanaEvents");
+const SolanaEvents_1 = require("../../chain/modules/SolanaEvents");
 const anchor_1 = require("@coral-xyz/anchor");
 class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
-    constructor(root) {
-        super(root);
-        this.root = root;
-        this.programCoder = new anchor_1.BorshCoder(root.program.idl);
-        this.eventParser = new anchor_1.EventParser(root.program.programId, this.programCoder);
+    constructor(chain, program) {
+        super(chain);
+        this.program = program;
+        this.programCoder = new anchor_1.BorshCoder(program.program.idl);
+        this.eventParser = new anchor_1.EventParser(program.program.programId, this.programCoder);
         this.nameMappedInstructions = {};
-        for (let ix of root.program.idl.instructions) {
+        for (let ix of program.program.idl.instructions) {
             this.nameMappedInstructions[ix.name] = ix;
         }
     }
@@ -62,7 +62,7 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
     decodeInstructions(transactionMessage) {
         const instructions = [];
         for (let _ix of transactionMessage.instructions) {
-            if (!_ix.programId.equals(this.root.program.programId)) {
+            if (!_ix.programId.equals(this.program.program.programId)) {
                 instructions.push(null);
                 continue;
             }

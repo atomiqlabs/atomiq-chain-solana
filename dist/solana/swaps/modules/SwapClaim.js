@@ -2,13 +2,13 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SwapClaim = void 0;
 const SolanaSwapModule_1 = require("../SolanaSwapModule");
-const SolanaAction_1 = require("../../base/SolanaAction");
+const SolanaAction_1 = require("../../chain/SolanaAction");
 const spl_token_1 = require("@solana/spl-token");
 const base_1 = require("@atomiqlabs/base");
 const web3_js_1 = require("@solana/web3.js");
 const Utils_1 = require("../../../utils/Utils");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
-const SolanaTokens_1 = require("../../base/modules/SolanaTokens");
+const SolanaTokens_1 = require("../../chain/modules/SolanaTokens");
 const BN = require("bn.js");
 class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
     async Claim(signer, swapData, secretOrDataKey) {
@@ -16,7 +16,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = {
             signer,
             initializer: swapData.isPayIn() ? swapData.offerer : swapData.claimer,
-            escrowState: this.root.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
+            escrowState: this.program.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
             ixSysvar: web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY,
             data: isDataKey ? secretOrDataKey : null,
         };
@@ -24,23 +24,23 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             Buffer.alloc(0) :
             Buffer.from(secretOrDataKey, "hex");
         if (swapData.isPayOut()) {
-            return new SolanaAction_1.SolanaAction(signer, this.root, await this.program.methods
+            return new SolanaAction_1.SolanaAction(signer, this.root, await this.swapProgram.methods
                 .claimerClaimPayOut(secretBuffer)
                 .accounts({
                 ...accounts,
                 claimerAta: swapData.claimerAta,
-                vault: this.root.SwapVault(swapData.token),
-                vaultAuthority: this.root.SwapVaultAuthority,
+                vault: this.program.SwapVault(swapData.token),
+                vaultAuthority: this.program.SwapVaultAuthority,
                 tokenProgram: spl_token_1.TOKEN_PROGRAM_ID
             })
                 .instruction(), this.getComputeBudget(swapData));
         }
         else {
-            return new SolanaAction_1.SolanaAction(signer, this.root, await this.program.methods
+            return new SolanaAction_1.SolanaAction(signer, this.root, await this.swapProgram.methods
                 .claimerClaim(secretBuffer)
                 .accounts({
                 ...accounts,
-                claimerUserData: this.root.SwapUserVault(swapData.claimer, swapData.token)
+                claimerUserData: this.program.SwapUserVault(swapData.claimer, swapData.token)
             })
                 .instruction(), this.getComputeBudget(swapData));
         }
@@ -64,8 +64,8 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         action.computeBudget = null;
         return action;
     }
-    constructor(root, btcRelay) {
-        super(root);
+    constructor(chainInterface, program, btcRelay) {
+        super(chainInterface, program);
         this.btcRelay = btcRelay;
     }
     /**
@@ -135,7 +135,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             Buffer.from(tx.hex, "hex")
         ]);
         this.logger.debug("addTxsWriteTransactionData(): writing transaction data: ", writeData.toString("hex"));
-        return this.root.DataAccount.addTxsWriteData(signer, reversedTxId, writeData, txs, feeRate);
+        return this.program.DataAccount.addTxsWriteData(signer, reversedTxId, writeData, txs, feeRate);
     }
     /**
      * Checks whether we should unwrap the WSOL to SOL when claiming the swap
@@ -164,7 +164,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
     async txsClaimWithSecret(signer, swapData, secret, checkExpiry, initAta, feeRate, skipAtaCheck) {
         //We need to be sure that this transaction confirms in time, otherwise we reveal the secret to the counterparty
         // and won't claim the funds
-        if (checkExpiry && await this.root.isExpired(swapData.claimer.toString(), swapData)) {
+        if (checkExpiry && await this.program.isExpired(swapData.claimer.toString(), swapData)) {
             throw new base_1.SwapDataVerificationError("Not enough time to reliably pay the invoice");
         }
         const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);
@@ -235,7 +235,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = [signer];
         if (swapData.payOut) {
             if (swapData.token != null)
-                accounts.push(this.root.SwapVault(swapData.token));
+                accounts.push(this.program.SwapVault(swapData.token));
             if (swapData.payIn) {
                 if (swapData.offerer != null)
                     accounts.push(swapData.offerer);
@@ -249,7 +249,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         }
         else {
             if (swapData.claimer != null && swapData.token != null)
-                accounts.push(this.root.SwapUserVault(swapData.claimer, swapData.token));
+                accounts.push(this.program.SwapUserVault(swapData.claimer, swapData.token));
             if (swapData.payIn) {
                 if (swapData.offerer != null)
                     accounts.push(swapData.offerer);
@@ -260,7 +260,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             }
         }
         if (swapData.paymentHash != null)
-            accounts.push(this.root.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")));
+            accounts.push(this.program.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")));
         return this.root.Fees.getFeeRate(accounts);
     }
     /**

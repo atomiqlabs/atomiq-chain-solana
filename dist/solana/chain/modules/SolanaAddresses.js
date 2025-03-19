@@ -1,9 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaAddresses = void 0;
-const SolanaModule_1 = require("../SolanaModule");
 const web3_js_1 = require("@solana/web3.js");
-class SolanaAddresses extends SolanaModule_1.SolanaModule {
+class SolanaAddresses {
     ///////////////////
     //// Address utils
     /**
@@ -11,7 +10,7 @@ class SolanaAddresses extends SolanaModule_1.SolanaModule {
      *
      * @param address
      */
-    isValidAddress(address) {
+    static isValidAddress(address) {
         try {
             return web3_js_1.PublicKey.isOnCurve(address);
         }

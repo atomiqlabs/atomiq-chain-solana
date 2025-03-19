@@ -1,36 +1,39 @@
 import {AnchorProvider, Idl, Program} from "@coral-xyz/anchor";
-import {SolanaFees} from "../base/modules/SolanaFees";
-import {SolanaBase, SolanaRetryPolicy} from "../base/SolanaBase";
+import {SolanaFees} from "../chain/modules/SolanaFees";
+import {SolanaChainInterface, SolanaRetryPolicy} from "../chain/SolanaChainInterface";
 import {SolanaProgramEvents} from "./modules/SolanaProgramEvents";
 import {Connection, Keypair, PublicKey} from "@solana/web3.js";
 import {sha256} from "@noble/hashes/sha2";
 import {Buffer} from "buffer";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
+import {getLogger} from "../../utils/Utils";
 
 /**
  * Base class providing program specific utilities
  */
-export class SolanaProgramBase<T extends Idl> extends SolanaBase {
+export class SolanaProgramBase<T extends Idl> {
+
+    protected readonly logger = getLogger(this.constructor.name+": ");
 
     program: Program<T>;
 
     public readonly Events: SolanaProgramEvents<T>;
+    public readonly Chain: SolanaChainInterface;
 
     constructor(
-        connection: Connection,
+        chainInterface: SolanaChainInterface,
         programIdl: any,
-        programAddress?: string,
-        retryPolicy?: SolanaRetryPolicy,
-        solanaFeeEstimator: SolanaFees = new SolanaFees(connection)
+        programAddress?: string
     ) {
-        super(connection, retryPolicy, solanaFeeEstimator);
+        this.Chain = chainInterface;
+
         this.program = new Program<T>(
             programIdl as any,
             programAddress || programIdl.metadata.address,
-            new AnchorProvider(connection, new SolanaKeypairWallet(Keypair.generate()), {})
+            new AnchorProvider(chainInterface.connection, new SolanaKeypairWallet(Keypair.generate()), {})
         );
 
-        this.Events = new SolanaProgramEvents(this);
+        this.Events = new SolanaProgramEvents(chainInterface, this);
     }
 
     /**

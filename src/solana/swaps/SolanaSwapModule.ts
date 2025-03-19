@@ -1,17 +1,17 @@
-import {SolanaModule} from "../base/SolanaModule";
 import {SolanaSwapProgram} from "./SolanaSwapProgram";
 import {Program} from "@coral-xyz/anchor";
 import {SwapProgram} from "./programTypes";
+import {SolanaProgramModule} from "../program/SolanaProgramModule";
+import {SolanaChainInterface} from "../chain/SolanaChainInterface";
 
-export class SolanaSwapModule extends SolanaModule {
+export class SolanaSwapModule extends SolanaProgramModule<SwapProgram> {
 
-    readonly root: SolanaSwapProgram;
-    readonly program: Program<SwapProgram>;
+    protected readonly program: SolanaSwapProgram;
+    protected readonly swapProgram: Program<SwapProgram>;
 
-    constructor(root: SolanaSwapProgram) {
-        super(root);
-        this.root = root;
-        this.program = root.program;
+    constructor(chainInterface: SolanaChainInterface, program: SolanaSwapProgram) {
+        super(chainInterface, program);
+        this.swapProgram = program.program;
     }
 
 }

@@ -2,11 +2,12 @@ import {SolanaSwapModule} from "../SolanaSwapModule";
 import {AccountInfo, PublicKey, Signer, SystemProgram} from "@solana/web3.js";
 import {IStorageManager, StorageObject} from "@atomiqlabs/base";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
-import {SolanaAction} from "../../base/SolanaAction";
-import {SolanaTx} from "../../base/modules/SolanaTransactions";
+import {SolanaAction} from "../../chain/SolanaAction";
+import {SolanaTx} from "../../chain/modules/SolanaTransactions";
 import {tryWithRetries} from "../../../utils/Utils";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {randomBytes} from "@noble/hashes/utils";
+import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
 
 export class StoredDataAccount implements StorageObject {
 
@@ -37,10 +38,10 @@ export class StoredDataAccount implements StorageObject {
 
 export class SolanaDataAccount extends SolanaSwapModule {
 
-    readonly SwapTxDataAlt = this.root.keypair(
+    readonly SwapTxDataAlt = this.program.keypair(
         (reversedTxId: Buffer, signer: Signer) => [Buffer.from(signer.secretKey), reversedTxId]
     );
-    readonly SwapTxDataAltBuffer = this.root.keypair((reversedTxId: Buffer, secret: Buffer) => [secret, reversedTxId]);
+    readonly SwapTxDataAltBuffer = this.program.keypair((reversedTxId: Buffer, secret: Buffer) => [secret, reversedTxId]);
 
     readonly storage: IStorageManager<StoredDataAccount>;
 
@@ -76,9 +77,9 @@ export class SolanaDataAccount extends SolanaSwapModule {
                 newAccountPubkey: accountKey.publicKey,
                 lamports: lamportsDeposit,
                 space: accountSize,
-                programId: this.program.programId
+                programId: this.swapProgram.programId
             }),
-            await this.program.methods
+            await this.swapProgram.methods
                 .initData()
                 .accounts({
                     signer,
@@ -98,7 +99,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
         return new SolanaAction(
             signer,
             this.root,
-            await this.program.methods
+            await this.swapProgram.methods
                 .closeData()
                 .accounts({
                     signer,
@@ -134,7 +135,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
         return {
             bytesWritten: writeLen,
             action: new SolanaAction(signer, this.root,
-                await this.program.methods
+                await this.swapProgram.methods
                     .writeData(offset, writeData.slice(offset, offset+writeLen))
                     .accounts({
                         signer,
@@ -146,8 +147,8 @@ export class SolanaDataAccount extends SolanaSwapModule {
         };
     }
 
-    constructor(root: SolanaSwapProgram, storage: IStorageManager<StoredDataAccount>) {
-        super(root);
+    constructor(chainInterface: SolanaChainInterface, program: SolanaSwapProgram, storage: IStorageManager<StoredDataAccount>) {
+        super(chainInterface, program);
         this.storage = storage;
     }
 

@@ -1,8 +1,7 @@
-import {SolanaModule} from "../SolanaModule";
 import {PublicKey} from "@solana/web3.js";
 
 
-export class SolanaAddresses extends SolanaModule {
+export class SolanaAddresses {
 
     ///////////////////
     //// Address utils
@@ -11,7 +10,7 @@ export class SolanaAddresses extends SolanaModule {
      *
      * @param address
      */
-    isValidAddress(address: string): boolean {
+    static isValidAddress(address: string): boolean {
         try {
             return PublicKey.isOnCurve(address);
         } catch (e) {

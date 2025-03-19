@@ -1,17 +1,23 @@
 /// <reference types="node" />
 import { Idl, Program } from "@coral-xyz/anchor";
-import { SolanaFees } from "../base/modules/SolanaFees";
-import { SolanaBase, SolanaRetryPolicy } from "../base/SolanaBase";
+import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 import { SolanaProgramEvents } from "./modules/SolanaProgramEvents";
-import { Connection, Keypair, PublicKey } from "@solana/web3.js";
+import { Keypair, PublicKey } from "@solana/web3.js";
 import { Buffer } from "buffer";
 /**
  * Base class providing program specific utilities
  */
-export declare class SolanaProgramBase<T extends Idl> extends SolanaBase {
+export declare class SolanaProgramBase<T extends Idl> {
+    protected readonly logger: {
+        debug: (msg: any, ...args: any[]) => void;
+        info: (msg: any, ...args: any[]) => void;
+        warn: (msg: any, ...args: any[]) => void;
+        error: (msg: any, ...args: any[]) => void;
+    };
     program: Program<T>;
     readonly Events: SolanaProgramEvents<T>;
-    constructor(connection: Connection, programIdl: any, programAddress?: string, retryPolicy?: SolanaRetryPolicy, solanaFeeEstimator?: SolanaFees);
+    readonly Chain: SolanaChainInterface;
+    constructor(chainInterface: SolanaChainInterface, programIdl: any, programAddress?: string);
     /**
      * Derives static PDA address from the seed
      *

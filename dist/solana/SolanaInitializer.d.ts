@@ -1,8 +1,8 @@
 import { BaseTokenType, BitcoinNetwork, BitcoinRpc, ChainData, ChainInitializer, IStorageManager, StorageObject } from "@atomiqlabs/base";
 import { Connection } from "@solana/web3.js";
 import { StoredDataAccount } from "./swaps/modules/SolanaDataAccount";
-import { SolanaRetryPolicy } from "./base/SolanaBase";
-import { SolanaFees } from "./base/modules/SolanaFees";
+import { SolanaRetryPolicy } from "./chain/SolanaChainInterface";
+import { SolanaFees } from "./chain/modules/SolanaFees";
 import { SolanaChainType } from "./SolanaChainType";
 export type SolanaAssetsType = BaseTokenType<"WBTC" | "USDC" | "USDT" | "SOL" | "BONK">;
 export type SolanaSwapperOptions = {

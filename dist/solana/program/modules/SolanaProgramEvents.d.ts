@@ -1,8 +1,9 @@
-import { SolanaEvents } from "../../base/modules/SolanaEvents";
+import { SolanaEvents } from "../../chain/modules/SolanaEvents";
 import { DecodeType, Event, Idl, IdlTypes } from "@coral-xyz/anchor";
 import { IdlField, IdlInstruction } from "@coral-xyz/anchor/dist/cjs/idl";
 import { ParsedMessage, PublicKey } from "@solana/web3.js";
 import { SolanaProgramBase } from "../SolanaProgramBase";
+import { SolanaChainInterface } from "../../chain/SolanaChainInterface";
 type DecodedFieldOrNull<D, Defined> = D extends IdlField ? DecodeType<D["type"], Defined> : unknown;
 type ArgsTuple<A extends IdlField[], Defined> = {
     [K in A[number]["name"]]: DecodedFieldOrNull<Extract<A[number], {
@@ -21,9 +22,9 @@ export type ProgramEvent<IDL extends Idl> = Event<IDL["events"][number], Record<
 export declare class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
     private readonly programCoder;
     private readonly eventParser;
-    readonly root: SolanaProgramBase<any>;
+    private readonly program;
     private readonly nameMappedInstructions;
-    constructor(root: SolanaProgramBase<IDL>);
+    constructor(chain: SolanaChainInterface, program: SolanaProgramBase<IDL>);
     /**
      * Gets events from specific transaction as specified by signature, events are ordered from newest to oldest
      *

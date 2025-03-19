@@ -2,11 +2,12 @@ import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { RelaySynchronizer } from "@atomiqlabs/base";
 import { PublicKey } from "@solana/web3.js";
-import { SolanaTx } from "../../base/modules/SolanaTransactions";
+import { SolanaTx } from "../../chain/modules/SolanaTransactions";
 import { SolanaBtcStoredHeader } from "../../btcrelay/headers/SolanaBtcStoredHeader";
 import { SolanaBtcRelay } from "../../btcrelay/SolanaBtcRelay";
 import { SolanaSwapProgram } from "../SolanaSwapProgram";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
+import { SolanaChainInterface } from "../../chain/SolanaChainInterface";
 export declare class SwapClaim extends SolanaSwapModule {
     private static readonly CUCosts;
     readonly btcRelay: SolanaBtcRelay<any>;
@@ -34,7 +35,7 @@ export declare class SwapClaim extends SolanaSwapModule {
      * @private
      */
     private VerifyAndClaim;
-    constructor(root: SolanaSwapProgram, btcRelay: SolanaBtcRelay<any>);
+    constructor(chainInterface: SolanaChainInterface, program: SolanaSwapProgram, btcRelay: SolanaBtcRelay<any>);
     /**
      * Gets the compute budget required for claiming the swap
      *

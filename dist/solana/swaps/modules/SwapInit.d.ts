@@ -2,7 +2,7 @@
 import { ParsedAccountsModeBlockResponse, PublicKey } from "@solana/web3.js";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaSwapModule } from "../SolanaSwapModule";
-import { SolanaTx } from "../../base/modules/SolanaTransactions";
+import { SolanaTx } from "../../chain/modules/SolanaTransactions";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
 export type SolanaPreFetchVerification = {

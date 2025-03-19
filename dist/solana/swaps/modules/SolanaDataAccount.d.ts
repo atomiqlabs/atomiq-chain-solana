@@ -3,8 +3,9 @@ import { SolanaSwapModule } from "../SolanaSwapModule";
 import { PublicKey, Signer } from "@solana/web3.js";
 import { IStorageManager, StorageObject } from "@atomiqlabs/base";
 import { SolanaSwapProgram } from "../SolanaSwapProgram";
-import { SolanaTx } from "../../base/modules/SolanaTransactions";
+import { SolanaTx } from "../../chain/modules/SolanaTransactions";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
+import { SolanaChainInterface } from "../../chain/SolanaChainInterface";
 export declare class StoredDataAccount implements StorageObject {
     accountKey: PublicKey;
     owner: PublicKey;
@@ -46,7 +47,7 @@ export declare class SolanaDataAccount extends SolanaSwapModule {
      * @returns {Promise<{bytesWritten: number, action: SolanaAction}>} bytes written to the data account & action
      */
     private WriteData;
-    constructor(root: SolanaSwapProgram, storage: IStorageManager<StoredDataAccount>);
+    constructor(chainInterface: SolanaChainInterface, program: SolanaSwapProgram, storage: IStorageManager<StoredDataAccount>);
     /**
      * Saves data account to the storage, the storage is required such that we are able to close the accounts later
      *  manually in case the claim doesn't happen (expires due to fees, etc.)
