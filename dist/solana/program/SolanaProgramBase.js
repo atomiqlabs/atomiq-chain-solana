@@ -6,7 +6,7 @@ const SolanaFees_1 = require("../base/modules/SolanaFees");
 const SolanaBase_1 = require("../base/SolanaBase");
 const SolanaProgramEvents_1 = require("./modules/SolanaProgramEvents");
 const web3_js_1 = require("@solana/web3.js");
-const createHash = require("create-hash");
+const sha2_1 = require("@noble/hashes/sha2");
 const buffer_1 = require("buffer");
 const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
 /**
@@ -35,7 +35,7 @@ class SolanaProgramBase extends SolanaBase_1.SolanaBase {
     keypair(func) {
         return (...args) => {
             const res = func(...args);
-            const buff = createHash("sha256").update(buffer_1.Buffer.concat(res)).digest();
+            const buff = (0, sha2_1.sha256)(buffer_1.Buffer.concat(res));
             return web3_js_1.Keypair.fromSeed(buff);
         };
     }

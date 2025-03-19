@@ -1,6 +1,5 @@
 import {SolanaSwapModule} from "../SolanaSwapModule";
 import {SolanaAction} from "../../base/SolanaAction";
-import * as BN from "bn.js";
 import {PublicKey, SystemProgram} from "@solana/web3.js";
 import {
     Account,
@@ -9,10 +8,11 @@ import {
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
-import {tryWithRetries} from "../../../utils/Utils";
+import {toBigInt, toBN, tryWithRetries} from "../../../utils/Utils";
 import {SwapProgram} from "../programTypes";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
 import { IdlAccounts } from "@coral-xyz/anchor";
+import {SolanaTokens} from "../../base/modules/SolanaTokens";
 
 export class SolanaLpVault extends SolanaSwapModule {
 
@@ -30,11 +30,11 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @constructor
      * @private
      */
-    private async Withdraw(signer: PublicKey, token: PublicKey, amount: BN): Promise<SolanaAction> {
+    private async Withdraw(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
         const ata = getAssociatedTokenAddressSync(token, signer);
         return new SolanaAction(signer, this.root,
             await this.program.methods
-                .withdraw(new BN(amount))
+                .withdraw(toBN(amount))
                 .accounts({
                     signer,
                     signerAta: ata,
@@ -58,11 +58,11 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @constructor
      * @private
      */
-    private async Deposit(signer: PublicKey, token: PublicKey, amount: BN): Promise<SolanaAction> {
+    private async Deposit(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
         const ata = getAssociatedTokenAddressSync(token, signer);
         return new SolanaAction(signer, this.root,
             await this.program.methods
-                .deposit(new BN(amount))
+                .deposit(toBN(amount))
                 .accounts({
                     signer,
                     signerAta: ata,
@@ -85,7 +85,7 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param token
      */
     public async getIntermediaryData(address: PublicKey, token: PublicKey): Promise<{
-        balance: BN,
+        balance: bigint,
         reputation: IntermediaryReputationType
     }> {
         const data: IdlAccounts<SwapProgram>["userAccount"] = await this.program.account.userAccount.fetchNullable(
@@ -108,7 +108,7 @@ export class SolanaLpVault extends SolanaSwapModule {
         }
 
         return {
-            balance: data.amount,
+            balance: toBigInt(data.amount),
             reputation: response
         };
     }
@@ -130,14 +130,14 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param address
      * @param token
      */
-    public async getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<BN> {
+    public async getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint> {
         const intermediaryData = await this.getIntermediaryData(address, token);
-        const balance: BN = intermediaryData?.balance;
+        const balance: bigint = intermediaryData?.balance;
 
         this.logger.debug("getIntermediaryBalance(): token LP balance fetched, token: "+token.toString()+
             " address: "+address+" amount: "+(balance==null ? "null" : balance.toString()));
 
-        return intermediaryData?.balance;
+        return balance;
     }
 
     /**
@@ -149,7 +149,7 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param amount
      * @param feeRate
      */
-    public async txsWithdraw(signer: PublicKey, token: PublicKey, amount: BN, feeRate?: string): Promise<SolanaTx[]> {
+    public async txsWithdraw(signer: PublicKey, token: PublicKey, amount: bigint, feeRate?: string): Promise<SolanaTx[]> {
         const ata = await getAssociatedTokenAddress(token, signer);
 
         feeRate = feeRate || await this.getFeeRate(signer, token);
@@ -159,7 +159,7 @@ export class SolanaLpVault extends SolanaSwapModule {
             action.add(this.root.Tokens.InitAta(signer, signer, token));
         }
         action.add(await this.Withdraw(signer, token, amount));
-        const shouldUnwrap = token.equals(this.root.Tokens.WSOL_ADDRESS);
+        const shouldUnwrap = token.equals(SolanaTokens.WSOL_ADDRESS);
         if(shouldUnwrap) action.add(this.root.Tokens.Unwrap(signer));
 
         this.logger.debug("txsWithdraw(): withdraw TX created, token: "+token.toString()+
@@ -176,7 +176,7 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param amount
      * @param feeRate
      */
-    public async txsDeposit(signer: PublicKey, token: PublicKey, amount: BN, feeRate?: string): Promise<SolanaTx[]> {
+    public async txsDeposit(signer: PublicKey, token: PublicKey, amount: bigint, feeRate?: string): Promise<SolanaTx[]> {
         const ata = getAssociatedTokenAddressSync(token, signer);
 
         feeRate = feeRate || await this.getFeeRate(signer, token);
@@ -184,14 +184,14 @@ export class SolanaLpVault extends SolanaSwapModule {
         const action = new SolanaAction(signer, this.root);
 
         let wrapping: boolean = false;
-        if(token.equals(this.root.Tokens.WSOL_ADDRESS)) {
+        if(token.equals(SolanaTokens.WSOL_ADDRESS)) {
             const account = await tryWithRetries<Account>(
                 () => this.root.Tokens.getATAOrNull(ata),
                 this.retryPolicy
             );
-            let balance: BN = account==null ? new BN(0) : new BN(account.amount.toString());
-            if(balance.lt(amount)) {
-                action.add(this.root.Tokens.Wrap(signer, amount.sub(balance), account==null));
+            let balance: bigint = account==null ? 0n : account.amount;
+            if(balance < amount) {
+                action.add(this.root.Tokens.Wrap(signer, amount - balance, account==null));
                 wrapping = true;
             }
         }

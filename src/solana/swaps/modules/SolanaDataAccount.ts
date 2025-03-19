@@ -5,10 +5,8 @@ import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaAction} from "../../base/SolanaAction";
 import {SolanaTx} from "../../base/modules/SolanaTransactions";
 import {tryWithRetries} from "../../../utils/Utils";
-import * as randomBytes from "randombytes";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
-import {sign} from "tweetnacl";
-import * as BN from "bn.js";
+import {randomBytes} from "@noble/hashes/utils";
 
 export class StoredDataAccount implements StorageObject {
 
@@ -184,9 +182,9 @@ export class SolanaDataAccount extends SolanaSwapModule {
         return this.storage.removeData(publicKey.toBase58());
     }
 
-    public async getDataAccountsInfo(signer: PublicKey): Promise<{closePublicKeys: PublicKey[], count: number, totalValue: BN}> {
+    public async getDataAccountsInfo(signer: PublicKey): Promise<{closePublicKeys: PublicKey[], count: number, totalValue: bigint}> {
         const closePublicKeys: PublicKey[] = [];
-        let totalLocked = new BN(0);
+        let totalLocked = 0n;
         for(let key in this.storage.data) {
             const {accountKey, owner} = this.storage.data[key];
 
@@ -199,7 +197,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
                     continue;
                 }
                 closePublicKeys.push(accountKey);
-                totalLocked = totalLocked.add(new BN(fetchedDataAccount.lamports));
+                totalLocked += BigInt(fetchedDataAccount.lamports);
             } catch (e) {}
         }
 
@@ -213,7 +211,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
     /**
      * Sweeps all old data accounts, reclaiming the SOL locked in the PDAs
      */
-    public async sweepDataAccounts(signer: SolanaSigner): Promise<{txIds: string[], count: number, totalValue: BN}> {
+    public async sweepDataAccounts(signer: SolanaSigner): Promise<{txIds: string[], count: number, totalValue: bigint}> {
         const {closePublicKeys, totalValue} = await this.getDataAccountsInfo(signer.getPublicKey());
 
         if(closePublicKeys.length===0) {
@@ -269,7 +267,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
                 this.retryPolicy
             );
         } else {
-            const secret = randomBytes(32);
+            const secret = Buffer.from(randomBytes(32));
             txDataKey = this.SwapTxDataAltBuffer(reversedTxId, secret);
         }
 

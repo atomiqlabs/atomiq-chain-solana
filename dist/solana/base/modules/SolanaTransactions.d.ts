@@ -80,7 +80,7 @@ export declare class SolanaTransactions extends SolanaModule {
      *  optionally waits for confirmation of a batch of solana transactions
      *
      * @param signer
-     * @param txs transactions to send
+     * @param _txs
      * @param waitForConfirmation whether to wait for transaction confirmations (this also makes sure the transactions
      *  are re-sent at regular intervals)
      * @param abortSignal abort signal to abort waiting for transaction confirmations
@@ -88,7 +88,7 @@ export declare class SolanaTransactions extends SolanaModule {
      *  are executed in order)
      * @param onBeforePublish a callback called before every transaction is published
      */
-    sendAndConfirm(signer: SolanaSigner, txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
+    sendAndConfirm(signer: SolanaSigner, _txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
     /**
      * Serializes the solana transaction, saves the transaction, signers & last valid blockheight
      *

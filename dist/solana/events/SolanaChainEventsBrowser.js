@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaChainEventsBrowser = void 0;
 const base_1 = require("@atomiqlabs/base");
@@ -36,23 +27,21 @@ class SolanaChainEventsBrowser {
      * @private
      * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
      */
-    getTransactionInstructions(signature) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const transaction = yield (0, Utils_1.tryWithRetries)(() => __awaiter(this, void 0, void 0, function* () {
-                const res = yield this.connection.getParsedTransaction(signature, {
-                    commitment: "confirmed",
-                    maxSupportedTransactionVersion: 0
-                });
-                if (res == null)
-                    throw new Error("Transaction not found!");
-                return res;
-            }));
-            if (transaction == null)
-                return null;
-            if (transaction.meta.err != null)
-                return null;
-            return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
+    async getTransactionInstructions(signature) {
+        const transaction = await (0, Utils_1.tryWithRetries)(async () => {
+            const res = await this.connection.getParsedTransaction(signature, {
+                commitment: "confirmed",
+                maxSupportedTransactionVersion: 0
+            });
+            if (res == null)
+                throw new Error("Transaction not found!");
+            return res;
         });
+        if (transaction == null)
+            return null;
+        if (transaction.meta.err != null)
+            return null;
+        return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
     }
     /**
      * Converts initialize instruction data into {SolanaSwapData}
@@ -83,33 +72,39 @@ class SolanaChainEventsBrowser {
      * @returns {() => Promise<SolanaSwapData>} getter to be passed to InitializeEvent constructor
      */
     getSwapDataGetter(eventObject, txoHash) {
-        return () => __awaiter(this, void 0, void 0, function* () {
+        return async () => {
             if (eventObject.instructions == null)
-                eventObject.instructions = yield this.getTransactionInstructions(eventObject.signature);
+                eventObject.instructions = await this.getTransactionInstructions(eventObject.signature);
             if (eventObject.instructions == null)
                 return null;
             const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
             if (initIx == null)
                 return null;
             return this.instructionToSwapData(initIx, txoHash);
-        });
+        };
     }
     parseInitializeEvent(data, eventObject) {
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
         const txoHash = buffer_1.Buffer.from(data.txoHash).toString("hex");
-        this.logger.debug("InitializeEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) + " txoHash: " + txoHash);
-        return new base_1.InitializeEvent(paymentHash, data.sequence, txoHash, SwapTypeEnum_1.SwapTypeEnum.toChainSwapType(data.kind), (0, Utils_1.onceAsync)(this.getSwapDataGetter(eventObject, txoHash)));
+        const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
+        this.logger.debug("InitializeEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) +
+            " txoHash: " + txoHash + " escrowHash: " + escrowHash);
+        return new base_1.InitializeEvent(escrowHash, SwapTypeEnum_1.SwapTypeEnum.toChainSwapType(data.kind), (0, Utils_1.onceAsync)(this.getSwapDataGetter(eventObject, txoHash)));
     }
     parseRefundEvent(data) {
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
-        this.logger.debug("RefundEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10));
-        return new base_1.RefundEvent(paymentHash, data.sequence);
+        const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
+        this.logger.debug("RefundEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) +
+            " escrowHash: " + escrowHash);
+        return new base_1.RefundEvent(escrowHash);
     }
     parseClaimEvent(data) {
         const secret = buffer_1.Buffer.from(data.secret).toString("hex");
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
-        this.logger.debug("ClaimEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) + " secret: " + secret);
-        return new base_1.ClaimEvent(paymentHash, data.sequence, secret);
+        const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
+        this.logger.debug("ClaimEvent paymentHash: " + paymentHash + " sequence: " + data.sequence.toString(10) +
+            " secret: " + secret + " escrowHash: " + escrowHash);
+        return new base_1.ClaimEvent(escrowHash, secret);
     }
     /**
      * Processes event as received from the chain, parses it & calls event listeners
@@ -117,31 +112,29 @@ class SolanaChainEventsBrowser {
      * @param eventObject
      * @protected
      */
-    processEvent(eventObject) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let parsedEvents = eventObject.events.map(event => {
-                let parsedEvent;
-                switch (event.name) {
-                    case "ClaimEvent":
-                        parsedEvent = this.parseClaimEvent(event.data);
-                        break;
-                    case "RefundEvent":
-                        parsedEvent = this.parseRefundEvent(event.data);
-                        break;
-                    case "InitializeEvent":
-                        parsedEvent = this.parseInitializeEvent(event.data, eventObject);
-                        break;
-                }
-                parsedEvent.meta = {
-                    timestamp: eventObject.blockTime,
-                    txId: eventObject.signature
-                };
-                return parsedEvent;
-            }).filter(parsedEvent => parsedEvent != null);
-            for (let listener of this.listeners) {
-                yield listener(parsedEvents);
+    async processEvent(eventObject) {
+        let parsedEvents = eventObject.events.map(event => {
+            let parsedEvent;
+            switch (event.name) {
+                case "ClaimEvent":
+                    parsedEvent = this.parseClaimEvent(event.data);
+                    break;
+                case "RefundEvent":
+                    parsedEvent = this.parseRefundEvent(event.data);
+                    break;
+                case "InitializeEvent":
+                    parsedEvent = this.parseInitializeEvent(event.data, eventObject);
+                    break;
             }
-        });
+            parsedEvent.meta = {
+                timestamp: eventObject.blockTime,
+                txId: eventObject.signature
+            };
+            return parsedEvent;
+        }).filter(parsedEvent => parsedEvent != null);
+        for (let listener of this.listeners) {
+            await listener(parsedEvents);
+        }
     }
     /**
      * Returns websocket event handler for specific event type
@@ -179,13 +172,11 @@ class SolanaChainEventsBrowser {
         this.setupWebsocket();
         return Promise.resolve();
     }
-    stop() {
-        return __awaiter(this, void 0, void 0, function* () {
-            for (let num of this.eventListeners) {
-                yield this.solanaSwapProgram.program.removeEventListener(num);
-            }
-            this.eventListeners = [];
-        });
+    async stop() {
+        for (let num of this.eventListeners) {
+            await this.solanaSwapProgram.program.removeEventListener(num);
+        }
+        this.eventListeners = [];
     }
     registerListener(cbk) {
         this.listeners.push(cbk);

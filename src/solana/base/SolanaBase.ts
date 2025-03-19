@@ -1,5 +1,4 @@
-import {Connection, Signer} from "@solana/web3.js";
-import {AnchorProvider} from "@coral-xyz/anchor";
+import {Connection} from "@solana/web3.js";
 import {SolanaFees} from "./modules/SolanaFees";
 import {SolanaBlocks} from "./modules/SolanaBlocks";
 import {SolanaSlots} from "./modules/SolanaSlots";

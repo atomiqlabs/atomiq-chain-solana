@@ -1,4 +1,3 @@
-import * as BN from "bn.js";
 import {
     ComputeBudgetProgram,
     Connection,
@@ -16,26 +15,26 @@ const MAX_FEE_AGE = 5000;
 export type FeeBribeData = {
     address: string,
     endpoint: string,
-    getBribeFee?: (original: BN) => BN
+    getBribeFee?: (original: bigint) => bigint
 };
 
 export class SolanaFees {
 
     private readonly connection: Connection;
-    private readonly maxFeeMicroLamports: BN;
+    private readonly maxFeeMicroLamports: bigint;
     private readonly numSamples: number;
     private readonly period: number;
     private useHeliusApi: "yes" | "no" | "auto";
     private heliusApiSupported: boolean = true;
     private readonly heliusFeeLevel: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax";
     private readonly bribeData?: FeeBribeData;
-    private readonly getStaticFee?: (original: BN) => BN;
+    private readonly getStaticFee?: (original: bigint) => bigint;
 
     private readonly logger = getLogger("SolanaFees: ");
 
     private blockFeeCache: {
         timestamp: number,
-        feeRate: Promise<BN>
+        feeRate: Promise<bigint>
     } = null;
 
     constructor(
@@ -45,11 +44,11 @@ export class SolanaFees {
         period: number = 150,
         useHeliusApi: "yes" | "no" | "auto" = "auto",
         heliusFeeLevel: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax" = "veryHigh",
-        getStaticFee?: (feeRate: BN) => BN,
+        getStaticFee?: (feeRate: bigint) => bigint,
         bribeData?: FeeBribeData,
     ) {
         this.connection = connection;
-        this.maxFeeMicroLamports = new BN(maxFeeMicroLamports);
+        this.maxFeeMicroLamports = BigInt(maxFeeMicroLamports);
         this.numSamples = numSamples;
         this.period = period;
         this.useHeliusApi = useHeliusApi;
@@ -172,7 +171,7 @@ export class SolanaFees {
      * @param parsedTx
      * @private
      */
-    private getJitoTxFee(parsedTx: Transaction): BN | null {
+    private getJitoTxFee(parsedTx: Transaction): bigint | null {
         const lastIx = parsedTx.instructions[parsedTx.instructions.length-1];
 
         if(!lastIx.programId.equals(SystemProgram.programId)) return null;
@@ -180,7 +179,7 @@ export class SolanaFees {
 
         const decodedIxData = SystemInstruction.decodeTransfer(lastIx);
         if(decodedIxData.toPubkey.toBase58()!==this.bribeData?.address) return null;
-        return new BN(decodedIxData.lamports.toString(10));
+        return decodedIxData.lamports;
     }
 
     /**
@@ -189,21 +188,21 @@ export class SolanaFees {
      * @param slot
      * @private
      */
-    private async getBlockMeanFeeRate(slot: number): Promise<BN | null> {
+    private async getBlockMeanFeeRate(slot: number): Promise<bigint | null> {
         const block = await this.getBlockWithSignature(slot);
         if(block==null) return null;
 
         const blockComission = block.rewards.find(e => e.rewardType==="Fee");
-        const totalBlockFees = new BN(blockComission.lamports).mul(new BN(2));
+        const totalBlockFees: bigint = BigInt(blockComission.lamports) * 2n;
 
         //Subtract per-signature fees to get pure compute fees
-        const totalTransactionBaseFees = new BN(block.signatures.length).mul(new BN(5000));
-        const computeFees = totalBlockFees.sub(totalTransactionBaseFees);
+        const totalTransactionBaseFees = BigInt(block.signatures.length) * 5000n;
+        const computeFees = totalBlockFees - totalTransactionBaseFees;
 
         //Total compute fees in micro lamports
-        const computeFeesMicroLamports = computeFees.mul(new BN(1000000));
+        const computeFeesMicroLamports = computeFees * 1000000n;
         //micro lamports per CU considering block was full (48M compute units)
-        const perCUMicroLamports = computeFeesMicroLamports.div(new BN(48000000));
+        const perCUMicroLamports = computeFeesMicroLamports / 48000000n;
 
         this.logger.debug("getBlockMeanFeeRate(): slot: "+slot+" total reward: "+totalBlockFees.toString(10)+
             " total transactions: "+block.signatures.length+" computed fee: "+perCUMicroLamports);
@@ -217,7 +216,7 @@ export class SolanaFees {
      * @private
      * @returns {Promise<BN>} sampled mean microLamports/CU fee over the last period
      */
-    private async _getGlobalFeeRate(): Promise<BN> {
+    private async _getGlobalFeeRate(): Promise<bigint> {
         let slot = await this.connection.getSlot();
 
         const slots: number[] = [];
@@ -226,10 +225,10 @@ export class SolanaFees {
             slots.push(slot-i);
         }
 
-        const promises: Promise<BN>[] = [];
+        const promises: Promise<bigint>[] = [];
         for(let i=0;i<this.numSamples;i++) {
             promises.push((async () => {
-                let feeRate: BN = null;
+                let feeRate: bigint = null;
                 while(feeRate==null) {
                     if(slots.length===0) throw new Error("Ran out of slots to check!");
                     const index = Math.floor(Math.random()*slots.length);
@@ -244,7 +243,7 @@ export class SolanaFees {
         const meanFees = await Promise.all(promises);
 
         let min = null;
-        meanFees.forEach(e => min==null ? min = e : min = BN.min(min, e));
+        meanFees.forEach(e => min==null || min > e ? min = e : 0);
 
         if(min!=null) this.logger.debug("_getGlobalFeeRate(): slot: "+slot+" global fee minimum: "+min.toString(10));
 
@@ -257,13 +256,15 @@ export class SolanaFees {
      * @param mutableAccounts
      * @private
      */
-    private async _getFeeRate(mutableAccounts: PublicKey[]): Promise<BN> {
+    private async _getFeeRate(mutableAccounts: PublicKey[]): Promise<bigint> {
         if(this.useHeliusApi==="yes" || (this.useHeliusApi==="auto" && this.heliusApiSupported)) {
             //Try to use getPriorityFeeEstimate api of Helius
             const fees = await this.getPriorityFeeEstimate(mutableAccounts);
             if(fees!=null) {
-                const calculatedFee = BN.max(new BN(8000), new BN(fees[this.heliusFeeLevel]));
-                return BN.min(calculatedFee, this.maxFeeMicroLamports);
+                let calculatedFee = BigInt(fees[this.heliusFeeLevel]);
+                if(calculatedFee < 8000n) calculatedFee = 8000n;
+                if(calculatedFee > this.maxFeeMicroLamports) calculatedFee = this.maxFeeMicroLamports;
+                return calculatedFee;
             }
             this.logger.warn("_getFeeRate(): tried fetching fees from Helius API, not supported," +
                 " falling back to client-side fee estimation");
@@ -280,13 +281,16 @@ export class SolanaFees {
                     const data = resp[resp.length-i-1];
                     if(data!=null) lamports = Math.min(lamports, data.prioritizationFee);
                 }
-                return new BN(lamports);
+                return BigInt(lamports);
             })
         ]);
 
-        const fee =  BN.max(BN.max(globalFeeRate, localFeeRate), new BN(8000));
+        let fee = globalFeeRate;
+        if(fee < localFeeRate) fee = localFeeRate;
+        if(fee < 8000n) fee = 8000n;
+        if(fee > this.maxFeeMicroLamports) fee = this.maxFeeMicroLamports;
 
-        return BN.min(fee, this.maxFeeMicroLamports);
+        return fee;
     }
 
     /**
@@ -294,7 +298,7 @@ export class SolanaFees {
      *
      * @returns {Promise<BN>} global fee rate microLamports/CU
      */
-    public getGlobalFeeRate(): Promise<BN> {
+    public getGlobalFeeRate(): Promise<bigint> {
         if(this.blockFeeCache==null || Date.now() - this.blockFeeCache.timestamp > MAX_FEE_AGE) {
             let obj = {
                 timestamp: Date.now(),
@@ -344,8 +348,8 @@ export class SolanaFees {
      * @param feeRate
      * @param includeStaticFee whether the include the static/base part of the fee rate
      */
-    public getPriorityFee(computeUnits: number, feeRate: string, includeStaticFee: boolean = true): BN {
-        if(feeRate==null) return new BN(0);
+    public getPriorityFee(computeUnits: number, feeRate: string, includeStaticFee: boolean = true): bigint {
+        if(feeRate==null) return 0n;
 
         const hashArr = feeRate.split("#");
         if(hashArr.length>1) {
@@ -353,10 +357,10 @@ export class SolanaFees {
         }
 
         const arr = feeRate.split(";");
-        const cuPrice = new BN(arr[0]);
-        const staticFee = includeStaticFee ? new BN(arr[1]) : new BN(0);
+        const cuPrice = BigInt(arr[0]);
+        const staticFee = includeStaticFee ? BigInt(arr[1]) : 0n;
 
-        return staticFee.add(cuPrice.mul(new BN(computeUnits)).div(new BN(1000000)));
+        return staticFee + (cuPrice * BigInt(computeUnits) / 1000000n);
     }
 
     /**

@@ -7,6 +7,8 @@ const base_1 = require("@atomiqlabs/base");
 const SwapTypeEnum_1 = require("./SwapTypeEnum");
 const buffer_1 = require("buffer");
 const spl_token_1 = require("@solana/spl-token");
+const Utils_1 = require("../../utils/Utils");
+const SolanaTokens_1 = require("../base/modules/SolanaTokens");
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 class SolanaSwapData extends base_1.SwapData {
     constructor(offererOrData, claimer, token, amount, paymentHash, sequence, expiry, nonce, confirmations, payOut, kind, payIn, offererAta, claimerAta, securityDeposit, claimerBounty, txoHash) {
@@ -91,7 +93,7 @@ class SolanaSwapData extends base_1.SwapData {
         };
     }
     getAmount() {
-        return this.amount;
+        return (0, Utils_1.toBigInt)(this.amount);
     }
     getToken() {
         return this.token.toString();
@@ -105,13 +107,13 @@ class SolanaSwapData extends base_1.SwapData {
     getExpiry() {
         if (this.expiry.lt(EXPIRY_BLOCKHEIGHT_THRESHOLD))
             return null;
-        return this.expiry;
+        return (0, Utils_1.toBigInt)(this.expiry);
     }
-    getConfirmations() {
+    getConfirmationsHint() {
         return this.confirmations;
     }
-    getEscrowNonce() {
-        return this.nonce;
+    getNonceHint() {
+        return (0, Utils_1.toBigInt)(this.nonce);
     }
     isPayIn() {
         return this.payIn;
@@ -119,26 +121,34 @@ class SolanaSwapData extends base_1.SwapData {
     isPayOut() {
         return this.payOut;
     }
-    getHash() {
-        return this.paymentHash;
+    getClaimHash() {
+        return (0, Utils_1.toClaimHash)(this.paymentHash, (0, Utils_1.toBigInt)(this.nonce), this.confirmations);
+    }
+    getEscrowHash() {
+        return (0, Utils_1.toEscrowHash)(this.paymentHash, this.sequence);
     }
     getSequence() {
-        return this.sequence;
+        return (0, Utils_1.toBigInt)(this.sequence);
     }
-    getTxoHash() {
+    getTxoHashHint() {
+        if (this.txoHash === "0000000000000000000000000000000000000000000000000000000000000000")
+            return null; //Txo hash opt-out flag
         return this.txoHash;
     }
-    setTxoHash(txoHash) {
+    getExtraData() {
+        return this.txoHash;
+    }
+    setExtraData(txoHash) {
         this.txoHash = txoHash;
     }
     getSecurityDeposit() {
-        return this.securityDeposit;
+        return (0, Utils_1.toBigInt)(this.securityDeposit);
     }
     getClaimerBounty() {
-        return this.claimerBounty;
+        return (0, Utils_1.toBigInt)(this.claimerBounty);
     }
     getTotalDeposit() {
-        return this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty;
+        return (0, Utils_1.toBigInt)(this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty);
     }
     toSwapDataStruct() {
         return {
@@ -245,6 +255,12 @@ class SolanaSwapData extends base_1.SwapData {
     }
     isOfferer(address) {
         return this.offerer.equals(new web3_js_1.PublicKey(address));
+    }
+    getDepositToken() {
+        return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.toString();
+    }
+    isDepositToken(token) {
+        return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.equals(new web3_js_1.PublicKey(token));
     }
 }
 exports.SolanaSwapData = SolanaSwapData;

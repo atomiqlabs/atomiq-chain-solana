@@ -1,6 +1,5 @@
 import {SolanaModule} from "../SolanaModule";
 import {ConfirmedSignatureInfo, PublicKey} from "@solana/web3.js";
-import {log} from "node:util";
 
 export class SolanaEvents extends SolanaModule {
 

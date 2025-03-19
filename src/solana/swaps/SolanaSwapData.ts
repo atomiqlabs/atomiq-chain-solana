@@ -6,6 +6,8 @@ import {IdlAccounts, IdlTypes} from "@coral-xyz/anchor";
 import {SwapTypeEnum} from "./SwapTypeEnum";
 import {Buffer} from "buffer";
 import {getAssociatedTokenAddressSync} from "@solana/spl-token";
+import {toBigInt, toClaimHash, toEscrowHash} from "../../utils/Utils";
+import {SolanaTokens} from "../base/modules/SolanaTokens";
 
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 
@@ -161,8 +163,8 @@ export class SolanaSwapData extends SwapData {
         }
     }
 
-    getAmount(): BN {
-        return this.amount;
+    getAmount(): bigint {
+        return toBigInt(this.amount);
     }
 
     getToken(): string {
@@ -177,17 +179,17 @@ export class SolanaSwapData extends SwapData {
         return SolanaSwapData.kindToType(this.kind);
     }
 
-    getExpiry(): BN {
+    getExpiry(): bigint {
         if(this.expiry.lt(EXPIRY_BLOCKHEIGHT_THRESHOLD)) return null;
-        return this.expiry;
+        return toBigInt(this.expiry);
     }
 
-    getConfirmations(): number {
+    getConfirmationsHint(): number {
         return this.confirmations;
     }
 
-    getEscrowNonce(): BN {
-        return this.nonce;
+    getNonceHint(): bigint {
+        return toBigInt(this.nonce);
     }
 
     isPayIn(): boolean {
@@ -198,32 +200,41 @@ export class SolanaSwapData extends SwapData {
         return this.payOut;
     }
 
-    getHash(): string {
-        return this.paymentHash;
+    getClaimHash(): string {
+        return toClaimHash(this.paymentHash, toBigInt(this.nonce), this.confirmations);
     }
 
-    getSequence(): BN {
-        return this.sequence;
+    getEscrowHash(): string {
+        return toEscrowHash(this.paymentHash, this.sequence);
     }
 
-    getTxoHash(): string {
+    getSequence(): bigint {
+        return toBigInt(this.sequence);
+    }
+
+    getTxoHashHint(): string {
+        if(this.txoHash==="0000000000000000000000000000000000000000000000000000000000000000") return null; //Txo hash opt-out flag
         return this.txoHash;
     }
 
-    setTxoHash(txoHash: string): void {
+    getExtraData(): string {
+        return this.txoHash;
+    }
+
+    setExtraData(txoHash: string): void {
         this.txoHash = txoHash;
     }
 
-    getSecurityDeposit() {
-        return this.securityDeposit;
+    getSecurityDeposit(): bigint {
+        return toBigInt(this.securityDeposit);
     }
 
-    getClaimerBounty() {
-        return this.claimerBounty;
+    getClaimerBounty(): bigint {
+        return toBigInt(this.claimerBounty);
     }
 
-    getTotalDeposit() {
-        return this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty;
+    getTotalDeposit(): bigint {
+        return toBigInt(this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty);
     }
 
     toSwapDataStruct(): IdlTypes<SwapProgram>["SwapData"] {
@@ -353,6 +364,14 @@ export class SolanaSwapData extends SwapData {
 
     isOfferer(address: string) {
         return this.offerer.equals(new PublicKey(address));
+    }
+
+    getDepositToken(): string {
+        return SolanaTokens.WSOL_ADDRESS.toString();
+    }
+
+    isDepositToken(token: string): boolean {
+        return SolanaTokens.WSOL_ADDRESS.equals(new PublicKey(token));
     }
 
 }

@@ -41,4 +41,5 @@ __exportStar(require("./solana/swaps/modules/SwapRefund"), exports);
 __exportStar(require("./solana/wallet/SolanaKeypairWallet"), exports);
 __exportStar(require("./solana/wallet/SolanaSigner"), exports);
 __exportStar(require("./solana/SolanaChainType"), exports);
+__exportStar(require("./solana/SolanaInitializer"), exports);
 __exportStar(require("./utils/Utils"), exports);

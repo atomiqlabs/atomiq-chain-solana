@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaProgramEvents = void 0;
 const SolanaEvents_1 = require("../../base/modules/SolanaEvents");
@@ -29,18 +20,16 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
      * @param signature
      * @private
      */
-    getEvents(signature) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const tx = yield this.connection.getTransaction(signature, {
-                commitment: "confirmed",
-                maxSupportedTransactionVersion: 0
-            });
-            if (tx.meta.err)
-                return [];
-            const events = this.parseLogs(tx.meta.logMessages);
-            events.reverse();
-            return events;
+    async getEvents(signature) {
+        const tx = await this.connection.getTransaction(signature, {
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0
         });
+        if (tx.meta.err)
+            return [];
+        const events = this.parseLogs(tx.meta.logMessages);
+        events.reverse();
+        return events;
     }
     /**
      * Runs a search backwards in time, processing the events for a specific topic public key
@@ -52,17 +41,17 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
      * @param logBatchSize how many signatures should be fetched in one getSignaturesForAddress call
      */
     findInEvents(topicKey, processor, abortSignal, logBatchSize) {
-        return this.findInSignatures(topicKey, (signatures) => __awaiter(this, void 0, void 0, function* () {
+        return this.findInSignatures(topicKey, async (signatures) => {
             for (let data of signatures) {
-                for (let event of yield this.getEvents(data.signature)) {
+                for (let event of await this.getEvents(data.signature)) {
                     if (abortSignal != null)
                         abortSignal.throwIfAborted();
-                    const result = yield processor(event);
+                    const result = await processor(event);
                     if (result != null)
                         return result;
                 }
             }
-        }), abortSignal, logBatchSize);
+        }, abortSignal, logBatchSize);
     }
     /**
      * Decodes the instructions for this program from the transaction, leaves null in the returned instructions array

@@ -1,16 +1,10 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaTxUtils = exports.tryWithRetries = exports.getLogger = exports.onceAsync = exports.timeoutPromise = void 0;
+exports.toBigInt = exports.toBN = exports.toEscrowHash = exports.fromClaimHash = exports.toClaimHash = exports.SolanaTxUtils = exports.tryWithRetries = exports.getLogger = exports.onceAsync = exports.timeoutPromise = void 0;
 const web3_js_1 = require("@solana/web3.js");
+const BN = require("bn.js");
+const buffer_1 = require("buffer");
+const sha2_1 = require("@noble/hashes/sha2");
 function timeoutPromise(timeoutMillis, abortSignal) {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(resolve, timeoutMillis);
@@ -45,32 +39,30 @@ function getLogger(prefix) {
 }
 exports.getLogger = getLogger;
 const logger = getLogger("Utils: ");
-function tryWithRetries(func, retryPolicy, errorAllowed, abortSignal) {
-    return __awaiter(this, void 0, void 0, function* () {
-        retryPolicy = retryPolicy || {};
-        retryPolicy.maxRetries = retryPolicy.maxRetries || 5;
-        retryPolicy.delay = retryPolicy.delay || 500;
-        retryPolicy.exponential = retryPolicy.exponential == null ? true : retryPolicy.exponential;
-        let err = null;
-        for (let i = 0; i < retryPolicy.maxRetries; i++) {
-            try {
-                const resp = yield func();
-                return resp;
-            }
-            catch (e) {
-                if (errorAllowed != null && errorAllowed(e))
-                    throw e;
-                err = e;
-                logger.error("tryWithRetries(): error on try number: " + i, e);
-            }
-            if (abortSignal != null && abortSignal.aborted)
-                throw new Error("Aborted");
-            if (i !== retryPolicy.maxRetries - 1) {
-                yield timeoutPromise(retryPolicy.exponential ? retryPolicy.delay * Math.pow(2, i) : retryPolicy.delay, abortSignal);
-            }
+async function tryWithRetries(func, retryPolicy, errorAllowed, abortSignal) {
+    retryPolicy = retryPolicy || {};
+    retryPolicy.maxRetries = retryPolicy.maxRetries || 5;
+    retryPolicy.delay = retryPolicy.delay || 500;
+    retryPolicy.exponential = retryPolicy.exponential == null ? true : retryPolicy.exponential;
+    let err = null;
+    for (let i = 0; i < retryPolicy.maxRetries; i++) {
+        try {
+            const resp = await func();
+            return resp;
         }
-        throw err;
-    });
+        catch (e) {
+            if (errorAllowed != null && errorAllowed(e))
+                throw e;
+            err = e;
+            logger.error("tryWithRetries(): error on try number: " + i, e);
+        }
+        if (abortSignal != null && abortSignal.aborted)
+            throw new Error("Aborted");
+        if (i !== retryPolicy.maxRetries - 1) {
+            await timeoutPromise(retryPolicy.exponential ? retryPolicy.delay * Math.pow(2, i) : retryPolicy.delay, abortSignal);
+        }
+    }
+    throw err;
 }
 exports.tryWithRetries = tryWithRetries;
 class SolanaTxUtils {
@@ -141,3 +133,38 @@ exports.SolanaTxUtils = SolanaTxUtils;
 // COMPACT ARRAY
 SolanaTxUtils.LOW_VALUE = 127; // 0x7f
 SolanaTxUtils.HIGH_VALUE = 16383; // 0x3fff
+function toClaimHash(paymentHash, nonce, confirmations) {
+    return paymentHash +
+        nonce.toString(16).padStart(16, "0") +
+        confirmations.toString(16).padStart(4, "0");
+}
+exports.toClaimHash = toClaimHash;
+function fromClaimHash(claimHash) {
+    if (claimHash.length !== 84)
+        throw new Error("Claim hash invalid length: " + claimHash.length);
+    return {
+        paymentHash: claimHash.slice(0, 64),
+        nonce: new BN(claimHash.slice(64, 80), "hex"),
+        confirmations: parseInt(claimHash.slice(80, 84), 16)
+    };
+}
+exports.fromClaimHash = fromClaimHash;
+function toEscrowHash(paymentHash, sequence) {
+    return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat([
+        buffer_1.Buffer.from(paymentHash, "hex"),
+        sequence.toArrayLike(buffer_1.Buffer, "be", 8)
+    ]))).toString("hex");
+}
+exports.toEscrowHash = toEscrowHash;
+function toBN(value) {
+    if (value == null)
+        return null;
+    return new BN(value.toString(10));
+}
+exports.toBN = toBN;
+function toBigInt(value) {
+    if (value == null)
+        return null;
+    return BigInt(value.toString(10));
+}
+exports.toBigInt = toBigInt;

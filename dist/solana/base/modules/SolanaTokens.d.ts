@@ -1,7 +1,6 @@
 import { SolanaModule } from "../SolanaModule";
 import { PublicKey } from "@solana/web3.js";
 import { Account } from "@solana/spl-token";
-import * as BN from "bn.js";
 import { SolanaTx } from "./SolanaTransactions";
 import { SolanaAction } from "../SolanaAction";
 export declare class SolanaTokens extends SolanaModule {
@@ -31,7 +30,7 @@ export declare class SolanaTokens extends SolanaModule {
      * @param initAta whether we should also initialize the ATA before depositing SOL
      * @constructor
      */
-    Wrap(publicKey: PublicKey, amount: BN, initAta: boolean): SolanaAction;
+    Wrap(publicKey: PublicKey, amount: bigint, initAta: boolean): SolanaAction;
     /**
      * Action for unwrapping WSOL to SOL for a specific public key
      *
@@ -39,8 +38,8 @@ export declare class SolanaTokens extends SolanaModule {
      * @constructor
      */
     Unwrap(publicKey: PublicKey): SolanaAction;
-    readonly WSOL_ADDRESS: PublicKey;
-    readonly SPL_ATA_RENT_EXEMPT = 2039280;
+    static readonly WSOL_ADDRESS: PublicKey;
+    static readonly SPL_ATA_RENT_EXEMPT = 2039280;
     /**
      * Action for transferring the native SOL token, uses provider's public key as a sender
      *
@@ -104,7 +103,7 @@ export declare class SolanaTokens extends SolanaModule {
     /**
      * Returns the rent exempt deposit required to initiate the ATA
      */
-    getATARentExemptLamports(): Promise<BN>;
+    getATARentExemptLamports(): Promise<bigint>;
     /**
      * Returns the token balance of the public key
      *
@@ -112,7 +111,7 @@ export declare class SolanaTokens extends SolanaModule {
      * @param token
      */
     getTokenBalance(publicKey: PublicKey, token: PublicKey): Promise<{
-        balance: BN;
+        balance: bigint;
         ataExists: boolean;
     }>;
     /**
@@ -133,5 +132,5 @@ export declare class SolanaTokens extends SolanaModule {
      * @param dstAddress destination address of the recipient
      * @param feeRate fee rate to use for the transaction
      */
-    txsTransfer(signer: PublicKey, token: PublicKey, amount: BN, dstAddress: PublicKey, feeRate?: string): Promise<SolanaTx[]>;
+    txsTransfer(signer: PublicKey, token: PublicKey, amount: bigint, dstAddress: PublicKey, feeRate?: string): Promise<SolanaTx[]>;
 }

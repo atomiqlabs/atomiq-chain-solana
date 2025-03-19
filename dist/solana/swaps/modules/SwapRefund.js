@@ -1,25 +1,17 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SwapRefund = void 0;
 const SolanaSwapModule_1 = require("../SolanaSwapModule");
-const createHash = require("create-hash");
+const sha2_1 = require("@noble/hashes/sha2");
 const tweetnacl_1 = require("tweetnacl");
 const base_1 = require("@atomiqlabs/base");
-const BN = require("bn.js");
 const web3_js_1 = require("@solana/web3.js");
 const spl_token_1 = require("@solana/spl-token");
 const SolanaAction_1 = require("../../base/SolanaAction");
 const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
+const SolanaTokens_1 = require("../../base/modules/SolanaTokens");
+const BN = require("bn.js");
 class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
     /**
      * Action for generic Refund instruction
@@ -29,30 +21,37 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @constructor
      * @private
      */
-    Refund(swapData, refundAuthTimeout) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const accounts = {
-                offerer: swapData.offerer,
-                claimer: swapData.claimer,
-                escrowState: this.root.SwapEscrowState(buffer_1.Buffer.from(swapData.paymentHash, "hex")),
-                claimerUserData: !swapData.payOut ? this.root.SwapUserVault(swapData.claimer, swapData.token) : null,
-                ixSysvar: refundAuthTimeout != null ? web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY : null
-            };
-            const useTimeout = refundAuthTimeout != null ? refundAuthTimeout : new BN(0);
-            if (swapData.isPayIn()) {
-                const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.offerer);
-                return new SolanaAction_1.SolanaAction(swapData.offerer, this.root, yield this.program.methods
-                    .offererRefundPayIn(useTimeout)
-                    .accounts(Object.assign(Object.assign({}, accounts), { offererAta: ata, vault: this.root.SwapVault(swapData.token), vaultAuthority: this.root.SwapVaultAuthority, tokenProgram: spl_token_1.TOKEN_PROGRAM_ID }))
-                    .instruction(), SwapRefund.CUCosts.REFUND_PAY_OUT);
-            }
-            else {
-                return new SolanaAction_1.SolanaAction(swapData.offerer, this.root, yield this.program.methods
-                    .offererRefund(useTimeout)
-                    .accounts(Object.assign(Object.assign({}, accounts), { offererUserData: this.root.SwapUserVault(swapData.offerer, swapData.token) }))
-                    .instruction(), SwapRefund.CUCosts.REFUND);
-            }
-        });
+    async Refund(swapData, refundAuthTimeout) {
+        const accounts = {
+            offerer: swapData.offerer,
+            claimer: swapData.claimer,
+            escrowState: this.root.SwapEscrowState(buffer_1.Buffer.from(swapData.paymentHash, "hex")),
+            claimerUserData: !swapData.payOut ? this.root.SwapUserVault(swapData.claimer, swapData.token) : null,
+            ixSysvar: refundAuthTimeout != null ? web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY : null
+        };
+        const useTimeout = refundAuthTimeout != null ? refundAuthTimeout : 0n;
+        if (swapData.isPayIn()) {
+            const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.offerer);
+            return new SolanaAction_1.SolanaAction(swapData.offerer, this.root, await this.program.methods
+                .offererRefundPayIn((0, Utils_1.toBN)(useTimeout))
+                .accounts({
+                ...accounts,
+                offererAta: ata,
+                vault: this.root.SwapVault(swapData.token),
+                vaultAuthority: this.root.SwapVaultAuthority,
+                tokenProgram: spl_token_1.TOKEN_PROGRAM_ID
+            })
+                .instruction(), SwapRefund.CUCosts.REFUND_PAY_OUT);
+        }
+        else {
+            return new SolanaAction_1.SolanaAction(swapData.offerer, this.root, await this.program.methods
+                .offererRefund((0, Utils_1.toBN)(useTimeout))
+                .accounts({
+                ...accounts,
+                offererUserData: this.root.SwapUserVault(swapData.offerer, swapData.token)
+            })
+                .instruction(), SwapRefund.CUCosts.REFUND);
+        }
     }
     /**
      * Action for refunding with signature, adds the Ed25519 verify instruction
@@ -64,16 +63,14 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @constructor
      * @private
      */
-    RefundWithSignature(swapData, timeout, prefix, signature) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const action = new SolanaAction_1.SolanaAction(swapData.offerer, this.root, web3_js_1.Ed25519Program.createInstructionWithPublicKey({
-                message: this.getRefundMessage(swapData, prefix, timeout),
-                publicKey: swapData.claimer.toBuffer(),
-                signature: signature
-            }), 0, null, null, true);
-            action.addAction(yield this.Refund(swapData, new BN(timeout)));
-            return action;
-        });
+    async RefundWithSignature(swapData, timeout, prefix, signature) {
+        const action = new SolanaAction_1.SolanaAction(swapData.offerer, this.root, web3_js_1.Ed25519Program.createInstructionWithPublicKey({
+            message: this.getRefundMessage(swapData, prefix, timeout),
+            publicKey: swapData.claimer.toBuffer(),
+            signature: signature
+        }), 0, null, null, true);
+        action.addAction(await this.Refund(swapData, BigInt(timeout)));
+        return action;
     }
     /**
      * Gets the message to be signed as a refund authorization
@@ -92,7 +89,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
             buffer_1.Buffer.from(swapData.paymentHash, "hex"),
             new BN(timeout).toArrayLike(buffer_1.Buffer, "le", 8)
         ];
-        return createHash("sha256").update(buffer_1.Buffer.concat(messageBuffers)).digest();
+        return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat(messageBuffers)));
     }
     /**
      * Checks whether we should unwrap the WSOL to SOL when refunding the swap
@@ -102,7 +99,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      */
     shouldUnwrap(swapData) {
         return swapData.isPayIn() &&
-            swapData.token.equals(this.root.Tokens.WSOL_ADDRESS) &&
+            swapData.token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS) &&
             swapData.offerer.equals(swapData.offerer);
     }
     signSwapRefund(signer, swapData, authorizationTimeout) {
@@ -123,9 +120,9 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
     isSignatureValid(swapData, timeout, prefix, signature) {
         if (prefix !== "refund")
             throw new base_1.SignatureVerificationError("Invalid prefix");
-        const expiryTimestamp = new BN(timeout);
-        const currentTimestamp = new BN(Math.floor(Date.now() / 1000));
-        const isExpired = expiryTimestamp.sub(currentTimestamp).lt(new BN(this.root.authGracePeriod));
+        const expiryTimestamp = BigInt(timeout);
+        const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
+        const isExpired = (expiryTimestamp - currentTimestamp) < BigInt(this.root.authGracePeriod);
         if (isExpired)
             throw new base_1.SignatureVerificationError("Authorization expired!");
         const signatureBuffer = buffer_1.Buffer.from(signature, "hex");
@@ -143,31 +140,29 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @param initAta should initialize ATA if it doesn't exist
      * @param feeRate fee rate to be used for the transactions
      */
-    txsRefund(swapData, check, initAta, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (check && !(yield (0, Utils_1.tryWithRetries)(() => this.root.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy))) {
-                throw new base_1.SwapDataVerificationError("Not refundable yet!");
-            }
-            const shouldInitAta = swapData.isPayIn() && !(yield this.root.Tokens.ataExists(swapData.offererAta));
-            if (shouldInitAta && !initAta)
-                throw new base_1.SwapDataVerificationError("ATA not initialized");
-            if (feeRate == null)
-                feeRate = yield this.root.getRefundFeeRate(swapData);
-            const shouldUnwrap = this.shouldUnwrap(swapData);
-            const action = new SolanaAction_1.SolanaAction(swapData.offerer, this.root);
-            if (shouldInitAta) {
-                const initAction = this.root.Tokens.InitAta(swapData.offerer, swapData.offerer, swapData.token, swapData.offererAta);
-                if (initAction == null)
-                    throw new base_1.SwapDataVerificationError("Invalid claimer token account address");
-                action.addAction(initAction);
-            }
-            action.add(yield this.Refund(swapData));
-            if (shouldUnwrap)
-                action.add(this.root.Tokens.Unwrap(swapData.offerer));
-            this.logger.debug("txsRefund(): creating claim transaction, swap: " + swapData.getHash() +
-                " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap);
-            return [yield action.tx(feeRate)];
-        });
+    async txsRefund(swapData, check, initAta, feeRate) {
+        if (check && !await (0, Utils_1.tryWithRetries)(() => this.root.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy)) {
+            throw new base_1.SwapDataVerificationError("Not refundable yet!");
+        }
+        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
+        if (shouldInitAta && !initAta)
+            throw new base_1.SwapDataVerificationError("ATA not initialized");
+        if (feeRate == null)
+            feeRate = await this.root.getRefundFeeRate(swapData);
+        const shouldUnwrap = this.shouldUnwrap(swapData);
+        const action = new SolanaAction_1.SolanaAction(swapData.offerer, this.root);
+        if (shouldInitAta) {
+            const initAction = this.root.Tokens.InitAta(swapData.offerer, swapData.offerer, swapData.token, swapData.offererAta);
+            if (initAction == null)
+                throw new base_1.SwapDataVerificationError("Invalid claimer token account address");
+            action.addAction(initAction);
+        }
+        action.add(await this.Refund(swapData));
+        if (shouldUnwrap)
+            action.add(this.root.Tokens.Unwrap(swapData.offerer));
+        this.logger.debug("txsRefund(): creating claim transaction, swap: " + swapData.getClaimHash() +
+            " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap);
+        return [await action.tx(feeRate)];
     }
     /**
      * Creates transactions required for refunding the swap with authorization signature, also unwraps WSOL to SOL
@@ -180,34 +175,32 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @param initAta should initialize ATA if it doesn't exist
      * @param feeRate fee rate to be used for the transactions
      */
-    txsRefundWithAuthorization(swapData, timeout, prefix, signature, check, initAta, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (check && !(yield (0, Utils_1.tryWithRetries)(() => this.root.isCommited(swapData), this.retryPolicy))) {
-                throw new base_1.SwapDataVerificationError("Not correctly committed");
-            }
-            yield (0, Utils_1.tryWithRetries)(() => this.isSignatureValid(swapData, timeout, prefix, signature), this.retryPolicy, (e) => e instanceof base_1.SignatureVerificationError);
-            const shouldInitAta = swapData.isPayIn() && !(yield this.root.Tokens.ataExists(swapData.offererAta));
-            if (shouldInitAta && !initAta)
-                throw new base_1.SwapDataVerificationError("ATA not initialized");
-            if (feeRate == null)
-                feeRate = yield this.root.getRefundFeeRate(swapData);
-            console.log("[SolanaSwapProgram] txsRefundsWithAuthorization: feeRate: ", feeRate);
-            const signatureBuffer = buffer_1.Buffer.from(signature, "hex");
-            const shouldUnwrap = this.shouldUnwrap(swapData);
-            const action = yield this.RefundWithSignature(swapData, timeout, prefix, signatureBuffer);
-            if (shouldInitAta) {
-                const initAction = this.root.Tokens.InitAta(swapData.offerer, swapData.offerer, swapData.token, swapData.offererAta);
-                if (initAction == null)
-                    throw new base_1.SwapDataVerificationError("Invalid claimer token account address");
-                action.addAction(initAction, 1); //Need to add it after the Ed25519 verify IX, but before the actual refund IX
-            }
-            if (shouldUnwrap)
-                action.add(this.root.Tokens.Unwrap(swapData.offerer));
-            this.logger.debug("txsRefundWithAuthorization(): creating claim transaction, swap: " + swapData.getHash() +
-                " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap +
-                " auth expiry: " + timeout + " signature: " + signature);
-            return [yield action.tx(feeRate)];
-        });
+    async txsRefundWithAuthorization(swapData, timeout, prefix, signature, check, initAta, feeRate) {
+        if (check && !await (0, Utils_1.tryWithRetries)(() => this.root.isCommited(swapData), this.retryPolicy)) {
+            throw new base_1.SwapDataVerificationError("Not correctly committed");
+        }
+        await (0, Utils_1.tryWithRetries)(() => this.isSignatureValid(swapData, timeout, prefix, signature), this.retryPolicy, (e) => e instanceof base_1.SignatureVerificationError);
+        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
+        if (shouldInitAta && !initAta)
+            throw new base_1.SwapDataVerificationError("ATA not initialized");
+        if (feeRate == null)
+            feeRate = await this.root.getRefundFeeRate(swapData);
+        console.log("[SolanaSwapProgram] txsRefundsWithAuthorization: feeRate: ", feeRate);
+        const signatureBuffer = buffer_1.Buffer.from(signature, "hex");
+        const shouldUnwrap = this.shouldUnwrap(swapData);
+        const action = await this.RefundWithSignature(swapData, timeout, prefix, signatureBuffer);
+        if (shouldInitAta) {
+            const initAction = this.root.Tokens.InitAta(swapData.offerer, swapData.offerer, swapData.token, swapData.offererAta);
+            if (initAction == null)
+                throw new base_1.SwapDataVerificationError("Invalid claimer token account address");
+            action.addAction(initAction, 1); //Need to add it after the Ed25519 verify IX, but before the actual refund IX
+        }
+        if (shouldUnwrap)
+            action.add(this.root.Tokens.Unwrap(swapData.offerer));
+        this.logger.debug("txsRefundWithAuthorization(): creating claim transaction, swap: " + swapData.getClaimHash() +
+            " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap +
+            " auth expiry: " + timeout + " signature: " + signature);
+        return [await action.tx(feeRate)];
     }
     getRefundFeeRate(swapData) {
         const accounts = [];
@@ -238,22 +231,19 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * Get the estimated solana transaction fee of the refund transaction, in the worst case scenario in case where the
      *  ATA needs to be initialized again (i.e. adding the ATA rent exempt lamports to the fee)
      */
-    getRefundFee(swapData, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            return new BN(swapData == null || swapData.payIn ? this.root.Tokens.SPL_ATA_RENT_EXEMPT : 0).add(yield this.getRawRefundFee(swapData, feeRate));
-        });
+    async getRefundFee(swapData, feeRate) {
+        return BigInt(swapData == null || swapData.payIn ? SolanaTokens_1.SolanaTokens.SPL_ATA_RENT_EXEMPT : 0) +
+            await this.getRawRefundFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRawRefundFee(swapData, feeRate) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (swapData == null)
-                return new BN(10000);
-            feeRate = feeRate || (yield this.getRefundFeeRate(swapData));
-            const computeBudget = swapData.payIn ? SwapRefund.CUCosts.REFUND_PAY_OUT : SwapRefund.CUCosts.REFUND;
-            return new BN(10000).add(this.root.Fees.getPriorityFee(computeBudget, feeRate));
-        });
+    async getRawRefundFee(swapData, feeRate) {
+        if (swapData == null)
+            return 10000n;
+        feeRate = feeRate || await this.getRefundFeeRate(swapData);
+        const computeBudget = swapData.payIn ? SwapRefund.CUCosts.REFUND_PAY_OUT : SwapRefund.CUCosts.REFUND;
+        return 10000n + this.root.Fees.getPriorityFee(computeBudget, feeRate);
     }
 }
 exports.SwapRefund = SwapRefund;

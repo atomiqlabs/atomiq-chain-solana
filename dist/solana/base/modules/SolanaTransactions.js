@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaTransactions = void 0;
 const web3_js_1 = require("@solana/web3.js");
@@ -25,20 +16,18 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param options
      * @private
      */
-    sendRawTransaction(data, options) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let result = null;
-            options !== null && options !== void 0 ? options : (options = {});
-            options.maxRetries = 0;
-            if (this.cbkSendTransaction != null)
-                result = yield this.cbkSendTransaction(data, options);
-            if (result == null)
-                result = yield this.root.Fees.submitTx(data, options);
-            if (result == null)
-                result = yield this.connection.sendRawTransaction(data, options);
-            // this.logger.debug("sendRawTransaction(): tx sent, signature: "+result);
-            return result;
-        });
+    async sendRawTransaction(data, options) {
+        let result = null;
+        options ?? (options = {});
+        options.maxRetries = 0;
+        if (this.cbkSendTransaction != null)
+            result = await this.cbkSendTransaction(data, options);
+        if (result == null)
+            result = await this.root.Fees.submitTx(data, options);
+        if (result == null)
+            result = await this.connection.sendRawTransaction(data, options);
+        // this.logger.debug("sendRawTransaction(): tx sent, signature: "+result);
+        return result;
     }
     /**
      * Waits for the transaction to confirm by periodically checking the transaction status over HTTP, also
@@ -53,12 +42,11 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         const rawTx = solanaTx.tx.serialize();
         const signature = bs58.encode(solanaTx.tx.signature);
         return new Promise((resolve, reject) => {
-            var _a;
             let watchdogInterval;
-            watchdogInterval = setInterval(() => __awaiter(this, void 0, void 0, function* () {
-                const result = yield this.sendRawTransaction(rawTx, { skipPreflight: true }).catch(e => this.logger.error("txConfirmationAndResendWatchdog(): transaction re-sent error: ", e));
+            watchdogInterval = setInterval(async () => {
+                const result = await this.sendRawTransaction(rawTx, { skipPreflight: true }).catch(e => this.logger.error("txConfirmationAndResendWatchdog(): transaction re-sent error: ", e));
                 this.logger.debug("txConfirmationAndResendWatchdog(): transaction re-sent: " + result);
-                const status = yield this.getTxIdStatus(signature, finality).catch(e => this.logger.error("txConfirmationAndResendWatchdog(): get tx id status error: ", e));
+                const status = await this.getTxIdStatus(signature, finality).catch(e => this.logger.error("txConfirmationAndResendWatchdog(): get tx id status error: ", e));
                 if (status == null || status === "not_found")
                     return;
                 if (status === "success") {
@@ -68,7 +56,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
                 if (status === "reverted")
                     reject(new Error("Transaction reverted!"));
                 clearInterval(watchdogInterval);
-            }), ((_a = this.retryPolicy) === null || _a === void 0 ? void 0 : _a.transactionResendInterval) || 3000);
+            }, this.retryPolicy?.transactionResendInterval || 3000);
             if (abortSignal != null)
                 abortSignal.addEventListener("abort", () => {
                     clearInterval(watchdogInterval);
@@ -86,40 +74,38 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
      */
-    txConfirmFromWebsocket(solanaTx, finality, abortSignal) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const signature = bs58.encode(solanaTx.tx.signature);
-            let result;
-            try {
-                result = yield this.connection.confirmTransaction({
-                    signature: signature,
-                    blockhash: solanaTx.tx.recentBlockhash,
-                    lastValidBlockHeight: solanaTx.tx.lastValidBlockHeight,
-                    abortSignal
-                }, finality);
-                this.logger.info("txConfirmFromWebsocket(): transaction confirmed from WS, signature: " + signature);
-            }
-            catch (err) {
-                if (abortSignal != null && abortSignal.aborted)
-                    throw err;
-                this.logger.debug("txConfirmFromWebsocket(): transaction rejected from WS, running ultimate check, expiry blockheight: " + solanaTx.tx.lastValidBlockHeight + " signature: " + signature + " error: " + err);
-                const status = yield (0, Utils_1.tryWithRetries)(() => this.getTxIdStatus(signature, finality));
-                this.logger.info("txConfirmFromWebsocket(): transaction status: " + status + " signature: " + signature);
-                if (status === "success")
-                    return signature;
-                if (status === "reverted")
-                    throw new Error("Transaction reverted!");
-                if (err instanceof web3_js_1.TransactionExpiredBlockheightExceededError || err.toString().startsWith("TransactionExpiredBlockheightExceededError")) {
-                    throw new Error("Transaction expired before confirmation, please try again!");
-                }
-                else {
-                    throw err;
-                }
-            }
-            if (result.value.err != null)
+    async txConfirmFromWebsocket(solanaTx, finality, abortSignal) {
+        const signature = bs58.encode(solanaTx.tx.signature);
+        let result;
+        try {
+            result = await this.connection.confirmTransaction({
+                signature: signature,
+                blockhash: solanaTx.tx.recentBlockhash,
+                lastValidBlockHeight: solanaTx.tx.lastValidBlockHeight,
+                abortSignal
+            }, finality);
+            this.logger.info("txConfirmFromWebsocket(): transaction confirmed from WS, signature: " + signature);
+        }
+        catch (err) {
+            if (abortSignal != null && abortSignal.aborted)
+                throw err;
+            this.logger.debug("txConfirmFromWebsocket(): transaction rejected from WS, running ultimate check, expiry blockheight: " + solanaTx.tx.lastValidBlockHeight + " signature: " + signature + " error: " + err);
+            const status = await (0, Utils_1.tryWithRetries)(() => this.getTxIdStatus(signature, finality));
+            this.logger.info("txConfirmFromWebsocket(): transaction status: " + status + " signature: " + signature);
+            if (status === "success")
+                return signature;
+            if (status === "reverted")
                 throw new Error("Transaction reverted!");
-            return signature;
-        });
+            if (err instanceof web3_js_1.TransactionExpiredBlockheightExceededError || err.toString().startsWith("TransactionExpiredBlockheightExceededError")) {
+                throw new Error("Transaction expired before confirmation, please try again!");
+            }
+            else {
+                throw err;
+            }
+        }
+        if (result.value.err != null)
+            throw new Error("Transaction reverted!");
+        return signature;
     }
     /**
      * Waits for transaction confirmation using WS subscription and occasional HTTP polling, also re-sends
@@ -130,27 +116,25 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param finality wait for specific finality
      * @private
      */
-    confirmTransaction(solanaTx, abortSignal, finality) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const abortController = new AbortController();
-            if (abortSignal != null)
-                abortSignal.addEventListener("abort", () => {
-                    abortController.abort();
-                });
-            let txSignature;
-            try {
-                txSignature = yield Promise.race([
-                    this.txConfirmationAndResendWatchdog(solanaTx, finality, abortController.signal),
-                    this.txConfirmFromWebsocket(solanaTx, finality, abortController.signal)
-                ]);
-            }
-            catch (e) {
-                abortController.abort(e);
-                throw e;
-            }
-            // this.logger.info("confirmTransaction(): transaction confirmed, signature: "+txSignature);
-            abortController.abort();
-        });
+    async confirmTransaction(solanaTx, abortSignal, finality) {
+        const abortController = new AbortController();
+        if (abortSignal != null)
+            abortSignal.addEventListener("abort", () => {
+                abortController.abort();
+            });
+        let txSignature;
+        try {
+            txSignature = await Promise.race([
+                this.txConfirmationAndResendWatchdog(solanaTx, finality, abortController.signal),
+                this.txConfirmFromWebsocket(solanaTx, finality, abortController.signal)
+            ]);
+        }
+        catch (e) {
+            abortController.abort(e);
+            throw e;
+        }
+        // this.logger.info("confirmTransaction(): transaction confirmed, signature: "+txSignature);
+        abortController.abort();
     }
     /**
      * Prepares solana transactions, assigns recentBlockhash if needed, applies Phantom hotfix,
@@ -160,34 +144,32 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param txs
      * @private
      */
-    prepareTransactions(signer, txs) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let latestBlockData = null;
-            for (let tx of txs) {
-                if (tx.tx.recentBlockhash == null) {
-                    if (latestBlockData == null) {
-                        latestBlockData = yield (0, Utils_1.tryWithRetries)(() => this.connection.getLatestBlockhash("confirmed"), this.retryPolicy);
-                        this.logger.debug("prepareTransactions(): fetched latest block data for transactions," +
-                            " blockhash: " + latestBlockData.blockhash + " expiry blockheight: " + latestBlockData.lastValidBlockHeight);
-                    }
-                    tx.tx.recentBlockhash = latestBlockData.blockhash;
-                    tx.tx.lastValidBlockHeight = latestBlockData.lastValidBlockHeight;
+    async prepareTransactions(signer, txs) {
+        let latestBlockData = null;
+        for (let tx of txs) {
+            if (tx.tx.recentBlockhash == null) {
+                if (latestBlockData == null) {
+                    latestBlockData = await (0, Utils_1.tryWithRetries)(() => this.connection.getLatestBlockhash("confirmed"), this.retryPolicy);
+                    this.logger.debug("prepareTransactions(): fetched latest block data for transactions," +
+                        " blockhash: " + latestBlockData.blockhash + " expiry blockheight: " + latestBlockData.lastValidBlockHeight);
                 }
-                //This is a hotfix for Phantom adding compute unit price instruction on the first position & breaking
-                // required instructions order (e.g. btc relay verify needs to be 0th instruction in a tx)
-                if (signer.keypair == null && tx.tx.signatures.length === 0) {
-                    const foundIx = tx.tx.instructions.find(ix => ix.programId.equals(web3_js_1.ComputeBudgetProgram.programId) && web3_js_1.ComputeBudgetInstruction.decodeInstructionType(ix) === "SetComputeUnitPrice");
-                    if (foundIx == null)
-                        tx.tx.instructions.splice(tx.tx.instructions.length - 1, 0, web3_js_1.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
-                }
-                tx.tx.feePayer = signer.getPublicKey();
-                if (this.cbkBeforeTxSigned != null)
-                    yield this.cbkBeforeTxSigned(tx);
-                if (tx.signers != null && tx.signers.length > 0)
-                    for (let signer of tx.signers)
-                        tx.tx.sign(signer);
+                tx.tx.recentBlockhash = latestBlockData.blockhash;
+                tx.tx.lastValidBlockHeight = latestBlockData.lastValidBlockHeight;
             }
-        });
+            //This is a hotfix for Phantom adding compute unit price instruction on the first position & breaking
+            // required instructions order (e.g. btc relay verify needs to be 0th instruction in a tx)
+            if (signer.keypair == null && tx.tx.signatures.length === 0) {
+                const foundIx = tx.tx.instructions.find(ix => ix.programId.equals(web3_js_1.ComputeBudgetProgram.programId) && web3_js_1.ComputeBudgetInstruction.decodeInstructionType(ix) === "SetComputeUnitPrice");
+                if (foundIx == null)
+                    tx.tx.instructions.splice(tx.tx.instructions.length - 1, 0, web3_js_1.ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 1 }));
+            }
+            tx.tx.feePayer = signer.getPublicKey();
+            if (this.cbkBeforeTxSigned != null)
+                await this.cbkBeforeTxSigned(tx);
+            if (tx.signers != null && tx.signers.length > 0)
+                for (let signer of tx.signers)
+                    tx.tx.sign(signer);
+        }
     }
     /**
      * Sends out a signed transaction to the RPC
@@ -197,17 +179,15 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param onBeforePublish a callback called before every transaction is published
      * @private
      */
-    sendSignedTransaction(solTx, options, onBeforePublish) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (onBeforePublish != null)
-                yield onBeforePublish(bs58.encode(solTx.tx.signature), yield this.serializeTx(solTx));
-            const serializedTx = solTx.tx.serialize();
-            this.logger.debug("sendSignedTransaction(): sending transaction: " + serializedTx.toString("hex") +
-                " signature: " + bs58.encode(solTx.tx.signature));
-            const txResult = yield (0, Utils_1.tryWithRetries)(() => this.sendRawTransaction(serializedTx, options), this.retryPolicy);
-            this.logger.info("sendSignedTransaction(): tx sent, signature: " + txResult);
-            return txResult;
-        });
+    async sendSignedTransaction(solTx, options, onBeforePublish) {
+        if (onBeforePublish != null)
+            await onBeforePublish(bs58.encode(solTx.tx.signature), await this.serializeTx(solTx));
+        const serializedTx = solTx.tx.serialize();
+        this.logger.debug("sendSignedTransaction(): sending transaction: " + serializedTx.toString("hex") +
+            " signature: " + bs58.encode(solTx.tx.signature));
+        const txResult = await (0, Utils_1.tryWithRetries)(() => this.sendRawTransaction(serializedTx, options), this.retryPolicy);
+        this.logger.info("sendSignedTransaction(): tx sent, signature: " + txResult);
+        return txResult;
     }
     /**
      * Prepares (adds recent blockhash if required, applies Phantom hotfix),
@@ -215,7 +195,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      *  optionally waits for confirmation of a batch of solana transactions
      *
      * @param signer
-     * @param txs transactions to send
+     * @param _txs
      * @param waitForConfirmation whether to wait for transaction confirmations (this also makes sure the transactions
      *  are re-sent at regular intervals)
      * @param abortSignal abort signal to abort waiting for transaction confirmations
@@ -223,47 +203,49 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      *  are executed in order)
      * @param onBeforePublish a callback called before every transaction is published
      */
-    sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.prepareTransactions(signer, txs);
-            const signedTxs = yield signer.wallet.signAllTransactions(txs.map(e => e.tx));
+    async sendAndConfirm(signer, _txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
+        const options = {
+            skipPreflight: true
+        };
+        this.logger.debug("sendAndConfirm(): sending transactions, count: " + _txs.length +
+            " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
+        const signatures = [];
+        for (let e = 0; e < _txs.length; e += 50) {
+            const txs = _txs.slice(e, e + 50);
+            await this.prepareTransactions(signer, txs);
+            const signedTxs = await signer.wallet.signAllTransactions(txs.map(e => e.tx));
             signedTxs.forEach((tx, index) => {
                 const solTx = txs[index];
                 tx.lastValidBlockHeight = solTx.tx.lastValidBlockHeight;
                 solTx.tx = tx;
             });
-            const options = {
-                skipPreflight: true
-            };
-            this.logger.debug("sendAndConfirm(): sending transactions, count: " + txs.length +
-                " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
-            const signatures = [];
+            this.logger.debug("sendAndConfirm(): sending transaction batch (" + e + ".." + (e + 50) + "), count: " + txs.length);
             if (parallel) {
                 const promises = [];
                 for (let solTx of txs) {
-                    const signature = yield this.sendSignedTransaction(solTx, options, onBeforePublish);
+                    const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
                     if (waitForConfirmation)
                         promises.push(this.confirmTransaction(solTx, abortSignal, "confirmed"));
                     signatures.push(signature);
                 }
                 if (promises.length > 0)
-                    yield Promise.all(promises);
+                    await Promise.all(promises);
             }
             else {
                 for (let i = 0; i < txs.length; i++) {
                     const solTx = txs[i];
-                    const signature = yield this.sendSignedTransaction(solTx, options, onBeforePublish);
+                    const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
                     const confirmPromise = this.confirmTransaction(solTx, abortSignal, "confirmed");
                     //Don't await the last promise when !waitForConfirmation
-                    if (i < txs.length - 1 || waitForConfirmation)
-                        yield confirmPromise;
+                    if (i < txs.length - 1 || e + 50 < _txs.length || waitForConfirmation)
+                        await confirmPromise;
                     signatures.push(signature);
                 }
             }
-            this.logger.info("sendAndConfirm(): sent transactions, count: " + txs.length +
-                " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
-            return signatures;
-        });
+        }
+        this.logger.info("sendAndConfirm(): sent transactions, count: " + _txs.length +
+            " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
+        return signatures;
     }
     /**
      * Serializes the solana transaction, saves the transaction, signers & last valid blockheight
@@ -298,23 +280,21 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      *
      * @param tx
      */
-    getTxStatus(tx) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const parsedTx = yield this.deserializeTx(tx);
-            const txReceipt = yield this.connection.getTransaction(bs58.encode(parsedTx.tx.signature), {
-                commitment: "confirmed",
-                maxSupportedTransactionVersion: 0
-            });
-            if (txReceipt == null) {
-                const currentBlockheight = yield this.connection.getBlockHeight("processed");
-                if (currentBlockheight > parsedTx.tx.lastValidBlockHeight)
-                    return "not_found";
-                return "pending";
-            }
-            if (txReceipt.meta.err)
-                return "reverted";
-            return "success";
+    async getTxStatus(tx) {
+        const parsedTx = await this.deserializeTx(tx);
+        const txReceipt = await this.connection.getTransaction(bs58.encode(parsedTx.tx.signature), {
+            commitment: "confirmed",
+            maxSupportedTransactionVersion: 0
         });
+        if (txReceipt == null) {
+            const currentBlockheight = await this.connection.getBlockHeight("processed");
+            if (currentBlockheight > parsedTx.tx.lastValidBlockHeight)
+                return "not_found";
+            return "pending";
+        }
+        if (txReceipt.meta.err)
+            return "reverted";
+        return "success";
     }
     /**
      * Gets the status of the solana transaction with a specific txId, this cannot report whether the transaction is
@@ -323,18 +303,16 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param txId
      * @param finality
      */
-    getTxIdStatus(txId, finality) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const txReceipt = yield this.connection.getTransaction(txId, {
-                commitment: finality || "confirmed",
-                maxSupportedTransactionVersion: 0
-            });
-            if (txReceipt == null)
-                return "not_found";
-            if (txReceipt.meta.err)
-                return "reverted";
-            return "success";
+    async getTxIdStatus(txId, finality) {
+        const txReceipt = await this.connection.getTransaction(txId, {
+            commitment: finality || "confirmed",
+            maxSupportedTransactionVersion: 0
         });
+        if (txReceipt == null)
+            return "not_found";
+        if (txReceipt.meta.err)
+            return "reverted";
+        return "success";
     }
     onBeforeTxSigned(callback) {
         this.cbkBeforeTxSigned = callback;

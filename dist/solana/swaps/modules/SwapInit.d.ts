@@ -1,6 +1,5 @@
 /// <reference types="node" />
 import { ParsedAccountsModeBlockResponse, PublicKey } from "@solana/web3.js";
-import * as BN from "bn.js";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaTx } from "../../base/modules/SolanaTransactions";
@@ -209,9 +208,9 @@ export declare class SwapInit extends SolanaSwapModule {
      * Get the estimated solana fee of the init transaction, this includes the required deposit for creating swap PDA
      *  and also deposit for ATAs
      */
-    getInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
      * Get the estimated solana fee of the init transaction, without the required deposit for creating swap PDA
      */
-    getRawInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<BN>;
+    getRawInitFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
 }

@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaSlots = void 0;
 const SolanaModule_1 = require("../SolanaModule");
@@ -49,17 +40,15 @@ class SolanaSlots extends SolanaModule_1.SolanaModule {
      *
      * @param commitment
      */
-    getSlotAndTimestamp(commitment) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let cachedSlotData = this.slotCache[commitment];
-            if (cachedSlotData == null || Date.now() - cachedSlotData.timestamp > this.SLOT_CACHE_TIME) {
-                cachedSlotData = this.fetchAndSaveSlot(commitment);
-            }
-            return {
-                slot: yield cachedSlotData.slot,
-                timestamp: cachedSlotData.timestamp
-            };
-        });
+    async getSlotAndTimestamp(commitment) {
+        let cachedSlotData = this.slotCache[commitment];
+        if (cachedSlotData == null || Date.now() - cachedSlotData.timestamp > this.SLOT_CACHE_TIME) {
+            cachedSlotData = this.fetchAndSaveSlot(commitment);
+        }
+        return {
+            slot: await cachedSlotData.slot,
+            timestamp: cachedSlotData.timestamp
+        };
     }
     /**
      * Gets the slot for a given commitment, uses slot cache & tries to estimate current slot based on the cached
@@ -67,15 +56,13 @@ class SolanaSlots extends SolanaModule_1.SolanaModule {
      *
      * @param commitment
      */
-    getSlot(commitment) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let cachedSlotData = this.slotCache[commitment];
-            if (cachedSlotData != null && Date.now() - cachedSlotData.timestamp < this.SLOT_CACHE_TIME) {
-                return (yield cachedSlotData.slot) + Math.floor((Date.now() - cachedSlotData.timestamp) / this.root.SLOT_TIME);
-            }
-            cachedSlotData = this.fetchAndSaveSlot(commitment);
-            return yield cachedSlotData.slot;
-        });
+    async getSlot(commitment) {
+        let cachedSlotData = this.slotCache[commitment];
+        if (cachedSlotData != null && Date.now() - cachedSlotData.timestamp < this.SLOT_CACHE_TIME) {
+            return (await cachedSlotData.slot) + Math.floor((Date.now() - cachedSlotData.timestamp) / this.root.SLOT_TIME);
+        }
+        cachedSlotData = this.fetchAndSaveSlot(commitment);
+        return await cachedSlotData.slot;
     }
 }
 exports.SolanaSlots = SolanaSlots;

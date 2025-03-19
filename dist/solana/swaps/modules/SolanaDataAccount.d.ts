@@ -5,7 +5,6 @@ import { IStorageManager, StorageObject } from "@atomiqlabs/base";
 import { SolanaSwapProgram } from "../SolanaSwapProgram";
 import { SolanaTx } from "../../base/modules/SolanaTransactions";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
-import * as BN from "bn.js";
 export declare class StoredDataAccount implements StorageObject {
     accountKey: PublicKey;
     owner: PublicKey;
@@ -71,7 +70,7 @@ export declare class SolanaDataAccount extends SolanaSwapModule {
     getDataAccountsInfo(signer: PublicKey): Promise<{
         closePublicKeys: PublicKey[];
         count: number;
-        totalValue: BN;
+        totalValue: bigint;
     }>;
     /**
      * Sweeps all old data accounts, reclaiming the SOL locked in the PDAs
@@ -79,7 +78,7 @@ export declare class SolanaDataAccount extends SolanaSwapModule {
     sweepDataAccounts(signer: SolanaSigner): Promise<{
         txIds: string[];
         count: number;
-        totalValue: BN;
+        totalValue: bigint;
     }>;
     /**
      * Adds the transactions writing (and also initializing if it doesn't exist) data to the data account

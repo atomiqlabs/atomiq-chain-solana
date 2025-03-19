@@ -1,13 +1,4 @@
 "use strict";
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaBlocks = void 0;
 const SolanaModule_1 = require("../SolanaModule");
@@ -44,28 +35,26 @@ class SolanaBlocks extends SolanaModule_1.SolanaModule {
      *
      * @param commitment
      */
-    findLatestParsedBlock(commitment) {
-        return __awaiter(this, void 0, void 0, function* () {
-            let slot = yield this.root.Slots.getSlot(commitment);
-            for (let i = 0; i < 10; i++) {
-                const block = yield this.getParsedBlock(slot).catch(e => {
-                    if (e.toString().startsWith("SolanaJSONRPCError: failed to get block: Block not available for slot")) {
-                        return null;
-                    }
-                    throw e;
-                });
-                if (block != null) {
-                    this.logger.debug("findLatestParsedBlock(): Found valid block, slot: " + slot +
-                        " blockhash: " + block.blockhash + " tries: " + i);
-                    return {
-                        block,
-                        slot
-                    };
+    async findLatestParsedBlock(commitment) {
+        let slot = await this.root.Slots.getSlot(commitment);
+        for (let i = 0; i < 10; i++) {
+            const block = await this.getParsedBlock(slot).catch(e => {
+                if (e.toString().startsWith("SolanaJSONRPCError: failed to get block: Block not available for slot")) {
+                    return null;
                 }
-                slot--;
+                throw e;
+            });
+            if (block != null) {
+                this.logger.debug("findLatestParsedBlock(): Found valid block, slot: " + slot +
+                    " blockhash: " + block.blockhash + " tries: " + i);
+                return {
+                    block,
+                    slot
+                };
             }
-            throw new Error("Ran out of tries trying to find a parsedBlock");
-        });
+            slot--;
+        }
+        throw new Error("Ran out of tries trying to find a parsedBlock");
     }
     /**
      * Gets parsed block for a given slot, uses block cache if the block was already fetched before

@@ -1,4 +1,7 @@
 import {ComputeBudgetProgram, PublicKey, Transaction} from "@solana/web3.js";
+import * as BN from "bn.js";
+import {Buffer} from "buffer";
+import {sha256} from "@noble/hashes/sha2";
 
 export function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -142,4 +145,36 @@ export class SolanaTxUtils {
             ixsSize
         );
     };
+}
+
+export function toClaimHash(paymentHash: string, nonce: bigint, confirmations: number): string {
+    return paymentHash+
+        nonce.toString(16).padStart(16, "0")+
+        confirmations.toString(16).padStart(4, "0");
+}
+
+export function fromClaimHash(claimHash: string): {paymentHash: string, nonce: BN, confirmations: number} {
+    if(claimHash.length!==84) throw new Error("Claim hash invalid length: "+claimHash.length);
+    return {
+        paymentHash: claimHash.slice(0, 64),
+        nonce: new BN(claimHash.slice(64, 80), "hex"),
+        confirmations: parseInt(claimHash.slice(80, 84), 16)
+    }
+}
+
+export function toEscrowHash(paymentHash: string, sequence: BN): string {
+    return Buffer.from(sha256(Buffer.concat([
+        Buffer.from(paymentHash, "hex"),
+        sequence.toArrayLike(Buffer, "be", 8)
+    ]))).toString("hex");
+}
+
+export function toBN(value: bigint): BN {
+    if(value==null) return null;
+    return new BN(value.toString(10));
+}
+
+export function toBigInt(value: BN): bigint {
+    if(value==null) return null;
+    return BigInt(value.toString(10));
 }
