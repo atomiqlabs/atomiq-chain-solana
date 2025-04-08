@@ -6,6 +6,7 @@ const SolanaChainEventsBrowser_1 = require("./SolanaChainEventsBrowser");
 const BLOCKHEIGHT_FILENAME = "/blockheight.txt";
 const LOG_FETCH_INTERVAL = 5 * 1000;
 const LOG_FETCH_LIMIT = 500;
+const PROCESSED_SIGNATURES_BACKLOG = 100;
 /**
  * Event handler for backend Node.js systems with access to fs, uses HTTP polling in combination with WS to not miss
  *  any events
@@ -14,9 +15,20 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
     constructor(directory, connection, solanaSwapProgram, logFetchInterval, logFetchLimit) {
         super(connection, solanaSwapProgram);
         this.signaturesProcessing = {};
+        this.processedSignatures = [];
+        this.processedSignaturesIndex = 0;
         this.directory = directory;
         this.logFetchInterval = logFetchInterval || LOG_FETCH_INTERVAL;
         this.logFetchLimit = logFetchLimit || LOG_FETCH_LIMIT;
+    }
+    addProcessedSignature(signature) {
+        this.processedSignatures[this.processedSignaturesIndex] = signature;
+        this.processedSignaturesIndex += 1;
+        if (this.processedSignaturesIndex >= PROCESSED_SIGNATURES_BACKLOG)
+            this.processedSignaturesIndex = 0;
+    }
+    isSignatureProcessed(signature) {
+        return this.processedSignatures.includes(signature);
     }
     /**
      * Retrieves last signature & slot from filesystem
@@ -107,6 +119,8 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         return (data, slotNumber, signature) => {
             if (this.signaturesProcessing[signature] != null)
                 return;
+            if (this.isSignatureProcessed(signature))
+                return;
             console.log("[Solana Events WebSocket] Process signature: ", signature);
             this.signaturesProcessing[signature] = this.processEvent({
                 events: [{ name, data: data }],
@@ -180,6 +194,7 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
                     delete this.signaturesProcessing[txSignature.signature];
                     if (result) {
                         lastSuccessfulSignature = txSignature;
+                        this.addProcessedSignature(txSignature.signature);
                         continue;
                     }
                 }
@@ -190,6 +205,7 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
                 if (!result)
                     throw new Error("Failed to process signature: " + txSignature);
                 lastSuccessfulSignature = txSignature;
+                this.addProcessedSignature(txSignature.signature);
                 delete this.signaturesProcessing[txSignature.signature];
             }
         }

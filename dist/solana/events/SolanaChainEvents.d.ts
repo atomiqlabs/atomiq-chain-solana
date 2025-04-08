@@ -12,9 +12,13 @@ export declare class SolanaChainEvents extends SolanaChainEventsBrowser {
     private readonly logFetchInterval;
     private readonly logFetchLimit;
     private signaturesProcessing;
+    private processedSignatures;
+    private processedSignaturesIndex;
     private stopped;
     private timeout;
     constructor(directory: string, connection: Connection, solanaSwapProgram: SolanaSwapProgram, logFetchInterval?: number, logFetchLimit?: number);
+    private addProcessedSignature;
+    private isSignatureProcessed;
     /**
      * Retrieves last signature & slot from filesystem
      *
