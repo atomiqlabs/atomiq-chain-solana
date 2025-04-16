@@ -1,6 +1,6 @@
 {
   "name": "@atomiqlabs/chain-solana",
-  "version": "9.0.0-beta.0",
+  "version": "9.0.0-beta.1",
   "description": "Solana specific base implementation",
   "main": "./dist/index.js",
   "types:": "./dist/index.d.ts",

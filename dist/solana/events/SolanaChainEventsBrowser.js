@@ -128,6 +128,7 @@ class SolanaChainEventsBrowser {
             }
             parsedEvent.meta = {
                 timestamp: eventObject.blockTime,
+                blockTime: eventObject.blockTime,
                 txId: eventObject.signature
             };
             return parsedEvent;
