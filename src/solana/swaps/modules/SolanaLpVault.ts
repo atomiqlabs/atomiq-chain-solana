@@ -1,5 +1,5 @@
 import {SolanaSwapModule} from "../SolanaSwapModule";
-import {SolanaAction} from "../../base/SolanaAction";
+import {SolanaAction} from "../../chain/SolanaAction";
 import {PublicKey, SystemProgram} from "@solana/web3.js";
 import {
     Account,
@@ -7,12 +7,12 @@ import {
     getAssociatedTokenAddressSync,
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
-import {SolanaTx} from "../../base/modules/SolanaTransactions";
+import {SolanaTx} from "../../chain/modules/SolanaTransactions";
 import {toBigInt, toBN, tryWithRetries} from "../../../utils/Utils";
 import {SwapProgram} from "../programTypes";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
 import { IdlAccounts } from "@coral-xyz/anchor";
-import {SolanaTokens} from "../../base/modules/SolanaTokens";
+import {SolanaTokens} from "../../chain/modules/SolanaTokens";
 
 export class SolanaLpVault extends SolanaSwapModule {
 
@@ -33,14 +33,14 @@ export class SolanaLpVault extends SolanaSwapModule {
     private async Withdraw(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
         const ata = getAssociatedTokenAddressSync(token, signer);
         return new SolanaAction(signer, this.root,
-            await this.program.methods
+            await this.swapProgram.methods
                 .withdraw(toBN(amount))
                 .accounts({
                     signer,
                     signerAta: ata,
-                    userData: this.root.SwapUserVault(signer, token),
-                    vault: this.root.SwapVault(token),
-                    vaultAuthority: this.root.SwapVaultAuthority,
+                    userData: this.program.SwapUserVault(signer, token),
+                    vault: this.program.SwapVault(token),
+                    vaultAuthority: this.program.SwapVaultAuthority,
                     mint: token,
                     tokenProgram: TOKEN_PROGRAM_ID
                 })
@@ -61,14 +61,14 @@ export class SolanaLpVault extends SolanaSwapModule {
     private async Deposit(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
         const ata = getAssociatedTokenAddressSync(token, signer);
         return new SolanaAction(signer, this.root,
-            await this.program.methods
+            await this.swapProgram.methods
                 .deposit(toBN(amount))
                 .accounts({
                     signer,
                     signerAta: ata,
-                    userData: this.root.SwapUserVault(signer, token),
-                    vault: this.root.SwapVault(token),
-                    vaultAuthority: this.root.SwapVaultAuthority,
+                    userData: this.program.SwapUserVault(signer, token),
+                    vault: this.program.SwapVault(token),
+                    vaultAuthority: this.program.SwapVaultAuthority,
                     mint: token,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID
@@ -88,8 +88,8 @@ export class SolanaLpVault extends SolanaSwapModule {
         balance: bigint,
         reputation: IntermediaryReputationType
     }> {
-        const data: IdlAccounts<SwapProgram>["userAccount"] = await this.program.account.userAccount.fetchNullable(
-            this.root.SwapUserVault(address, token)
+        const data: IdlAccounts<SwapProgram>["userAccount"] = await this.swapProgram.account.userAccount.fetchNullable(
+            this.program.SwapUserVault(address, token)
         );
 
         if(data==null) return null;
@@ -208,8 +208,8 @@ export class SolanaLpVault extends SolanaSwapModule {
         return this.root.Fees.getFeeRate([
             signer,
             ata,
-            this.root.SwapUserVault(signer, token),
-            this.root.SwapVault(token)
+            this.program.SwapUserVault(signer, token),
+            this.program.SwapVault(token)
         ])
     }
 

@@ -9,8 +9,8 @@ import {
 } from "@atomiqlabs/base";
 import {Connection} from "@solana/web3.js";
 import {StoredDataAccount} from "./swaps/modules/SolanaDataAccount";
-import {SolanaRetryPolicy} from "./base/SolanaBase";
-import {SolanaFees} from "./base/modules/SolanaFees";
+import {SolanaChainInterface, SolanaRetryPolicy} from "./chain/SolanaChainInterface";
+import {SolanaFees} from "./chain/modules/SolanaFees";
 import {SolanaChainType} from "./SolanaChainType";
 import {SolanaBtcRelay} from "./btcrelay/SolanaBtcRelay";
 import {SolanaChains} from "./SolanaChains";
@@ -66,14 +66,16 @@ export function initializeSolana(
         options.rpcUrl;
 
     const Fees = options.fees ?? new SolanaFees(connection, 200000, 4, 100);
-    const btcRelay = new SolanaBtcRelay(connection, bitcoinRpc, options.btcRelayContract ?? SolanaChains[network].addresses.btcRelayContract, Fees);
+
+    const chainInterface = new SolanaChainInterface(connection, options.retryPolicy ?? {transactionResendInterval: 1000}, Fees);
+
+    const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? SolanaChains[network].addresses.btcRelayContract);
+
     const swapContract = new SolanaSwapProgram(
-        connection,
+        chainInterface,
         btcRelay,
         options.dataAccountStorage || storageCtor("solAccounts"),
-        options.swapContract ?? SolanaChains[network].addresses.swapContract,
-        options.retryPolicy ?? {transactionResendInterval: 1000},
-        Fees
+        options.swapContract ?? SolanaChains[network].addresses.swapContract
     );
     const chainEvents = new SolanaChainEventsBrowser(connection, swapContract);
 
@@ -83,8 +85,10 @@ export function initializeSolana(
         swapContract,
         chainEvents,
         swapDataConstructor: SolanaSwapData,
-        //These are defined here to keep the data from old SolLightning-sdk, not needed for other chains
-        storagePrefix: "SOLv4-"+network+"-"
+        chainInterface,
+        spvVaultContract: null as never,
+        spvVaultDataConstructor: null,
+        spvVaultWithdrawalDataConstructor: null
     };
 }
 

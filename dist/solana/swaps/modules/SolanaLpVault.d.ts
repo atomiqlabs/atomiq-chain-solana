@@ -1,6 +1,6 @@
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { PublicKey } from "@solana/web3.js";
-import { SolanaTx } from "../../base/modules/SolanaTransactions";
+import { SolanaTx } from "../../chain/modules/SolanaTransactions";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
 export declare class SolanaLpVault extends SolanaSwapModule {
     private static readonly CUCosts;

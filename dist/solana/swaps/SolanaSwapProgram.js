@@ -7,7 +7,6 @@ const sha2_1 = require("@noble/hashes/sha2");
 const programIdl = require("./programIdl.json");
 const base_1 = require("@atomiqlabs/base");
 const spl_token_1 = require("@solana/spl-token");
-const SolanaFees_1 = require("../base/modules/SolanaFees");
 const SolanaProgramBase_1 = require("../program/SolanaProgramBase");
 const SwapInit_1 = require("./modules/SwapInit");
 const SolanaDataAccount_1 = require("./modules/SolanaDataAccount");
@@ -15,17 +14,15 @@ const SwapRefund_1 = require("./modules/SwapRefund");
 const SwapClaim_1 = require("./modules/SwapClaim");
 const SolanaLpVault_1 = require("./modules/SolanaLpVault");
 const buffer_1 = require("buffer");
-const SolanaSigner_1 = require("../wallet/SolanaSigner");
-const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
 const Utils_1 = require("../../utils/Utils");
-const SolanaTokens_1 = require("../base/modules/SolanaTokens");
+const SolanaTokens_1 = require("../chain/modules/SolanaTokens");
 const BN = require("bn.js");
 function toPublicKeyOrNull(str) {
     return str == null ? null : new web3_js_1.PublicKey(str);
 }
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
-    constructor(connection, btcRelay, storage, programAddress, retryPolicy, solanaFeeEstimator = btcRelay.Fees || new SolanaFees_1.SolanaFees(connection)) {
-        super(connection, programIdl, programAddress, retryPolicy, solanaFeeEstimator);
+    constructor(chainInterface, btcRelay, storage, programAddress) {
+        super(chainInterface, programIdl, programAddress);
         ////////////////////////
         //// Constants
         this.ESCROW_STATE_RENT_EXEMPT = 2658720;
@@ -44,11 +41,11 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         this.claimGracePeriod = 10 * 60;
         this.refundGracePeriod = 10 * 60;
         this.authGracePeriod = 5 * 60;
-        this.Init = new SwapInit_1.SwapInit(this);
-        this.Refund = new SwapRefund_1.SwapRefund(this);
-        this.Claim = new SwapClaim_1.SwapClaim(this, btcRelay);
-        this.DataAccount = new SolanaDataAccount_1.SolanaDataAccount(this, storage);
-        this.LpVault = new SolanaLpVault_1.SolanaLpVault(this);
+        this.Init = new SwapInit_1.SwapInit(chainInterface, this);
+        this.Refund = new SwapRefund_1.SwapRefund(chainInterface, this);
+        this.Claim = new SwapClaim_1.SwapClaim(chainInterface, this, btcRelay);
+        this.DataAccount = new SolanaDataAccount_1.SolanaDataAccount(chainInterface, this, storage);
+        this.LpVault = new SolanaLpVault_1.SolanaLpVault(chainInterface, this);
     }
     async start() {
         await this.DataAccount.init();
@@ -86,10 +83,10 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return this.Refund.isSignatureValid(swapData, timeout, prefix, signature);
     }
     getDataSignature(signer, data) {
-        return this.Signatures.getDataSignature(signer, data);
+        return this.Chain.Signatures.getDataSignature(signer, data);
     }
     isValidDataSignature(data, signature, publicKey) {
-        return this.Signatures.isValidDataSignature(data, signature, publicKey);
+        return this.Chain.Signatures.isValidDataSignature(data, signature, publicKey);
     }
     ////////////////////////////////////////////
     //// Swap data utils
@@ -280,19 +277,12 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     ////////////////////////////////////////////
     //// Utils
     async getBalance(signer, tokenAddress, inContract) {
+        if (!inContract) {
+            return await this.Chain.getBalance(signer, tokenAddress);
+        }
         const token = new web3_js_1.PublicKey(tokenAddress);
         const publicKey = new web3_js_1.PublicKey(signer);
-        if (inContract)
-            return await this.getIntermediaryBalance(publicKey, token);
-        let { balance } = await this.Tokens.getTokenBalance(publicKey, token);
-        if (token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS)) {
-            const accountRentExemptCost = 1000000n;
-            balance = balance - accountRentExemptCost;
-            if (balance < 0n)
-                balance = 0n;
-        }
-        this.logger.debug("getBalance(): token balance, token: " + token.toBase58() + " balance: " + balance.toString(10));
-        return balance;
+        return await this.getIntermediaryBalance(publicKey, token);
     }
     getIntermediaryData(address, token) {
         return this.LpVault.getIntermediaryData(new web3_js_1.PublicKey(address), new web3_js_1.PublicKey(token));
@@ -302,12 +292,6 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     getIntermediaryBalance(address, token) {
         return this.LpVault.getIntermediaryBalance(address, token);
-    }
-    isValidAddress(address) {
-        return this.Addresses.isValidAddress(address);
-    }
-    getNativeCurrencyAddress() {
-        return this.Tokens.getNativeCurrencyAddress().toString();
     }
     ////////////////////////////////////////////
     //// Transaction initializers
@@ -343,14 +327,11 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     txsDeposit(signer, token, amount, feeRate) {
         return this.LpVault.txsDeposit(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, feeRate);
     }
-    txsTransfer(signer, token, amount, dstAddress, feeRate) {
-        return this.Tokens.txsTransfer(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, new web3_js_1.PublicKey(dstAddress), feeRate);
-    }
     ////////////////////////////////////////////
     //// Executors
     async claimWithSecret(signer, swapData, secret, checkExpiry, initAta, txOptions) {
         const result = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, checkExpiry, initAta, txOptions?.feeRate);
-        const [signature] = await this.Transactions.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [signature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signature;
     }
     async claimWithTxData(signer, swapData, tx, requiredConfirmations, vout, commitedHeader, synchronizer, initAta, txOptions) {
@@ -363,18 +344,18 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         if (txs === null)
             throw new Error("Btc relay not synchronized to required blockheight!");
         //TODO: This doesn't return proper tx signature
-        const [signature] = await this.Transactions.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [signature] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         await this.DataAccount.removeDataAccount(data.storageAcc);
         return signature;
     }
     async refund(signer, swapData, check, initAta, txOptions) {
         let result = await this.txsRefund(signer.getAddress(), swapData, check, initAta, txOptions?.feeRate);
-        const [signature] = await this.Transactions.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [signature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signature;
     }
     async refundWithAuthorization(signer, swapData, signature, check, initAta, txOptions) {
         let result = await this.txsRefundWithAuthorization(signer.getAddress(), swapData, signature, check, initAta, txOptions?.feeRate);
-        const [txSignature] = await this.Transactions.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [txSignature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return txSignature;
     }
     async init(signer, swapData, signature, skipChecks, txOptions) {
@@ -387,7 +368,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 throw new Error("Invalid signer provided!");
         }
         const result = await this.txsInit(swapData, signature, skipChecks, txOptions?.feeRate);
-        const [txSignature] = await this.Transactions.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [txSignature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return txSignature;
     }
     async initAndClaimWithSecret(signer, swapData, signature, secret, skipChecks, txOptions) {
@@ -395,39 +376,17 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             throw new Error("Invalid signer provided!");
         const txsCommit = await this.txsInit(swapData, signature, skipChecks, txOptions?.feeRate);
         const txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, false, txOptions?.feeRate, true);
-        return await this.Transactions.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        return await this.Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
     }
     async withdraw(signer, token, amount, txOptions) {
         const txs = await this.LpVault.txsWithdraw(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, txOptions?.feeRate);
-        const [txId] = await this.Transactions.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
+        const [txId] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
         return txId;
     }
     async deposit(signer, token, amount, txOptions) {
         const txs = await this.LpVault.txsDeposit(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, txOptions?.feeRate);
-        const [txId] = await this.Transactions.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
+        const [txId] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
         return txId;
-    }
-    async transfer(signer, token, amount, dstAddress, txOptions) {
-        const txs = await this.Tokens.txsTransfer(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, new web3_js_1.PublicKey(dstAddress), txOptions?.feeRate);
-        const [txId] = await this.Transactions.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
-        return txId;
-    }
-    ////////////////////////////////////////////
-    //// Transactions
-    sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
-        return this.Transactions.sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
-    }
-    serializeTx(tx) {
-        return this.Transactions.serializeTx(tx);
-    }
-    deserializeTx(txData) {
-        return this.Transactions.deserializeTx(txData);
-    }
-    getTxIdStatus(txId) {
-        return this.Transactions.getTxIdStatus(txId);
-    }
-    getTxStatus(tx) {
-        return this.Transactions.getTxStatus(tx);
     }
     ////////////////////////////////////////////
     //// Fees
@@ -474,41 +433,6 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      */
     getRawRefundFee(swapData, feeRate) {
         return this.Refund.getRawRefundFee(swapData, feeRate);
-    }
-    ///////////////////////////////////
-    //// Callbacks & handlers
-    offBeforeTxReplace(callback) {
-        return true;
-    }
-    onBeforeTxReplace(callback) { }
-    onBeforeTxSigned(callback) {
-        this.Transactions.onBeforeTxSigned(callback);
-    }
-    offBeforeTxSigned(callback) {
-        return this.Transactions.offBeforeTxSigned(callback);
-    }
-    onSendTransaction(callback) {
-        this.Transactions.onSendTransaction(callback);
-    }
-    offSendTransaction(callback) {
-        return this.Transactions.offSendTransaction(callback);
-    }
-    isValidToken(tokenIdentifier) {
-        try {
-            new web3_js_1.PublicKey(tokenIdentifier);
-            return true;
-        }
-        catch (e) {
-            return false;
-        }
-    }
-    randomAddress() {
-        return web3_js_1.Keypair.generate().publicKey.toString();
-    }
-    randomSigner() {
-        const keypair = web3_js_1.Keypair.generate();
-        const wallet = new SolanaKeypairWallet_1.SolanaKeypairWallet(keypair);
-        return new SolanaSigner_1.SolanaSigner(wallet, keypair);
     }
     getExtraData(outputScript, amount, confirmations, nonce) {
         return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat([

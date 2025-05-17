@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaSwapData } from "../SolanaSwapData";
-import { SolanaTx } from "../../base/modules/SolanaTransactions";
+import { SolanaTx } from "../../chain/modules/SolanaTransactions";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
 export declare class SwapRefund extends SolanaSwapModule {

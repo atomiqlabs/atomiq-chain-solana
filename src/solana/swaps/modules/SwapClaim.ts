@@ -1,17 +1,18 @@
 import {SolanaSwapModule} from "../SolanaSwapModule";
 import {SolanaSwapData} from "../SolanaSwapData";
-import {SolanaAction} from "../../base/SolanaAction";
+import {SolanaAction} from "../../chain/SolanaAction";
 import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
 import {ChainSwapType, RelaySynchronizer, SwapDataVerificationError} from "@atomiqlabs/base";
 import {PublicKey, SYSVAR_INSTRUCTIONS_PUBKEY} from "@solana/web3.js";
-import {SolanaTx} from "../../base/modules/SolanaTransactions";
+import {SolanaTx} from "../../chain/modules/SolanaTransactions";
 import {SolanaBtcStoredHeader} from "../../btcrelay/headers/SolanaBtcStoredHeader";
 import {tryWithRetries} from "../../../utils/Utils";
 import {SolanaBtcRelay} from "../../btcrelay/SolanaBtcRelay";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
-import {SolanaTokens} from "../../base/modules/SolanaTokens";
+import {SolanaTokens} from "../../chain/modules/SolanaTokens";
 import * as BN from "bn.js";
+import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
 
 export class SwapClaim extends SolanaSwapModule {
 
@@ -54,7 +55,7 @@ export class SwapClaim extends SolanaSwapModule {
         const accounts = {
             signer,
             initializer: swapData.isPayIn() ? swapData.offerer : swapData.claimer,
-            escrowState: this.root.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
+            escrowState: this.program.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
             ixSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
             data: isDataKey ? secretOrDataKey : null,
         };
@@ -64,13 +65,13 @@ export class SwapClaim extends SolanaSwapModule {
 
         if(swapData.isPayOut()) {
             return new SolanaAction(signer, this.root,
-                await this.program.methods
+                await this.swapProgram.methods
                     .claimerClaimPayOut(secretBuffer)
                     .accounts({
                         ...accounts,
                         claimerAta: swapData.claimerAta,
-                        vault: this.root.SwapVault(swapData.token),
-                        vaultAuthority: this.root.SwapVaultAuthority,
+                        vault: this.program.SwapVault(swapData.token),
+                        vaultAuthority: this.program.SwapVaultAuthority,
                         tokenProgram: TOKEN_PROGRAM_ID
                     })
                     .instruction(),
@@ -78,11 +79,11 @@ export class SwapClaim extends SolanaSwapModule {
             );
         } else {
             return new SolanaAction(signer, this.root,
-                await this.program.methods
+                await this.swapProgram.methods
                     .claimerClaim(secretBuffer)
                     .accounts({
                         ...accounts,
-                        claimerUserData: this.root.SwapUserVault(swapData.claimer, swapData.token)
+                        claimerUserData: this.program.SwapUserVault(swapData.claimer, swapData.token)
                     })
                     .instruction(),
                 this.getComputeBudget(swapData)
@@ -123,8 +124,8 @@ export class SwapClaim extends SolanaSwapModule {
         return action;
     }
 
-    constructor(root: SolanaSwapProgram, btcRelay: SolanaBtcRelay<any>) {
-        super(root);
+    constructor(chainInterface: SolanaChainInterface, program: SolanaSwapProgram, btcRelay: SolanaBtcRelay<any>) {
+        super(chainInterface, program);
         this.btcRelay = btcRelay;
     }
 
@@ -216,7 +217,7 @@ export class SwapClaim extends SolanaSwapModule {
         ]);
         this.logger.debug("addTxsWriteTransactionData(): writing transaction data: ", writeData.toString("hex"));
 
-        return this.root.DataAccount.addTxsWriteData(signer, reversedTxId, writeData, txs, feeRate);
+        return this.program.DataAccount.addTxsWriteData(signer, reversedTxId, writeData, txs, feeRate);
     }
 
     /**
@@ -255,7 +256,7 @@ export class SwapClaim extends SolanaSwapModule {
     ): Promise<SolanaTx[]> {
         //We need to be sure that this transaction confirms in time, otherwise we reveal the secret to the counterparty
         // and won't claim the funds
-        if(checkExpiry && await this.root.isExpired(swapData.claimer.toString(), swapData)) {
+        if(checkExpiry && await this.program.isExpired(swapData.claimer.toString(), swapData)) {
             throw new SwapDataVerificationError("Not enough time to reliably pay the invoice");
         }
         const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);
@@ -343,7 +344,7 @@ export class SwapClaim extends SolanaSwapModule {
     public getClaimFeeRate(signer: PublicKey, swapData: SolanaSwapData): Promise<string> {
         const accounts: PublicKey[] = [signer];
         if(swapData.payOut) {
-            if(swapData.token!=null) accounts.push(this.root.SwapVault(swapData.token));
+            if(swapData.token!=null) accounts.push(this.program.SwapVault(swapData.token));
             if(swapData.payIn) {
                 if(swapData.offerer!=null) accounts.push(swapData.offerer);
             } else {
@@ -351,7 +352,7 @@ export class SwapClaim extends SolanaSwapModule {
             }
             if(swapData.claimerAta!=null && !swapData.claimerAta.equals(PublicKey.default)) accounts.push(swapData.claimerAta);
         } else {
-            if(swapData.claimer!=null && swapData.token!=null) accounts.push(this.root.SwapUserVault(swapData.claimer, swapData.token));
+            if(swapData.claimer!=null && swapData.token!=null) accounts.push(this.program.SwapUserVault(swapData.claimer, swapData.token));
 
             if(swapData.payIn) {
                 if(swapData.offerer!=null) accounts.push(swapData.offerer);
@@ -360,7 +361,7 @@ export class SwapClaim extends SolanaSwapModule {
             }
         }
 
-        if(swapData.paymentHash!=null) accounts.push(this.root.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")));
+        if(swapData.paymentHash!=null) accounts.push(this.program.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")));
 
         return this.root.Fees.getFeeRate(accounts);
     }

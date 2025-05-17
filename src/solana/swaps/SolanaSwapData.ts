@@ -7,7 +7,7 @@ import {SwapTypeEnum} from "./SwapTypeEnum";
 import {Buffer} from "buffer";
 import {getAssociatedTokenAddressSync} from "@solana/spl-token";
 import {toBigInt, toClaimHash, toEscrowHash} from "../../utils/Utils";
-import {SolanaTokens} from "../base/modules/SolanaTokens";
+import {SolanaTokens} from "../chain/modules/SolanaTokens";
 
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 

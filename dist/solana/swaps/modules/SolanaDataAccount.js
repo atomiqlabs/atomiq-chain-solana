@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaDataAccount = exports.StoredDataAccount = void 0;
 const SolanaSwapModule_1 = require("../SolanaSwapModule");
 const web3_js_1 = require("@solana/web3.js");
-const SolanaAction_1 = require("../../base/SolanaAction");
+const SolanaAction_1 = require("../../chain/SolanaAction");
 const Utils_1 = require("../../../utils/Utils");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
 const utils_1 = require("@noble/hashes/utils");
@@ -44,9 +44,9 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
                 newAccountPubkey: accountKey.publicKey,
                 lamports: lamportsDeposit,
                 space: accountSize,
-                programId: this.program.programId
+                programId: this.swapProgram.programId
             }),
-            await this.program.methods
+            await this.swapProgram.methods
                 .initData()
                 .accounts({
                 signer,
@@ -62,7 +62,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
      * @param publicKey
      */
     async CloseDataAccount(signer, publicKey) {
-        return new SolanaAction_1.SolanaAction(signer, this.root, await this.program.methods
+        return new SolanaAction_1.SolanaAction(signer, this.root, await this.swapProgram.methods
             .closeData()
             .accounts({
             signer,
@@ -86,7 +86,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
         const writeLen = Math.min(writeData.length - offset, sizeLimit);
         return {
             bytesWritten: writeLen,
-            action: new SolanaAction_1.SolanaAction(signer, this.root, await this.program.methods
+            action: new SolanaAction_1.SolanaAction(signer, this.root, await this.swapProgram.methods
                 .writeData(offset, writeData.slice(offset, offset + writeLen))
                 .accounts({
                 signer,
@@ -95,10 +95,10 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
                 .instruction(), SolanaDataAccount.CUCosts.DATA_WRITE)
         };
     }
-    constructor(root, storage) {
-        super(root);
-        this.SwapTxDataAlt = this.root.keypair((reversedTxId, signer) => [Buffer.from(signer.secretKey), reversedTxId]);
-        this.SwapTxDataAltBuffer = this.root.keypair((reversedTxId, secret) => [secret, reversedTxId]);
+    constructor(chainInterface, program, storage) {
+        super(chainInterface, program);
+        this.SwapTxDataAlt = this.program.keypair((reversedTxId, signer) => [Buffer.from(signer.secretKey), reversedTxId]);
+        this.SwapTxDataAltBuffer = this.program.keypair((reversedTxId, secret) => [secret, reversedTxId]);
         this.storage = storage;
     }
     /**

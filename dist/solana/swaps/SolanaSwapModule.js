@@ -1,12 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaSwapModule = void 0;
-const SolanaModule_1 = require("../base/SolanaModule");
-class SolanaSwapModule extends SolanaModule_1.SolanaModule {
-    constructor(root) {
-        super(root);
-        this.root = root;
-        this.program = root.program;
+const SolanaProgramModule_1 = require("../program/SolanaProgramModule");
+class SolanaSwapModule extends SolanaProgramModule_1.SolanaProgramModule {
+    constructor(chainInterface, program) {
+        super(chainInterface, program);
+        this.swapProgram = program.program;
     }
 }
 exports.SolanaSwapModule = SolanaSwapModule;

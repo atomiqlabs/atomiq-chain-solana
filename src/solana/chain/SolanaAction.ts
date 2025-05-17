@@ -1,13 +1,13 @@
 import {PublicKey, Signer, Transaction, TransactionInstruction} from "@solana/web3.js";
 import {SolanaTx} from "./modules/SolanaTransactions";
-import {SolanaBase} from "./SolanaBase";
+import {SolanaChainInterface} from "./SolanaChainInterface";
 
 
 export class SolanaAction {
 
     computeBudget: number;
     readonly mainSigner: PublicKey;
-    private readonly root: SolanaBase;
+    private readonly root: SolanaChainInterface;
     private readonly instructions: TransactionInstruction[];
     private feeRate: string;
     private readonly signers: Signer[];
@@ -15,7 +15,7 @@ export class SolanaAction {
 
     constructor(
         mainSigner: PublicKey,
-        root: SolanaBase,
+        root: SolanaChainInterface,
         instructions: TransactionInstruction[] | TransactionInstruction = [],
         computeBudget: number = 0,
         feeRate?: string,
