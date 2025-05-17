@@ -180,6 +180,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
                     break;
             }
             (parsedEvent as any).meta = {
+                blockTime: eventObject.blockTime,
                 timestamp: eventObject.blockTime,
                 blockTime: eventObject.blockTime,
                 txId: eventObject.signature

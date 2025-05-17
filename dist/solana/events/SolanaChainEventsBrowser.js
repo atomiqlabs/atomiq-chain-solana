@@ -127,6 +127,7 @@ class SolanaChainEventsBrowser {
                     break;
             }
             parsedEvent.meta = {
+                blockTime: eventObject.blockTime,
                 timestamp: eventObject.blockTime,
                 blockTime: eventObject.blockTime,
                 txId: eventObject.signature
