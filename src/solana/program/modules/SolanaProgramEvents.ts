@@ -70,7 +70,7 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      */
     public findInEvents<T>(
         topicKey: PublicKey,
-        processor: (event: ProgramEvent<IDL>) => Promise<T>,
+        processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T>,
         abortSignal?: AbortSignal,
         logBatchSize?: number
     ): Promise<T> {
@@ -78,7 +78,7 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
             for(let data of signatures) {
                 for(let event of await this.getEvents(data.signature)) {
                     if(abortSignal!=null) abortSignal.throwIfAborted();
-                    const result: T = await processor(event);
+                    const result: T = await processor(event, data);
                     if(result!=null) return result;
                 }
             }

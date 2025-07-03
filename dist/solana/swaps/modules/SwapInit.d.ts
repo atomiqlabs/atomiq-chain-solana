@@ -135,6 +135,7 @@ export declare class SwapInit extends SolanaSwapModule {
     /**
      * Checks whether the provided signature data is valid, using preFetchedData if provided and still valid
      *
+     * @param sender
      * @param swapData
      * @param timeout
      * @param prefix
@@ -143,7 +144,7 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param preFetchedData
      * @public
      */
-    isSignatureValid(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, feeRate?: string, preFetchedData?: SolanaPreFetchVerification): Promise<Buffer>;
+    isSignatureValid(sender: string, swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, feeRate?: string, preFetchedData?: SolanaPreFetchVerification): Promise<Buffer>;
     /**
      * Gets expiry of the provided signature data, this is a minimum of slot expiry & swap signature expiry
      *

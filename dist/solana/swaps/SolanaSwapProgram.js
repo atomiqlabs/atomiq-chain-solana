@@ -67,8 +67,8 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     getInitSignature(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate) {
         return this.Init.signSwapInitialization(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate);
     }
-    isValidInitAuthorization(swapData, { timeout, prefix, signature }, feeRate, preFetchedData) {
-        return this.Init.isSignatureValid(swapData, timeout, prefix, signature, feeRate, preFetchedData);
+    isValidInitAuthorization(signer, swapData, { timeout, prefix, signature }, feeRate, preFetchedData) {
+        return this.Init.isSignatureValid(signer, swapData, timeout, prefix, signature, feeRate, preFetchedData);
     }
     getInitAuthorizationExpiry(swapData, { timeout, prefix, signature }, preFetchedData) {
         return this.Init.getSignatureExpiry(timeout, signature, preFetchedData);
@@ -186,34 +186,49 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         if (escrowState != null) {
             if (data.correctPDA(escrowState)) {
                 if (data.isOfferer(signer) && isExpired)
-                    return base_1.SwapCommitStatus.REFUNDABLE;
-                return base_1.SwapCommitStatus.COMMITED;
+                    return { type: base_1.SwapCommitStateType.REFUNDABLE };
+                return { type: base_1.SwapCommitStateType.COMMITED };
             }
             if (data.isOfferer(signer) && isExpired)
-                return base_1.SwapCommitStatus.EXPIRED;
-            return base_1.SwapCommitStatus.NOT_COMMITED;
+                return { type: base_1.SwapCommitStateType.EXPIRED };
+            return { type: base_1.SwapCommitStateType.NOT_COMMITED };
         }
         //Check if paid or what
-        const status = await this.Events.findInEvents(escrowStateKey, async (event) => {
+        const status = await this.Events.findInEvents(escrowStateKey, async (event, info) => {
             if (event.name === "ClaimEvent") {
                 if (!event.data.sequence.eq(data.sequence))
                     return null;
-                return base_1.SwapCommitStatus.PAID;
+                return {
+                    type: base_1.SwapCommitStateType.PAID,
+                    getClaimTxId: () => Promise.resolve(info.signature),
+                    getTxBlock: async () => {
+                        return {
+                            blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
+                            blockTime: info.blockTime
+                        };
+                    }
+                };
             }
             if (event.name === "RefundEvent") {
                 if (!event.data.sequence.eq(data.sequence))
                     return null;
-                if (isExpired)
-                    return base_1.SwapCommitStatus.EXPIRED;
-                return base_1.SwapCommitStatus.NOT_COMMITED;
+                return {
+                    type: isExpired ? base_1.SwapCommitStateType.EXPIRED : base_1.SwapCommitStateType.NOT_COMMITED,
+                    getRefundTxId: () => Promise.resolve(info.signature),
+                    getTxBlock: async () => {
+                        return {
+                            blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
+                            blockTime: info.blockTime
+                        };
+                    }
+                };
             }
         });
         if (status != null)
             return status;
-        if (isExpired) {
-            return base_1.SwapCommitStatus.EXPIRED;
-        }
-        return base_1.SwapCommitStatus.NOT_COMMITED;
+        if (isExpired)
+            return { type: base_1.SwapCommitStateType.EXPIRED };
+        return { type: base_1.SwapCommitStateType.NOT_COMMITED };
     }
     /**
      * Checks the status of the specific payment hash
@@ -227,9 +242,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         //Start fetching events before checking escrow PDA, this call is used when quoting, so saving 100ms here helps a lot!
         const eventsPromise = this.Events.findInEvents(escrowStateKey, async (event) => {
             if (event.name === "ClaimEvent")
-                return base_1.SwapCommitStatus.PAID;
+                return base_1.SwapCommitStateType.PAID;
             if (event.name === "RefundEvent")
-                return base_1.SwapCommitStatus.NOT_COMMITED;
+                return base_1.SwapCommitStateType.NOT_COMMITED;
         }, abortController.signal).catch(e => {
             abortController.abort(e);
             return null;
@@ -238,14 +253,14 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         abortController.signal.throwIfAborted();
         if (escrowState != null) {
             abortController.abort();
-            return base_1.SwapCommitStatus.COMMITED;
+            return base_1.SwapCommitStateType.COMMITED;
         }
         //Check if paid or what
         const eventsStatus = await eventsPromise;
         abortController.signal.throwIfAborted();
         if (eventsStatus != null)
             return eventsStatus;
-        return base_1.SwapCommitStatus.NOT_COMMITED;
+        return base_1.SwapCommitStateType.NOT_COMMITED;
     }
     /**
      * Returns the data committed for a specific payment hash, or null if no data is currently commited for
@@ -313,11 +328,15 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             throw new Error("Only offerer can refund on Solana");
         return this.Refund.txsRefundWithAuthorization(swapData, timeout, prefix, signature, check, initAta, feeRate);
     }
-    txsInit(swapData, { timeout, prefix, signature }, skipChecks, feeRate) {
+    txsInit(sender, swapData, { timeout, prefix, signature }, skipChecks, feeRate) {
         if (swapData.isPayIn()) {
+            if (!swapData.isOfferer(sender))
+                throw new Error("Only offerer can create payIn=true swap");
             return this.Init.txsInitPayIn(swapData, timeout, prefix, signature, skipChecks, feeRate);
         }
         else {
+            if (!swapData.isClaimer(sender))
+                throw new Error("Only claimer can create payIn=false swap");
             return this.Init.txsInit(swapData, timeout, prefix, signature, skipChecks, feeRate);
         }
     }
@@ -367,14 +386,14 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             if (!signer.getPublicKey().equals(swapData.claimer))
                 throw new Error("Invalid signer provided!");
         }
-        const result = await this.txsInit(swapData, signature, skipChecks, txOptions?.feeRate);
+        const result = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
         const [txSignature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return txSignature;
     }
     async initAndClaimWithSecret(signer, swapData, signature, secret, skipChecks, txOptions) {
         if (!signer.getPublicKey().equals(swapData.claimer))
             throw new Error("Invalid signer provided!");
-        const txsCommit = await this.txsInit(swapData, signature, skipChecks, txOptions?.feeRate);
+        const txsCommit = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
         const txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, false, txOptions?.feeRate, true);
         return await this.Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
     }

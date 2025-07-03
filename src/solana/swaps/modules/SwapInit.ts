@@ -1,5 +1,9 @@
 import {ParsedAccountsModeBlockResponse, PublicKey, SystemProgram, Transaction} from "@solana/web3.js";
-import {SignatureVerificationError, SwapCommitStatus, SwapDataVerificationError} from "@atomiqlabs/base";
+import {
+    SignatureVerificationError,
+    SwapCommitStateType,
+    SwapDataVerificationError
+} from "@atomiqlabs/base";
 import {SolanaSwapData} from "../SolanaSwapData";
 import {SolanaAction} from "../../chain/SolanaAction";
 import {
@@ -335,6 +339,7 @@ export class SwapInit extends SolanaSwapModule {
     /**
      * Checks whether the provided signature data is valid, using preFetchedData if provided and still valid
      *
+     * @param sender
      * @param swapData
      * @param timeout
      * @param prefix
@@ -344,6 +349,7 @@ export class SwapInit extends SolanaSwapModule {
      * @public
      */
     public async isSignatureValid(
+        sender: string,
         swapData: SolanaSwapData,
         timeout: string,
         prefix: string,
@@ -351,7 +357,12 @@ export class SwapInit extends SolanaSwapModule {
         feeRate?: string,
         preFetchedData?: SolanaPreFetchVerification
     ): Promise<Buffer> {
-        const sender = swapData.isPayIn() ? swapData.offerer : swapData.claimer;
+        if(swapData.isPayIn()) {
+            if(!swapData.isOfferer(sender)) throw new SignatureVerificationError("Sender needs to be offerer in payIn=true swaps");
+        } else {
+            if(!swapData.isClaimer(sender)) throw new SignatureVerificationError("Sender needs to be claimer in payIn=false swaps");
+        }
+
         const signer = swapData.isPayIn() ? swapData.claimer : swapData.offerer;
 
         if(!swapData.isPayIn() && await this.program.isExpired(sender.toString(), swapData)) {
@@ -377,7 +388,7 @@ export class SwapInit extends SolanaSwapModule {
         if(slotsLeft<0) throw new SignatureVerificationError("Authorization expired!");
 
         const txToSign = await this.getTxToSign(swapData, timeout, feeRate);
-        txToSign.feePayer = sender;
+        txToSign.feePayer = new PublicKey(sender);
         txToSign.recentBlockhash = blockhash;
         txToSign.addSignature(signer, Buffer.from(signatureString, "hex"));
         this.logger.debug("isSignatureValid(): Signed tx: ",txToSign);
@@ -466,12 +477,12 @@ export class SwapInit extends SolanaSwapModule {
         if(!skipChecks) {
             const [_, payStatus] = await Promise.all([
                 tryWithRetries(
-                    () => this.isSignatureValid(swapData, timeout, prefix, signature, feeRate),
+                    () => this.isSignatureValid(swapData.getOfferer(), swapData, timeout, prefix, signature, feeRate),
                     this.retryPolicy, (e) => e instanceof SignatureVerificationError
                 ),
                 tryWithRetries(() => this.program.getClaimHashStatus(swapData.getClaimHash()), this.retryPolicy)
             ]);
-            if(payStatus!==SwapCommitStatus.NOT_COMMITED) throw new SwapDataVerificationError("Invoice already being paid for or paid");
+            if(payStatus!==SwapCommitStateType.NOT_COMMITED) throw new SwapDataVerificationError("Invoice already being paid for or paid");
         }
 
         const [slotNumber, signatureStr] = signature.split(";");
@@ -522,7 +533,7 @@ export class SwapInit extends SolanaSwapModule {
     public async txsInit(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]> {
         if(!skipChecks) {
             await tryWithRetries(
-                () => this.isSignatureValid(swapData, timeout, prefix, signature, feeRate),
+                () => this.isSignatureValid(swapData.getClaimer(), swapData, timeout, prefix, signature, feeRate),
                 this.retryPolicy,
                 (e) => e instanceof SignatureVerificationError
             );

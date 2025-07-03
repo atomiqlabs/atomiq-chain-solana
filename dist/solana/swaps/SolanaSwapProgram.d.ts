@@ -2,7 +2,7 @@
 import { SolanaSwapData } from "./SolanaSwapData";
 import { PublicKey } from "@solana/web3.js";
 import { SolanaBtcRelay } from "../btcrelay/SolanaBtcRelay";
-import { IStorageManager, SwapContract, ChainSwapType, IntermediaryReputationType, SwapCommitStatus, TransactionConfirmationOptions, SignatureData, RelaySynchronizer } from "@atomiqlabs/base";
+import { IStorageManager, SwapContract, ChainSwapType, IntermediaryReputationType, TransactionConfirmationOptions, SignatureData, RelaySynchronizer, SwapCommitState, SwapCommitStateType } from "@atomiqlabs/base";
 import { SolanaBtcStoredHeader } from "../btcrelay/headers/SolanaBtcStoredHeader";
 import { SwapProgram } from "./programTypes";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
@@ -47,7 +47,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     preFetchForInitSignatureVerification(data: SolanaPreFetchData): Promise<SolanaPreFetchVerification>;
     preFetchBlockDataForSignatures(): Promise<SolanaPreFetchData>;
     getInitSignature(signer: SolanaSigner, swapData: SolanaSwapData, authorizationTimeout: number, preFetchedBlockData?: SolanaPreFetchData, feeRate?: string): Promise<SignatureData>;
-    isValidInitAuthorization(swapData: SolanaSwapData, { timeout, prefix, signature }: {
+    isValidInitAuthorization(signer: string, swapData: SolanaSwapData, { timeout, prefix, signature }: {
         timeout: any;
         prefix: any;
         signature: any;
@@ -117,13 +117,13 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @param signer
      * @param data
      */
-    getCommitStatus(signer: string, data: SolanaSwapData): Promise<SwapCommitStatus>;
+    getCommitStatus(signer: string, data: SolanaSwapData): Promise<SwapCommitState>;
     /**
      * Checks the status of the specific payment hash
      *
      * @param claimHash
      */
-    getClaimHashStatus(claimHash: string): Promise<SwapCommitStatus>;
+    getClaimHashStatus(claimHash: string): Promise<SwapCommitStateType>;
     /**
      * Returns the data committed for a specific payment hash, or null if no data is currently commited for
      *  the specific swap
@@ -155,7 +155,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
         prefix: any;
         signature: any;
     }, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
-    txsInit(swapData: SolanaSwapData, { timeout, prefix, signature }: {
+    txsInit(sender: string, swapData: SolanaSwapData, { timeout, prefix, signature }: {
         timeout: any;
         prefix: any;
         signature: any;

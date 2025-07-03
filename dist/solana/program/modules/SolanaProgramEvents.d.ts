@@ -1,7 +1,7 @@
 import { SolanaEvents } from "../../chain/modules/SolanaEvents";
 import { DecodeType, Event, Idl, IdlTypes } from "@coral-xyz/anchor";
 import { IdlField, IdlInstruction } from "@coral-xyz/anchor/dist/cjs/idl";
-import { ParsedMessage, PublicKey } from "@solana/web3.js";
+import { ConfirmedSignatureInfo, ParsedMessage, PublicKey } from "@solana/web3.js";
 import { SolanaProgramBase } from "../SolanaProgramBase";
 import { SolanaChainInterface } from "../../chain/SolanaChainInterface";
 type DecodedFieldOrNull<D, Defined> = D extends IdlField ? DecodeType<D["type"], Defined> : unknown;
@@ -41,7 +41,7 @@ export declare class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      * @param abortSignal
      * @param logBatchSize how many signatures should be fetched in one getSignaturesForAddress call
      */
-    findInEvents<T>(topicKey: PublicKey, processor: (event: ProgramEvent<IDL>) => Promise<T>, abortSignal?: AbortSignal, logBatchSize?: number): Promise<T>;
+    findInEvents<T>(topicKey: PublicKey, processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T>, abortSignal?: AbortSignal, logBatchSize?: number): Promise<T>;
     /**
      * Decodes the instructions for this program from the transaction, leaves null in the returned instructions array
      *  for every instruction that doesn't correspond to this program (as those are impossible to parse)

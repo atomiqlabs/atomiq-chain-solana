@@ -46,7 +46,7 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
                 for (let event of await this.getEvents(data.signature)) {
                     if (abortSignal != null)
                         abortSignal.throwIfAborted();
-                    const result = await processor(event);
+                    const result = await processor(event, data);
                     if (result != null)
                         return result;
                 }
