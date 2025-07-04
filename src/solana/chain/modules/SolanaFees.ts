@@ -157,7 +157,6 @@ export class SolanaFees {
 
         if(request.ok) {
             const parsedResponse = await request.json();
-            // console.log(parsedResponse);
             return parsedResponse.result;
         }
 

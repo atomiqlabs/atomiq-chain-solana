@@ -28,10 +28,10 @@ export function onceAsync<T>(executor: () => Promise<T>): () => Promise<T> {
 
 export function getLogger(prefix: string) {
     return {
-        debug: (msg, ...args) => console.debug(prefix+msg, ...args),
-        info: (msg, ...args) => console.info(prefix+msg, ...args),
-        warn: (msg, ...args) => console.warn(prefix+msg, ...args),
-        error: (msg, ...args) => console.error(prefix+msg, ...args)
+        debug: (msg, ...args) => global.atomiqLogLevel >= 3 && console.debug(prefix+msg, ...args),
+        info: (msg, ...args) => global.atomiqLogLevel >= 2 && console.info(prefix+msg, ...args),
+        warn: (msg, ...args) => (global.atomiqLogLevel==null || global.atomiqLogLevel >= 1) && console.warn(prefix+msg, ...args),
+        error: (msg, ...args) => (global.atomiqLogLevel==null || global.atomiqLogLevel >= 0) && console.error(prefix+msg, ...args)
     };
 }
 

@@ -125,13 +125,10 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
             const eventObject = this.getEventObjectFromTransaction(transaction);
             if(eventObject==null) return true;
 
-            console.log("Instructions: ", eventObject.instructions);
-            console.log("Events: ", eventObject.events);
-
             await this.processEvent(eventObject);
             return true;
         } catch (e) {
-            console.error(e);
+            this.logger.error("fetchTxAndProcessEvent(): Error fetching transaction and processing event, signature: "+signature, e);
             return false;
         }
     }
@@ -150,7 +147,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
             if(this.signaturesProcessing[signature]!=null) return;
             if(this.isSignatureProcessed(signature)) return;
 
-            console.log("[Solana Events WebSocket] Process signature: ", signature);
+            this.logger.debug("getWsEventHandler("+name+"): Process signature: ", signature);
 
             this.signaturesProcessing[signature] = this.processEvent({
                 events: [{name, data: data as any}],
@@ -158,7 +155,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
                 blockTime: Math.floor(Date.now()/1000),
                 signature
             }).then(() => true).catch(e => {
-                console.error(e);
+                this.logger.error("getWsEventHandler("+name+"): Error processing signature: "+signature, e);
                 return false;
             });
         };
@@ -182,7 +179,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
                 }, "confirmed");
                 //Check if newest returned signature (index 0) is older than the latest signature's slot, this is a sanity check
                 if(fetched.length>0 && fetched[0].slot<lastProcessedSignature.slot) {
-                    console.log("[Solana Events POLL] Sanity check triggered, returned signature slot height is older than latest!");
+                    this.logger.debug("getNewSignatures(): Sanity check triggered, returned signature slot height is older than latest!");
                     return;
                 }
             } else {
@@ -236,7 +233,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
                     }
                 }
 
-                console.log("[Solana Events POLL] Process signature: ", txSignature);
+                this.logger.debug("processSignatures(): Process signature: ", txSignature);
 
                 const processPromise: Promise<boolean> = this.fetchTxAndProcessEvent(txSignature.signature);
                 this.signaturesProcessing[txSignature.signature] = processPromise;
@@ -248,7 +245,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
                 delete this.signaturesProcessing[txSignature.signature];
             }
         } catch (e) {
-            console.error(e);
+            this.logger.error("processSignatures(): Failed processing signatures: ", e);
         }
         return lastSuccessfulSignature;
     }
@@ -276,8 +273,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         let func;
         func = async () => {
             await this.checkEvents().catch(e => {
-                console.error("Failed to fetch Sol log");
-                console.error(e);
+                this.logger.error("setupHttpPolling(): Failed to fetch Solana log: ", e);
             });
             if(this.stopped) return;
             this.timeout = setTimeout(func, this.logFetchInterval);

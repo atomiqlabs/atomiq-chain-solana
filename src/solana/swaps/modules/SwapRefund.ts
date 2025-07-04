@@ -249,7 +249,6 @@ export class SwapRefund extends SolanaSwapModule {
         if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
 
         if(feeRate==null) feeRate = await this.program.getRefundFeeRate(swapData);
-        console.log("[SolanaSwapProgram] txsRefundsWithAuthorization: feeRate: ", feeRate);
 
         const signatureBuffer = Buffer.from(signature, "hex");
 

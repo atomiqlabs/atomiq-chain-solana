@@ -153,7 +153,7 @@ class SolanaChainEventsBrowser {
                 blockTime: Math.floor(Date.now() / 1000),
                 signature
             }).then(() => true).catch(e => {
-                console.error(e);
+                this.logger.error("wsEventHandler: Error when processing signature: " + signature, e);
                 return false;
             });
         };
