@@ -1,6 +1,13 @@
 import {BitcoinNetwork} from "@atomiqlabs/base";
 
 export const SolanaChains = {
+    //TODO: Not deployed yet
+    [BitcoinNetwork.TESTNET4]: {
+        addresses: {
+            swapContract: "11111111111111111111111111111111",
+            btcRelayContract: "11111111111111111111111111111111"
+        }
+    },
     [BitcoinNetwork.TESTNET]: {
         addresses: {
             swapContract: "4hfUykhqmD7ZRvNh1HuzVKEY7ToENixtdUKZspNDCrEM",

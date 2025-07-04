@@ -1,4 +1,10 @@
 export declare const SolanaChains: {
+    readonly 2: {
+        readonly addresses: {
+            readonly swapContract: "11111111111111111111111111111111";
+            readonly btcRelayContract: "11111111111111111111111111111111";
+        };
+    };
     readonly 1: {
         readonly addresses: {
             readonly swapContract: "4hfUykhqmD7ZRvNh1HuzVKEY7ToENixtdUKZspNDCrEM";
