@@ -439,25 +439,25 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     /**
      * Get the estimated solana fee of the commit transaction
      */
-    getCommitFee(swapData, feeRate) {
+    getCommitFee(signer, swapData, feeRate) {
         return this.Init.getInitFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana fee of the commit transaction, without any deposits
      */
-    getRawCommitFee(swapData, feeRate) {
+    getRawCommitFee(signer, swapData, feeRate) {
         return this.Init.getRawInitFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRefundFee(swapData, feeRate) {
+    getRefundFee(signer, swapData, feeRate) {
         return this.Refund.getRefundFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRawRefundFee(swapData, feeRate) {
+    getRawRefundFee(signer, swapData, feeRate) {
         return this.Refund.getRawRefundFee(swapData, feeRate);
     }
     getExtraData(outputScript, amount, confirmations, nonce) {

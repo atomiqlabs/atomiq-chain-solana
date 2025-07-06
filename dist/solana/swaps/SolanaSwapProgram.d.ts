@@ -185,18 +185,18 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     /**
      * Get the estimated solana fee of the commit transaction
      */
-    getCommitFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
+    getCommitFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
      * Get the estimated solana fee of the commit transaction, without any deposits
      */
-    getRawCommitFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
+    getRawCommitFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
+    getRefundFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
+    getRawRefundFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     getExtraData(outputScript: Buffer, amount: bigint, confirmations: number, nonce?: bigint): Buffer;
 }
