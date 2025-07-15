@@ -44,7 +44,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             headerTopic: this.BtcRelayHeader(serializedBlock.hash),
             systemProgram: web3_js_1.SystemProgram.programId
         })
-            .instruction());
+            .instruction(), 100000);
     }
     /**
      * Creates verify action to be used with the swap program, specifies the action to be firstIxBeforeComputeBudget,

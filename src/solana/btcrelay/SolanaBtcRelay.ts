@@ -62,7 +62,8 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                     headerTopic: this.BtcRelayHeader(serializedBlock.hash),
                     systemProgram: SystemProgram.programId
                 })
-                .instruction()
+                .instruction(),
+            100_000
         )
     }
 
