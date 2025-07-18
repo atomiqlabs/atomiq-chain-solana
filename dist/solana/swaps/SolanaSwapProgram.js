@@ -196,11 +196,15 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         //Check if paid or what
         const status = await this.Events.findInEvents(escrowStateKey, async (event, info) => {
             if (event.name === "ClaimEvent") {
+                const paymentHash = buffer_1.Buffer.from(event.data.hash).toString("hex");
+                if (paymentHash !== data.paymentHash)
+                    return null;
                 if (!event.data.sequence.eq(data.sequence))
                     return null;
                 return {
                     type: base_1.SwapCommitStateType.PAID,
                     getClaimTxId: () => Promise.resolve(info.signature),
+                    getClaimResult: () => Promise.resolve(buffer_1.Buffer.from(event.data.secret).toString("hex")),
                     getTxBlock: async () => {
                         return {
                             blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
@@ -210,6 +214,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 };
             }
             if (event.name === "RefundEvent") {
+                const paymentHash = buffer_1.Buffer.from(event.data.hash).toString("hex");
+                if (paymentHash !== data.paymentHash)
+                    return null;
                 if (!event.data.sequence.eq(data.sequence))
                     return null;
                 return {

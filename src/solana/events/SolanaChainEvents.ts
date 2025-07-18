@@ -118,7 +118,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         try {
             const transaction = await this.connection.getParsedTransaction(signature, {
                 commitment: "confirmed",
-                maxSupportedTransactionVersion: 0
+                maxSupportedTransactionVersion: 1
             });
             if(transaction==null) return false;
 

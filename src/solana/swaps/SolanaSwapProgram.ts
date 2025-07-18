@@ -33,7 +33,7 @@ import {SwapClaim} from "./modules/SwapClaim";
 import {SolanaLpVault} from "./modules/SolanaLpVault";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../wallet/SolanaSigner";
-import {fromClaimHash, toBN, toClaimHash} from "../../utils/Utils";
+import {fromClaimHash, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
 import {SolanaTokens} from "../chain/modules/SolanaTokens";
 import * as BN from "bn.js";
 
@@ -271,10 +271,13 @@ export class SolanaSwapProgram
         //Check if paid or what
         const status: SwapNotCommitedState | SwapExpiredState | SwapPaidState = await this.Events.findInEvents(escrowStateKey, async (event, info) => {
             if(event.name==="ClaimEvent") {
+                const paymentHash = Buffer.from(event.data.hash).toString("hex");
+                if(paymentHash!==data.paymentHash) return null;
                 if(!event.data.sequence.eq(data.sequence)) return null;
                 return {
                     type: SwapCommitStateType.PAID,
                     getClaimTxId: () => Promise.resolve(info.signature),
+                    getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
                     getTxBlock: async () => {
                         return {
                             blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
@@ -284,6 +287,8 @@ export class SolanaSwapProgram
                 }
             }
             if(event.name==="RefundEvent") {
+                const paymentHash = Buffer.from(event.data.hash).toString("hex");
+                if(paymentHash!==data.paymentHash) return null;
                 if(!event.data.sequence.eq(data.sequence)) return null;
                 return {
                     type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
