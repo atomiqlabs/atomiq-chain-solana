@@ -118,6 +118,12 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @param data
      */
     getCommitStatus(signer: string, data: SolanaSwapData): Promise<SwapCommitState>;
+    getCommitStatuses(request: {
+        signer: string;
+        swapData: SolanaSwapData;
+    }[]): Promise<{
+        [p: string]: SwapCommitState;
+    }>;
     /**
      * Checks the status of the specific payment hash
      *

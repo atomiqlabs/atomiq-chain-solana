@@ -20,6 +20,7 @@ const BN = require("bn.js");
 function toPublicKeyOrNull(str) {
     return str == null ? null : new web3_js_1.PublicKey(str);
 }
+const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     constructor(chainInterface, btcRelay, storage, programAddress) {
         super(chainInterface, programIdl, programAddress);
@@ -236,6 +237,21 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         if (isExpired)
             return { type: base_1.SwapCommitStateType.EXPIRED };
         return { type: base_1.SwapCommitStateType.NOT_COMMITED };
+    }
+    async getCommitStatuses(request) {
+        const result = {};
+        let promises = [];
+        for (let { signer, swapData } of request) {
+            promises.push(this.getCommitStatus(signer, swapData).then(val => {
+                result[swapData.getEscrowHash()] = val;
+            }));
+            if (promises.length >= MAX_PARALLEL_COMMIT_STATUS_CHECKS) {
+                await Promise.all(promises);
+                promises = [];
+            }
+        }
+        await Promise.all(promises);
+        return result;
     }
     /**
      * Checks the status of the specific payment hash
