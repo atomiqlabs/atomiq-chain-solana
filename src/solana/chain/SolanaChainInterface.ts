@@ -12,6 +12,7 @@ import {SolanaAddresses} from "./modules/SolanaAddresses";
 import {SolanaSigner} from "../wallet/SolanaSigner";
 import {Buffer} from "buffer";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
+import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
 
 export type SolanaRetryPolicy = {
     maxRetries?: number,
@@ -23,7 +24,8 @@ export type SolanaRetryPolicy = {
 export class SolanaChainInterface implements ChainInterface<
     SolanaTx,
     SolanaSigner,
-    "SOLANA"
+    "SOLANA",
+    Wallet
 > {
     readonly chainId = "SOLANA";
 
@@ -170,6 +172,10 @@ export class SolanaChainInterface implements ChainInterface<
         const keypair = Keypair.generate();
         const wallet = new SolanaKeypairWallet(keypair);
         return new SolanaSigner(wallet, keypair);
+    }
+
+    wrapSigner(signer: Wallet): Promise<SolanaSigner> {
+        return Promise.resolve(new SolanaSigner(signer));
     }
 
 }

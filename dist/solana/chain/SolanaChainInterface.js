@@ -108,5 +108,8 @@ class SolanaChainInterface {
         const wallet = new SolanaKeypairWallet_1.SolanaKeypairWallet(keypair);
         return new SolanaSigner_1.SolanaSigner(wallet, keypair);
     }
+    wrapSigner(signer) {
+        return Promise.resolve(new SolanaSigner_1.SolanaSigner(signer));
+    }
 }
 exports.SolanaChainInterface = SolanaChainInterface;

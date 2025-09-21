@@ -10,13 +10,14 @@ import { SolanaEvents } from "./modules/SolanaEvents";
 import { ChainInterface, TransactionConfirmationOptions } from "@atomiqlabs/base";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { Buffer } from "buffer";
+import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
 export type SolanaRetryPolicy = {
     maxRetries?: number;
     delay?: number;
     exponential?: boolean;
     transactionResendInterval?: number;
 };
-export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SolanaSigner, "SOLANA"> {
+export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SolanaSigner, "SOLANA", Wallet> {
     readonly chainId = "SOLANA";
     readonly SLOT_TIME = 400;
     readonly TX_SLOT_VALIDITY = 151;
@@ -55,4 +56,5 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     isValidToken(tokenIdentifier: string): boolean;
     randomAddress(): string;
     randomSigner(): SolanaSigner;
+    wrapSigner(signer: Wallet): Promise<SolanaSigner>;
 }

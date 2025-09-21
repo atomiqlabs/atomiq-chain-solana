@@ -3,6 +3,7 @@ import {AbstractSigner} from "@atomiqlabs/base";
 import {PublicKey, Signer} from "@solana/web3.js";
 
 export class SolanaSigner implements AbstractSigner {
+    type = "AtomiqAbstractSigner" as const;
 
     wallet: Wallet;
     keypair?: Signer;
