@@ -45,6 +45,9 @@ class SolanaChainInterface {
     isValidAddress(address) {
         return SolanaAddresses_1.SolanaAddresses.isValidAddress(address);
     }
+    normalizeAddress(address) {
+        return address;
+    }
     getNativeCurrencyAddress() {
         return this.Tokens.getNativeCurrencyAddress().toString();
     }

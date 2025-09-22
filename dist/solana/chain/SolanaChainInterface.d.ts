@@ -39,6 +39,7 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     constructor(connection: Connection, retryPolicy?: SolanaRetryPolicy, solanaFeeEstimator?: SolanaFees);
     getBalance(signer: string, tokenAddress: string): Promise<bigint>;
     isValidAddress(address: string): boolean;
+    normalizeAddress(address: string): string;
     getNativeCurrencyAddress(): string;
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]>;
     transfer(signer: SolanaSigner, token: string, amount: bigint, dstAddress: string, txOptions?: TransactionConfirmationOptions): Promise<string>;

@@ -80,6 +80,10 @@ export class SolanaChainInterface implements ChainInterface<
         return SolanaAddresses.isValidAddress(address);
     }
 
+    normalizeAddress(address: string): string {
+        return address;
+    }
+
     getNativeCurrencyAddress(): string {
         return this.Tokens.getNativeCurrencyAddress().toString();
     }
