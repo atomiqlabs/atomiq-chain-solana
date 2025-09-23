@@ -76,6 +76,13 @@ class SolanaChainInterface {
     getTxStatus(tx) {
         return this.Transactions.getTxStatus(tx);
     }
+    async getFinalizedBlock() {
+        const { block } = await this.Blocks.findLatestParsedBlock("finalized");
+        return {
+            height: block.blockHeight,
+            blockHash: block.blockhash
+        };
+    }
     ///////////////////////////////////
     //// Callbacks & handlers
     offBeforeTxReplace(callback) {

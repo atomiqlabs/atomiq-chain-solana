@@ -1,6 +1,6 @@
 {
   "name": "@atomiqlabs/chain-solana",
-  "version": "10.0.0-dev.9",
+  "version": "10.0.0-dev.10",
   "description": "Solana specific base implementation",
   "main": "./dist/index.js",
   "types:": "./dist/index.d.ts",
@@ -22,7 +22,7 @@
   "author": "adambor",
   "license": "ISC",
   "dependencies": {
-    "@atomiqlabs/base": "^10.0.0-dev.18",
+    "@atomiqlabs/base": "^10.0.0-dev.19",
     "@noble/hashes": "^1.7.1",
     "bn.js": "5.2.1",
     "bs58": "4.0.1",

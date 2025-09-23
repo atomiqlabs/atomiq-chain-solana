@@ -48,6 +48,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     deserializeTx(txData: string): Promise<SolanaTx>;
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;
     getTxStatus(tx: string): Promise<"not_found" | "pending" | "success" | "reverted">;
+    getFinalizedBlock(): Promise<{
+        height: number;
+        blockHash: string;
+    }>;
     offBeforeTxReplace(callback: (oldTx: string, oldTxId: string, newTx: string, newTxId: string) => Promise<void>): boolean;
     onBeforeTxReplace(callback: (oldTx: string, oldTxId: string, newTx: string, newTxId: string) => Promise<void>): void;
     onBeforeTxSigned(callback: (tx: SolanaTx) => Promise<void>): void;
