@@ -6,6 +6,7 @@ const SolanaModule_1 = require("../SolanaModule");
 const bs58 = require("bs58");
 const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
+const base_1 = require("@atomiqlabs/base");
 class SolanaTransactions extends SolanaModule_1.SolanaModule {
     /**
      * Sends raw solana transaction, first through the cbkSendTransaction callback (for e.g. sending the transaction
@@ -54,7 +55,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
                     resolve(signature);
                 }
                 if (status === "reverted")
-                    reject(new Error("Transaction reverted!"));
+                    reject(new base_1.TransactionRevertedError("Transaction reverted!"));
                 clearInterval(watchdogInterval);
             }, this.retryPolicy?.transactionResendInterval || 3000);
             if (abortSignal != null)
@@ -95,7 +96,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
             if (status === "success")
                 return signature;
             if (status === "reverted")
-                throw new Error("Transaction reverted!");
+                throw new base_1.TransactionRevertedError("Transaction reverted!");
             if (err instanceof web3_js_1.TransactionExpiredBlockheightExceededError || err.toString().startsWith("TransactionExpiredBlockheightExceededError")) {
                 throw new Error("Transaction expired before confirmation, please try again!");
             }
@@ -104,7 +105,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
             }
         }
         if (result.value.err != null)
-            throw new Error("Transaction reverted!");
+            throw new base_1.TransactionRevertedError("Transaction reverted!");
         return signature;
     }
     /**

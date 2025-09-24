@@ -9,6 +9,7 @@ import * as bs58 from "bs58";
 import {tryWithRetries} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {TransactionRevertedError} from "@atomiqlabs/base";
 
 export type SolanaTx = {tx: Transaction, signers: Signer[]};
 
@@ -74,7 +75,7 @@ export class SolanaTransactions extends SolanaModule {
                     this.logger.info("txConfirmationAndResendWatchdog(): transaction confirmed from HTTP polling, signature: "+signature);
                     resolve(signature);
                 }
-                if(status==="reverted") reject(new Error("Transaction reverted!"));
+                if(status==="reverted") reject(new TransactionRevertedError("Transaction reverted!"));
                 clearInterval(watchdogInterval);
             }, this.retryPolicy?.transactionResendInterval || 3000);
 
@@ -119,14 +120,14 @@ export class SolanaTransactions extends SolanaModule {
             );
             this.logger.info("txConfirmFromWebsocket(): transaction status: "+status+" signature: "+signature);
             if(status==="success") return signature;
-            if(status==="reverted") throw new Error("Transaction reverted!");
+            if(status==="reverted") throw new TransactionRevertedError("Transaction reverted!");
             if(err instanceof TransactionExpiredBlockheightExceededError || err.toString().startsWith("TransactionExpiredBlockheightExceededError")) {
                 throw new Error("Transaction expired before confirmation, please try again!");
             } else {
                 throw err;
             }
         }
-        if(result.value.err!=null) throw new Error("Transaction reverted!");
+        if(result.value.err!=null) throw new TransactionRevertedError("Transaction reverted!");
         return signature;
     }
 
