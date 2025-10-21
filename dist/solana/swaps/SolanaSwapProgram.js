@@ -20,6 +20,7 @@ const BN = require("bn.js");
 function toPublicKeyOrNull(str) {
     return str == null ? null : new web3_js_1.PublicKey(str);
 }
+const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     constructor(chainInterface, btcRelay, storage, programAddress) {
         super(chainInterface, programIdl, programAddress);
@@ -237,6 +238,21 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             return { type: base_1.SwapCommitStateType.EXPIRED };
         return { type: base_1.SwapCommitStateType.NOT_COMMITED };
     }
+    async getCommitStatuses(request) {
+        const result = {};
+        let promises = [];
+        for (let { signer, swapData } of request) {
+            promises.push(this.getCommitStatus(signer, swapData).then(val => {
+                result[swapData.getEscrowHash()] = val;
+            }));
+            if (promises.length >= MAX_PARALLEL_COMMIT_STATUS_CHECKS) {
+                await Promise.all(promises);
+                promises = [];
+            }
+        }
+        await Promise.all(promises);
+        return result;
+    }
     /**
      * Checks the status of the specific payment hash
      *
@@ -439,25 +455,25 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     /**
      * Get the estimated solana fee of the commit transaction
      */
-    getCommitFee(swapData, feeRate) {
+    getCommitFee(signer, swapData, feeRate) {
         return this.Init.getInitFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana fee of the commit transaction, without any deposits
      */
-    getRawCommitFee(swapData, feeRate) {
+    getRawCommitFee(signer, swapData, feeRate) {
         return this.Init.getRawInitFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRefundFee(swapData, feeRate) {
+    getRefundFee(signer, swapData, feeRate) {
         return this.Refund.getRefundFee(swapData, feeRate);
     }
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRawRefundFee(swapData, feeRate) {
+    getRawRefundFee(signer, swapData, feeRate) {
         return this.Refund.getRawRefundFee(swapData, feeRate);
     }
     getExtraData(outputScript, amount, confirmations, nonce) {

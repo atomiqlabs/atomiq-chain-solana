@@ -10,13 +10,14 @@ import { SolanaEvents } from "./modules/SolanaEvents";
 import { ChainInterface, TransactionConfirmationOptions } from "@atomiqlabs/base";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { Buffer } from "buffer";
+import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
 export type SolanaRetryPolicy = {
     maxRetries?: number;
     delay?: number;
     exponential?: boolean;
     transactionResendInterval?: number;
 };
-export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SolanaSigner, "SOLANA"> {
+export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SolanaSigner, "SOLANA", Wallet> {
     readonly chainId = "SOLANA";
     readonly SLOT_TIME = 400;
     readonly TX_SLOT_VALIDITY = 151;
@@ -38,6 +39,7 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     constructor(connection: Connection, retryPolicy?: SolanaRetryPolicy, solanaFeeEstimator?: SolanaFees);
     getBalance(signer: string, tokenAddress: string): Promise<bigint>;
     isValidAddress(address: string): boolean;
+    normalizeAddress(address: string): string;
     getNativeCurrencyAddress(): string;
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]>;
     transfer(signer: SolanaSigner, token: string, amount: bigint, dstAddress: string, txOptions?: TransactionConfirmationOptions): Promise<string>;
@@ -46,6 +48,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     deserializeTx(txData: string): Promise<SolanaTx>;
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;
     getTxStatus(tx: string): Promise<"not_found" | "pending" | "success" | "reverted">;
+    getFinalizedBlock(): Promise<{
+        height: number;
+        blockHash: string;
+    }>;
     offBeforeTxReplace(callback: (oldTx: string, oldTxId: string, newTx: string, newTxId: string) => Promise<void>): boolean;
     onBeforeTxReplace(callback: (oldTx: string, oldTxId: string, newTx: string, newTxId: string) => Promise<void>): void;
     onBeforeTxSigned(callback: (tx: SolanaTx) => Promise<void>): void;
@@ -55,4 +61,5 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     isValidToken(tokenIdentifier: string): boolean;
     randomAddress(): string;
     randomSigner(): SolanaSigner;
+    wrapSigner(signer: Wallet): Promise<SolanaSigner>;
 }

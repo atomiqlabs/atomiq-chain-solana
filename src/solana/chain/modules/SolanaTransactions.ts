@@ -9,6 +9,7 @@ import * as bs58 from "bs58";
 import {tryWithRetries} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
+import {TransactionRevertedError} from "@atomiqlabs/base";
 
 export type SolanaTx = {tx: Transaction, signers: Signer[]};
 
@@ -74,7 +75,7 @@ export class SolanaTransactions extends SolanaModule {
                     this.logger.info("txConfirmationAndResendWatchdog(): transaction confirmed from HTTP polling, signature: "+signature);
                     resolve(signature);
                 }
-                if(status==="reverted") reject(new Error("Transaction reverted!"));
+                if(status==="reverted") reject(new TransactionRevertedError("Transaction reverted!"));
                 clearInterval(watchdogInterval);
             }, this.retryPolicy?.transactionResendInterval || 3000);
 
@@ -119,14 +120,14 @@ export class SolanaTransactions extends SolanaModule {
             );
             this.logger.info("txConfirmFromWebsocket(): transaction status: "+status+" signature: "+signature);
             if(status==="success") return signature;
-            if(status==="reverted") throw new Error("Transaction reverted!");
+            if(status==="reverted") throw new TransactionRevertedError("Transaction reverted!");
             if(err instanceof TransactionExpiredBlockheightExceededError || err.toString().startsWith("TransactionExpiredBlockheightExceededError")) {
                 throw new Error("Transaction expired before confirmation, please try again!");
             } else {
                 throw err;
             }
         }
-        if(result.value.err!=null) throw new Error("Transaction reverted!");
+        if(result.value.err!=null) throw new TransactionRevertedError("Transaction reverted!");
         return signature;
     }
 
@@ -239,9 +240,11 @@ export class SolanaTransactions extends SolanaModule {
         this.logger.debug("sendAndConfirm(): sending transactions, count: "+_txs.length+
             " waitForConfirmation: "+waitForConfirmation+" parallel: "+parallel);
 
+        const BATCH_SIZE = 50;
+
         const signatures: string[] = [];
-        for(let e=0;e<_txs.length;e+=50) {
-            const txs = _txs.slice(e, e+50);
+        for(let e=0;e<_txs.length;e+=BATCH_SIZE) {
+            const txs = _txs.slice(e, e+BATCH_SIZE);
 
             await this.prepareTransactions(signer, txs)
             const signedTxs = await signer.wallet.signAllTransactions(txs.map(e => e.tx));
@@ -252,23 +255,15 @@ export class SolanaTransactions extends SolanaModule {
             });
             this.logger.debug("sendAndConfirm(): sending transaction batch ("+e+".."+(e+50)+"), count: "+txs.length);
 
-            if(parallel) {
-                const promises: Promise<void>[] = [];
-                for(let solTx of txs) {
-                    const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
-                    if(waitForConfirmation) promises.push(this.confirmTransaction(solTx, abortSignal, "confirmed"));
-                    signatures.push(signature);
-                }
-                if(promises.length>0) await Promise.all(promises);
-            } else {
-                for(let i=0;i<txs.length;i++) {
-                    const solTx = txs[i];
-                    const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
-                    const confirmPromise = this.confirmTransaction(solTx, abortSignal, "confirmed");
-                    //Don't await the last promise when !waitForConfirmation
-                    if(i<txs.length-1 || e+50<_txs.length || waitForConfirmation) await confirmPromise;
-                    signatures.push(signature);
-                }
+            //For solana we are forced to send txs one-by-one even with parallel, as we cannot determine their order upfront,
+            // however e.g. Jito could possibly handle sending a single package of up to 5 txns in order.
+            for(let i=0;i<txs.length;i++) {
+                const solTx = txs[i];
+                const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
+                const confirmPromise = this.confirmTransaction(solTx, abortSignal, "confirmed");
+                //Don't await the last promise when !waitForConfirmation
+                if(i<txs.length-1 || e+50<_txs.length || waitForConfirmation) await confirmPromise;
+                signatures.push(signature);
             }
         }
 

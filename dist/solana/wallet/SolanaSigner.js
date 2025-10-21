@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaSigner = void 0;
 class SolanaSigner {
     constructor(wallet, keypair) {
+        this.type = "AtomiqAbstractSigner";
         this.wallet = wallet;
         this.keypair = keypair;
     }

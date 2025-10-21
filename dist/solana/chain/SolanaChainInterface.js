@@ -45,6 +45,9 @@ class SolanaChainInterface {
     isValidAddress(address) {
         return SolanaAddresses_1.SolanaAddresses.isValidAddress(address);
     }
+    normalizeAddress(address) {
+        return address;
+    }
     getNativeCurrencyAddress() {
         return this.Tokens.getNativeCurrencyAddress().toString();
     }
@@ -72,6 +75,13 @@ class SolanaChainInterface {
     }
     getTxStatus(tx) {
         return this.Transactions.getTxStatus(tx);
+    }
+    async getFinalizedBlock() {
+        const { block } = await this.Blocks.findLatestParsedBlock("finalized");
+        return {
+            height: block.blockHeight,
+            blockHash: block.blockhash
+        };
     }
     ///////////////////////////////////
     //// Callbacks & handlers
@@ -107,6 +117,9 @@ class SolanaChainInterface {
         const keypair = web3_js_1.Keypair.generate();
         const wallet = new SolanaKeypairWallet_1.SolanaKeypairWallet(keypair);
         return new SolanaSigner_1.SolanaSigner(wallet, keypair);
+    }
+    wrapSigner(signer) {
+        return Promise.resolve(new SolanaSigner_1.SolanaSigner(signer));
     }
 }
 exports.SolanaChainInterface = SolanaChainInterface;

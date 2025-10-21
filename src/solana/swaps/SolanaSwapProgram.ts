@@ -41,6 +41,8 @@ function toPublicKeyOrNull(str: string | null): PublicKey | null {
     return str==null ? null : new PublicKey(str);
 }
 
+const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
+
 export class SolanaSwapProgram
     extends SolanaProgramBase<SwapProgram>
     implements SwapContract<
@@ -306,6 +308,26 @@ export class SolanaSwapProgram
 
         if(isExpired) return {type: SwapCommitStateType.EXPIRED};
         return {type: SwapCommitStateType.NOT_COMMITED};
+    }
+
+    async getCommitStatuses(request: { signer: string; swapData: SolanaSwapData }[]): Promise<{
+        [p: string]: SwapCommitState
+    }> {
+        const result: {
+            [p: string]: SwapCommitState
+        } = {};
+        let promises: Promise<void>[] = [];
+        for(let {signer, swapData} of request) {
+            promises.push(this.getCommitStatus(signer, swapData).then(val => {
+                result[swapData.getEscrowHash()] = val;
+            }));
+            if(promises.length>=MAX_PARALLEL_COMMIT_STATUS_CHECKS) {
+                await Promise.all(promises);
+                promises = [];
+            }
+        }
+        await Promise.all(promises);
+        return result;
     }
 
     /**
@@ -662,28 +684,28 @@ export class SolanaSwapProgram
     /**
      * Get the estimated solana fee of the commit transaction
      */
-    getCommitFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+    getCommitFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
         return this.Init.getInitFee(swapData, feeRate);
     }
 
     /**
      * Get the estimated solana fee of the commit transaction, without any deposits
      */
-    getRawCommitFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+    getRawCommitFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
         return this.Init.getRawInitFee(swapData, feeRate);
     }
 
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+    getRefundFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
         return this.Refund.getRefundFee(swapData, feeRate);
     }
 
     /**
      * Get the estimated solana transaction fee of the refund transaction
      */
-    getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
+    getRawRefundFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
         return this.Refund.getRawRefundFee(swapData, feeRate);
     }
 

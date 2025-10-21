@@ -7,4 +7,5 @@ import { SolanaSwapData } from "./swaps/SolanaSwapData";
 import { SolanaChainEventsBrowser } from "./events/SolanaChainEventsBrowser";
 import { SolanaBtcRelay } from "./btcrelay/SolanaBtcRelay";
 import { SolanaChainInterface } from "./chain/SolanaChainInterface";
-export type SolanaChainType = ChainType<"SOLANA", SolanaPreFetchData, SolanaPreFetchVerification, SolanaTx, SolanaSigner, SolanaSwapData, SolanaSwapProgram, SolanaChainInterface, SolanaChainEventsBrowser, SolanaBtcRelay<any>, never, never, never>;
+import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
+export type SolanaChainType = ChainType<"SOLANA", SolanaPreFetchData, SolanaPreFetchVerification, SolanaTx, SolanaSigner, Wallet, SolanaSwapData, SolanaSwapProgram, SolanaChainInterface, SolanaChainEventsBrowser, SolanaBtcRelay<any>, never, never, never>;
