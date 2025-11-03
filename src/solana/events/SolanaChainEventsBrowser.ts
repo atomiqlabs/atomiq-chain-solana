@@ -19,7 +19,7 @@ import {Buffer} from "buffer";
 
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[],
-    instructions: InstructionWithAccounts<SwapProgram>[],
+    instructions?: (InstructionWithAccounts<SwapProgram> | null)[],
     blockTime: number,
     signature: string
 };
@@ -48,9 +48,9 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
      * Fetches and parses transaction instructions
      *
      * @private
-     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     * @returns {Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null>} array of parsed instructions
      */
-    private async getTransactionInstructions(signature: string): Promise<InstructionWithAccounts<SwapProgram>[]> {
+    private async getTransactionInstructions(signature: string): Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null> {
         const transaction = await tryWithRetries<ParsedTransactionWithMeta>(async () => {
             const res = await this.connection.getParsedTransaction(signature, {
                 commitment: "confirmed",
@@ -59,7 +59,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
             if(res==null) throw new Error("Transaction not found!");
             return res;
         });
-        if(transaction==null) return null;
+        if(transaction.meta==null) throw new Error("Transaction 'meta' not found!");
         if(transaction.meta.err!=null) return null;
         return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
     }
@@ -115,10 +115,13 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
      * @private
      * @returns {() => Promise<SolanaSwapData>} getter to be passed to InitializeEvent constructor
      */
-    private getSwapDataGetter(eventObject: EventObject, txoHash: string): () => Promise<SolanaSwapData> {
+    private getSwapDataGetter(eventObject: EventObject, txoHash: string): () => Promise<SolanaSwapData | null> {
         return async () => {
-            if(eventObject.instructions==null) eventObject.instructions = await this.getTransactionInstructions(eventObject.signature);
-            if(eventObject.instructions==null) return null;
+            if(eventObject.instructions==null) {
+                const ixs = await this.getTransactionInstructions(eventObject.signature);
+                if(ixs==null) return null;
+                eventObject.instructions = ixs;
+            }
 
             const initIx = eventObject.instructions.find(
                 ix => ix!=null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize")
@@ -138,7 +141,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
         return new InitializeEvent<SolanaSwapData>(
             escrowHash,
             SwapTypeEnum.toChainSwapType(data.kind),
-            onceAsync<SolanaSwapData>(this.getSwapDataGetter(eventObject, txoHash))
+            onceAsync<SolanaSwapData | null>(this.getSwapDataGetter(eventObject, txoHash))
         );
     }
 
@@ -207,7 +210,6 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
 
             this.processEvent({
                 events: [{name, data: data as any}],
-                instructions: null, //Instructions will be fetched on-demand if required
                 blockTime: Math.floor(Date.now()/1000),
                 signature
             }).then(() => true).catch(e => {

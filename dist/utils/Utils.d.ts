@@ -3,10 +3,10 @@ import * as BN from "bn.js";
 export declare function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void>;
 export declare function onceAsync<T>(executor: () => Promise<T>): () => Promise<T>;
 export declare function getLogger(prefix: string): {
-    debug: (msg: any, ...args: any[]) => void;
-    info: (msg: any, ...args: any[]) => void;
-    warn: (msg: any, ...args: any[]) => void;
-    error: (msg: any, ...args: any[]) => void;
+    debug: (msg: any, ...args: any[]) => false | void;
+    info: (msg: any, ...args: any[]) => false | void;
+    warn: (msg: any, ...args: any[]) => false | void;
+    error: (msg: any, ...args: any[]) => false | void;
 };
 export declare function tryWithRetries<T>(func: () => Promise<T>, retryPolicy?: {
     maxRetries?: number;

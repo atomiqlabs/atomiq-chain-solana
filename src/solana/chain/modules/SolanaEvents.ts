@@ -38,19 +38,18 @@ export class SolanaEvents extends SolanaModule {
      */
     public async findInSignatures<T>(
         topicKey: PublicKey,
-        processor: (signatures: ConfirmedSignatureInfo[]) => Promise<T>,
+        processor: (signatures: ConfirmedSignatureInfo[]) => Promise<T | null | undefined>,
         abortSignal?: AbortSignal,
         logFetchLimit?: number
-    ): Promise<T> {
+    ): Promise<T | null> {
         if(logFetchLimit==null || logFetchLimit>this.LOG_FETCH_LIMIT) logFetchLimit = this.LOG_FETCH_LIMIT;
-        let signatures: ConfirmedSignatureInfo[] = null;
-        while(signatures==null || signatures.length>0) {
-            signatures = await this.getSignatures(topicKey, logFetchLimit, signatures!=null ? signatures[signatures.length-1].signature : null);
+        let signatures: ConfirmedSignatureInfo[];
+        do {
+            signatures = await this.getSignatures(topicKey, logFetchLimit, signatures!?.[signatures!.length-1].signature);
             if(abortSignal!=null) abortSignal.throwIfAborted();
-            const result: T = await processor(signatures);
+            const result= await processor(signatures);
             if(result!=null) return result;
-            if(signatures.length<logFetchLimit) break;
-        }
+        } while(signatures.length>=logFetchLimit); //Only fetch next one if this response is full
         return null;
     }
 

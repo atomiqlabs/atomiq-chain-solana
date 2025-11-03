@@ -8,7 +8,7 @@ import {SolanaSwapData} from "../SolanaSwapData";
 import {SolanaAction} from "../../chain/SolanaAction";
 import {
     Account,
-    createAssociatedTokenAccountIdempotentInstruction,
+    createAssociatedTokenAccountIdempotentInstruction, getAssociatedTokenAddress,
     getAssociatedTokenAddressSync,
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
@@ -138,7 +138,7 @@ export class SwapInit extends SolanaSwapModule {
         action.addIx(
             createAssociatedTokenAccountIdempotentInstruction(
                 swapData.claimer,
-                swapData.claimerAta,
+                swapData.claimerAta ?? await getAssociatedTokenAddress(swapData.token, swapData.claimer),
                 swapData.claimer,
                 swapData.token
             )

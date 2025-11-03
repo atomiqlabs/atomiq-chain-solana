@@ -31,10 +31,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     readonly Signatures: SolanaSignatures;
     readonly Events: SolanaEvents;
     protected readonly logger: {
-        debug: (msg: any, ...args: any[]) => void;
-        info: (msg: any, ...args: any[]) => void;
-        warn: (msg: any, ...args: any[]) => void;
-        error: (msg: any, ...args: any[]) => void;
+        debug: (msg: any, ...args: any[]) => false | void;
+        info: (msg: any, ...args: any[]) => false | void;
+        warn: (msg: any, ...args: any[]) => false | void;
+        error: (msg: any, ...args: any[]) => false | void;
     };
     constructor(connection: Connection, retryPolicy?: SolanaRetryPolicy, solanaFeeEstimator?: SolanaFees);
     getBalance(signer: string, tokenAddress: string): Promise<bigint>;

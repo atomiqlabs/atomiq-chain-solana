@@ -28,7 +28,8 @@ export class SolanaSlots extends SolanaModule {
             timestamp
         }
         slotPromise.catch(e => {
-            if(this.slotCache[commitment]!=null && this.slotCache[commitment].slot===slotPromise) delete this.slotCache[commitment];
+            const slotCache = this.slotCache[commitment];
+            if(slotCache!=null && slotCache.slot===slotPromise) delete this.slotCache[commitment];
             throw e;
         })
         return {

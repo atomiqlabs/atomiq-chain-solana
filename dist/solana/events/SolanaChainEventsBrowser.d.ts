@@ -23,10 +23,10 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
     protected readonly solanaSwapProgram: SolanaSwapProgram;
     protected eventListeners: number[];
     protected readonly logger: {
-        debug: (msg: any, ...args: any[]) => void;
-        info: (msg: any, ...args: any[]) => void;
-        warn: (msg: any, ...args: any[]) => void;
-        error: (msg: any, ...args: any[]) => void;
+        debug: (msg: any, ...args: any[]) => false | void;
+        info: (msg: any, ...args: any[]) => false | void;
+        warn: (msg: any, ...args: any[]) => false | void;
+        error: (msg: any, ...args: any[]) => false | void;
     };
     constructor(connection: Connection, solanaSwapContract: SolanaSwapProgram);
     /**

@@ -5,7 +5,7 @@ import {getLogger} from "../../utils/Utils";
 export class SolanaModule {
 
     protected readonly connection: Connection;
-    protected readonly retryPolicy: SolanaRetryPolicy;
+    protected readonly retryPolicy?: SolanaRetryPolicy;
     protected readonly root: SolanaChainInterface;
 
     protected readonly logger = getLogger(this.constructor.name+": ");

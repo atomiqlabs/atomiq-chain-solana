@@ -33,7 +33,7 @@ export class SolanaChainInterface implements ChainInterface<
     public readonly TX_SLOT_VALIDITY = 151;
 
     readonly connection: Connection;
-    readonly retryPolicy: SolanaRetryPolicy;
+    readonly retryPolicy?: SolanaRetryPolicy;
 
     public readonly Blocks: SolanaBlocks;
     public Fees: SolanaFees;
@@ -137,7 +137,7 @@ export class SolanaChainInterface implements ChainInterface<
     async getFinalizedBlock(): Promise<{ height: number; blockHash: string }> {
         const {block} = await this.Blocks.findLatestParsedBlock("finalized");
         return {
-            height: block.blockHeight,
+            height: block.blockHeight!,
             blockHash: block.blockhash
         };
     }

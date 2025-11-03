@@ -20,6 +20,8 @@ export class SolanaTokens extends SolanaModule {
         TRANSFER_SOL: 5000
     };
 
+    public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey): SolanaAction;
+    public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta: PublicKey): SolanaAction | null;
     /**
      * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
      *  public key
@@ -183,7 +185,7 @@ export class SolanaTokens extends SolanaModule {
         const initAta = !await this.ataExists(dstAta);
         const action = new SolanaAction(signer, this.root);
         if(initAta) {
-            action.add(this.InitAta(signer, recipient, token));
+            action.add(this.InitAta(signer, recipient, token)!);
         }
         action.add(this.Transfer(signer, recipient, token, amount));
 
@@ -227,7 +229,7 @@ export class SolanaTokens extends SolanaModule {
      * @param ata
      */
     public async ataExists(ata: PublicKey) {
-        const account = await tryWithRetries<Account>(
+        const account = await tryWithRetries<Account | null>(
             () => this.getATAOrNull(ata),
             this.retryPolicy
         );
@@ -249,7 +251,7 @@ export class SolanaTokens extends SolanaModule {
      */
     public async getTokenBalance(publicKey: PublicKey, token: PublicKey): Promise<{balance: bigint, ataExists: boolean}> {
         const ata: PublicKey = getAssociatedTokenAddressSync(token, publicKey, true);
-        const [ataAccount, balance] = await Promise.all<[Promise<Account>, Promise<number>]>([
+        const [ataAccount, balance] = await Promise.all<[Promise<Account | null>, Promise<number | null>]>([
             this.getATAOrNull(ata),
             (token!=null && token.equals(SolanaTokens.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
         ]);
@@ -257,7 +259,7 @@ export class SolanaTokens extends SolanaModule {
         let ataExists: boolean = ataAccount!=null;
         let sum: bigint = 0n;
         if(ataExists) {
-            sum += ataAccount.amount;
+            sum += ataAccount!.amount;
         }
 
         if(balance!=null) {

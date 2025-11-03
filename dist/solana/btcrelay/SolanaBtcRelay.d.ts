@@ -137,7 +137,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
         lastStoredHeader: SolanaBtcStoredHeader;
         tx: {
             tx: Transaction;
-            signers: any[];
+            signers: never[];
         };
         computedCommitedHeaders: SolanaBtcStoredHeader[];
     }>;
@@ -155,7 +155,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
         lastStoredHeader: SolanaBtcStoredHeader;
         tx: {
             tx: Transaction;
-            signers: any[];
+            signers: never[];
         };
         computedCommitedHeaders: SolanaBtcStoredHeader[];
     }>;
@@ -174,7 +174,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
         lastStoredHeader: SolanaBtcStoredHeader;
         tx: {
             tx: Transaction;
-            signers: any[];
+            signers: never[];
         };
         computedCommitedHeaders: SolanaBtcStoredHeader[];
     }>;
@@ -192,7 +192,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
         lastStoredHeader: SolanaBtcStoredHeader;
         tx: {
             tx: Transaction;
-            signers: any[];
+            signers: never[];
         };
         computedCommitedHeaders: SolanaBtcStoredHeader[];
     }>;

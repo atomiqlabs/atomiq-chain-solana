@@ -1,7 +1,7 @@
 import {SolanaSwapModule} from "../SolanaSwapModule";
 import {SolanaSwapData} from "../SolanaSwapData";
 import {SolanaAction} from "../../chain/SolanaAction";
-import {TOKEN_PROGRAM_ID} from "@solana/spl-token";
+import {getAssociatedTokenAddress, TOKEN_PROGRAM_ID} from "@solana/spl-token";
 import {ChainSwapType, RelaySynchronizer, SwapDataVerificationError} from "@atomiqlabs/base";
 import {PublicKey, SYSVAR_INSTRUCTIONS_PUBKEY} from "@solana/web3.js";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
@@ -166,7 +166,7 @@ export class SwapClaim extends SolanaSwapModule {
         blockhash: string,
         txs: SolanaTx[],
         synchronizer?: RelaySynchronizer<SolanaBtcStoredHeader, SolanaTx, any>,
-    ): Promise<SolanaBtcStoredHeader> {
+    ): Promise<SolanaBtcStoredHeader | null> {
         const requiredBlockheight = txBlockheight+requiredConfirmations-1;
 
         const result = await tryWithRetries(
@@ -259,7 +259,9 @@ export class SwapClaim extends SolanaSwapModule {
         if(checkExpiry && await this.program.isExpired(swapData.claimer.toString(), swapData)) {
             throw new SwapDataVerificationError("Not enough time to reliably pay the invoice");
         }
-        const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);
+
+        const claimerAta = swapData.claimerAta ?? await getAssociatedTokenAddress(swapData.token, swapData.claimer);
+        const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(claimerAta);
         if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
 
         if(feeRate==null) feeRate = await this.getClaimFeeRate(signer, swapData);
@@ -268,7 +270,7 @@ export class SwapClaim extends SolanaSwapModule {
 
         const shouldUnwrap = this.shouldUnwrap(signer, swapData);
         if(shouldInitAta) {
-            const initAction = this.root.Tokens.InitAta(signer, swapData.claimer, swapData.token, swapData.claimerAta);
+            const initAction = this.root.Tokens.InitAta(signer, swapData.claimer, swapData.token, claimerAta);
             if(initAction==null) throw new SwapDataVerificationError("Invalid claimer token account address");
             action.add(initAction);
         }
@@ -300,13 +302,15 @@ export class SwapClaim extends SolanaSwapModule {
         swapData: SolanaSwapData,
         tx: { blockhash: string, confirmations: number, txid: string, hex: string, height: number },
         vout: number,
-        commitedHeader?: SolanaBtcStoredHeader,
+        commitedHeader?: SolanaBtcStoredHeader | null,
         synchronizer?: RelaySynchronizer<any, SolanaTx, any>,
         initAta?: boolean,
         storageAccHolder?: {storageAcc: PublicKey},
         feeRate?: string
     ): Promise<SolanaTx[] | null> {
-        const shouldInitAta = swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);
+        const claimerAta = swapData.claimerAta ?? await getAssociatedTokenAddress(swapData.token, swapData.claimer);
+
+        const shouldInitAta = swapData.isPayOut() && !await this.root.Tokens.ataExists(claimerAta);
         if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
 
         const signerKey = signer instanceof SolanaSigner ? signer.getPublicKey() : signer;
@@ -314,6 +318,7 @@ export class SwapClaim extends SolanaSwapModule {
         if(feeRate==null) feeRate = await this.getClaimFeeRate(signerKey, swapData);
 
         const merkleProof = await this.btcRelay.bitcoinRpc.getMerkleProof(tx.txid, tx.blockhash);
+        if(merkleProof==null) throw new Error(`Failed to generate merkle proof for tx: ${tx.txid}`);
         this.logger.debug("txsClaimWithTxData(): merkle proof computed: ", merkleProof);
 
         const txs: SolanaTx[] = [];
@@ -321,13 +326,14 @@ export class SwapClaim extends SolanaSwapModule {
             signerKey, tx.height, swapData.confirmations,
             tx.blockhash, txs, synchronizer
         );
+        if(commitedHeader==null) throw new Error("Cannot get committed header, did you pass synchronizer?");
 
         const storeDataKey = await this.addTxsWriteTransactionData(signer, tx, vout, feeRate, txs);
         if(storageAccHolder!=null) storageAccHolder.storageAcc = storeDataKey;
 
         const shouldUnwrap = this.shouldUnwrap(signerKey, swapData);
         if(shouldInitAta) {
-            const initAction = this.root.Tokens.InitAta(signerKey, swapData.claimer, swapData.token, swapData.claimerAta);
+            const initAction = this.root.Tokens.InitAta(signerKey, swapData.claimer, swapData.token, claimerAta);
             if(initAction==null) throw new SwapDataVerificationError("Invalid claimer token account address");
             await initAction.addToTxs(txs, feeRate);
         }
