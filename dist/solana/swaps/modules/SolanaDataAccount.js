@@ -9,7 +9,7 @@ const SolanaSigner_1 = require("../../wallet/SolanaSigner");
 const utils_1 = require("@noble/hashes/utils");
 class StoredDataAccount {
     constructor(accountKeyOrData, owner) {
-        if (accountKeyOrData instanceof web3_js_1.PublicKey) {
+        if (accountKeyOrData instanceof web3_js_1.PublicKey && owner instanceof web3_js_1.PublicKey) {
             this.accountKey = accountKeyOrData;
             this.owner = owner;
         }
@@ -53,7 +53,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
                 data: accountKey.publicKey
             })
                 .instruction(),
-        ], SolanaDataAccount.CUCosts.DATA_CREATE, null, [accountKey]);
+        ], SolanaDataAccount.CUCosts.DATA_CREATE, undefined, [accountKey]);
     }
     /**
      * Action for closing the specific data account
@@ -160,14 +160,14 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
         const { closePublicKeys, totalValue } = await this.getDataAccountsInfo(signer.getPublicKey());
         if (closePublicKeys.length === 0) {
             this.logger.debug("sweepDataAccounts(): no old data accounts found, no need to close any!");
-            return;
+            return { txIds: [], count: 0, totalValue: 0n };
         }
         this.logger.debug("sweepDataAccounts(): closing old data accounts: ", closePublicKeys);
         let txns = [];
         for (let publicKey of closePublicKeys) {
             await (await this.CloseDataAccount(signer.getPublicKey(), publicKey)).addToTxs(txns);
         }
-        const result = await this.root.Transactions.sendAndConfirm(signer, txns, true, null, true);
+        const result = await this.root.Transactions.sendAndConfirm(signer, txns, true, undefined, true);
         this.logger.info("sweepDataAccounts(): old data accounts closed: " +
             closePublicKeys.map(pk => pk.toBase58()).join());
         for (let publicKey of closePublicKeys) {

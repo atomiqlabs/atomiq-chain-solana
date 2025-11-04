@@ -5,6 +5,7 @@ const SolanaProgramModule_1 = require("../program/SolanaProgramModule");
 class SolanaSwapModule extends SolanaProgramModule_1.SolanaProgramModule {
     constructor(chainInterface, program) {
         super(chainInterface, program);
+        this.program = program;
         this.swapProgram = program.program;
     }
 }

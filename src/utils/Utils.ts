@@ -3,6 +3,17 @@ import * as BN from "bn.js";
 import {Buffer} from "buffer";
 import {sha256} from "@noble/hashes/sha2";
 
+export type Serialized<T> = {
+    [K in keyof T as T[K] extends Function ? never : K]:
+    T[K] extends infer U
+        ? U extends PublicKey | BN
+            ? string
+            : U extends object
+                ? Serialized<U>
+                : U
+        : never;
+};
+
 export function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(resolve, timeoutMillis)

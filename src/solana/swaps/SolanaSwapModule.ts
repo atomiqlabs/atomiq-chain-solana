@@ -11,6 +11,7 @@ export class SolanaSwapModule extends SolanaProgramModule<SwapProgram> {
 
     constructor(chainInterface: SolanaChainInterface, program: SolanaSwapProgram) {
         super(chainInterface, program);
+        this.program = program;
         this.swapProgram = program.program;
     }
 

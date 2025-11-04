@@ -137,7 +137,7 @@ export class SolanaChainInterface implements ChainInterface<
     async getFinalizedBlock(): Promise<{ height: number; blockHash: string }> {
         const {block} = await this.Blocks.findLatestParsedBlock("finalized");
         return {
-            height: block.blockHeight!,
+            height: block.blockHeight,
             blockHash: block.blockhash
         };
     }

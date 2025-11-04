@@ -86,25 +86,25 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
             claimerBounty = initIx.data.claimerBounty;
         }
 
-        return new SolanaSwapData(
-            initIx.accounts.offerer,
-            initIx.accounts.claimer,
-            initIx.accounts.mint,
-            initIx.data.swapData.amount,
-            paymentHash.toString("hex"),
-            initIx.data.swapData.sequence,
-            initIx.data.swapData.expiry,
-            initIx.data.swapData.nonce,
-            initIx.data.swapData.confirmations,
-            initIx.data.swapData.payOut,
-            SwapTypeEnum.toNumber(initIx.data.swapData.kind),
+        return new SolanaSwapData({
+            offerer: initIx.accounts.offerer,
+            claimer: initIx.accounts.claimer,
+            token: initIx.accounts.mint,
+            amount: initIx.data.swapData.amount,
+            paymentHash: paymentHash.toString("hex"),
+            sequence: initIx.data.swapData.sequence,
+            expiry: initIx.data.swapData.expiry,
+            nonce: initIx.data.swapData.nonce,
+            confirmations: initIx.data.swapData.confirmations,
+            payOut: initIx.data.swapData.payOut,
+            kind: SwapTypeEnum.toNumber(initIx.data.swapData.kind),
             payIn,
-            initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : PublicKey.default,
-            initIx.data.swapData.payOut ? initIx.accounts.claimerAta : PublicKey.default,
+            offererAta: initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : PublicKey.default,
+            claimerAta: initIx.data.swapData.payOut ? initIx.accounts.claimerAta : PublicKey.default,
             securityDeposit,
             claimerBounty,
             txoHash
-        );
+        });
     }
 
     /**

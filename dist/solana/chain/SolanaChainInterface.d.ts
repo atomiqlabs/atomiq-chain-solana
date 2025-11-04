@@ -22,7 +22,7 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     readonly SLOT_TIME = 400;
     readonly TX_SLOT_VALIDITY = 151;
     readonly connection: Connection;
-    readonly retryPolicy: SolanaRetryPolicy;
+    readonly retryPolicy?: SolanaRetryPolicy;
     readonly Blocks: SolanaBlocks;
     Fees: SolanaFees;
     readonly Slots: SolanaSlots;
@@ -31,10 +31,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     readonly Signatures: SolanaSignatures;
     readonly Events: SolanaEvents;
     protected readonly logger: {
-        debug: (msg: any, ...args: any[]) => false | void;
-        info: (msg: any, ...args: any[]) => false | void;
-        warn: (msg: any, ...args: any[]) => false | void;
-        error: (msg: any, ...args: any[]) => false | void;
+        debug: (msg: string, ...args: any[]) => false | void;
+        info: (msg: string, ...args: any[]) => false | void;
+        warn: (msg: string, ...args: any[]) => false | void;
+        error: (msg: string, ...args: any[]) => false | void;
     };
     constructor(connection: Connection, retryPolicy?: SolanaRetryPolicy, solanaFeeEstimator?: SolanaFees);
     getBalance(signer: string, tokenAddress: string): Promise<bigint>;

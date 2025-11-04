@@ -8,7 +8,7 @@ type SolanaBtcHeaderType = {
     timestamp: number;
     nbits: number;
     nonce: number;
-    hash?: Buffer;
+    hash: Buffer;
 };
 export declare class SolanaBtcHeader implements BtcHeader {
     version: number;
@@ -17,7 +17,7 @@ export declare class SolanaBtcHeader implements BtcHeader {
     timestamp: number;
     nbits: number;
     nonce: number;
-    hash?: Buffer;
+    hash: Buffer;
     constructor(obj: SolanaBtcHeaderType);
     getMerkleRoot(): Buffer;
     getNbits(): number;

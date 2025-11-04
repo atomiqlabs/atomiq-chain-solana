@@ -7,7 +7,7 @@ import { InstructionWithAccounts, ProgramEvent, SingleInstructionWithAccounts } 
 import { SwapProgram } from "../swaps/programTypes";
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[];
-    instructions: InstructionWithAccounts<SwapProgram>[];
+    instructions?: (InstructionWithAccounts<SwapProgram> | null)[];
     blockTime: number;
     signature: string;
 };
@@ -23,17 +23,17 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
     protected readonly solanaSwapProgram: SolanaSwapProgram;
     protected eventListeners: number[];
     protected readonly logger: {
-        debug: (msg: any, ...args: any[]) => false | void;
-        info: (msg: any, ...args: any[]) => false | void;
-        warn: (msg: any, ...args: any[]) => false | void;
-        error: (msg: any, ...args: any[]) => false | void;
+        debug: (msg: string, ...args: any[]) => false | void;
+        info: (msg: string, ...args: any[]) => false | void;
+        warn: (msg: string, ...args: any[]) => false | void;
+        error: (msg: string, ...args: any[]) => false | void;
     };
     constructor(connection: Connection, solanaSwapContract: SolanaSwapProgram);
     /**
      * Fetches and parses transaction instructions
      *
      * @private
-     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     * @returns {Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null>} array of parsed instructions
      */
     private getTransactionInstructions;
     /**

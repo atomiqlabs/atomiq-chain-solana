@@ -21,7 +21,7 @@ export class SolanaTokens extends SolanaModule {
     };
 
     public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey): SolanaAction;
-    public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta: PublicKey): SolanaAction | null;
+    public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null;
     /**
      * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
      *  public key

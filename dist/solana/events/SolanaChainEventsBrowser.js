@@ -25,7 +25,7 @@ class SolanaChainEventsBrowser {
      * Fetches and parses transaction instructions
      *
      * @private
-     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     * @returns {Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null>} array of parsed instructions
      */
     async getTransactionInstructions(signature) {
         const transaction = await (0, Utils_1.tryWithRetries)(async () => {
@@ -37,8 +37,8 @@ class SolanaChainEventsBrowser {
                 throw new Error("Transaction not found!");
             return res;
         });
-        if (transaction == null)
-            return null;
+        if (transaction.meta == null)
+            throw new Error("Transaction 'meta' not found!");
         if (transaction.meta.err != null)
             return null;
         return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
@@ -61,7 +61,25 @@ class SolanaChainEventsBrowser {
             securityDeposit = initIx.data.securityDeposit;
             claimerBounty = initIx.data.claimerBounty;
         }
-        return new SolanaSwapData_1.SolanaSwapData(initIx.accounts.offerer, initIx.accounts.claimer, initIx.accounts.mint, initIx.data.swapData.amount, paymentHash.toString("hex"), initIx.data.swapData.sequence, initIx.data.swapData.expiry, initIx.data.swapData.nonce, initIx.data.swapData.confirmations, initIx.data.swapData.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind), payIn, initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default, initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default, securityDeposit, claimerBounty, txoHash);
+        return new SolanaSwapData_1.SolanaSwapData({
+            offerer: initIx.accounts.offerer,
+            claimer: initIx.accounts.claimer,
+            token: initIx.accounts.mint,
+            amount: initIx.data.swapData.amount,
+            paymentHash: paymentHash.toString("hex"),
+            sequence: initIx.data.swapData.sequence,
+            expiry: initIx.data.swapData.expiry,
+            nonce: initIx.data.swapData.nonce,
+            confirmations: initIx.data.swapData.confirmations,
+            payOut: initIx.data.swapData.payOut,
+            kind: SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind),
+            payIn,
+            offererAta: initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default,
+            claimerAta: initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default,
+            securityDeposit,
+            claimerBounty,
+            txoHash
+        });
     }
     /**
      * Returns async getter for fetching on-demand initialize event swap data
@@ -73,10 +91,12 @@ class SolanaChainEventsBrowser {
      */
     getSwapDataGetter(eventObject, txoHash) {
         return async () => {
-            if (eventObject.instructions == null)
-                eventObject.instructions = await this.getTransactionInstructions(eventObject.signature);
-            if (eventObject.instructions == null)
-                return null;
+            if (eventObject.instructions == null) {
+                const ixs = await this.getTransactionInstructions(eventObject.signature);
+                if (ixs == null)
+                    return null;
+                eventObject.instructions = ixs;
+            }
             const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
             if (initIx == null)
                 return null;
@@ -149,7 +169,6 @@ class SolanaChainEventsBrowser {
             this.logger.debug("wsEventHandler: Process signature: ", signature);
             this.processEvent({
                 events: [{ name, data: data }],
-                instructions: null,
                 blockTime: Math.floor(Date.now() / 1000),
                 signature
             }).then(() => true).catch(e => {

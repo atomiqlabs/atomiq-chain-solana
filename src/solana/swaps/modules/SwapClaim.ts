@@ -288,26 +288,23 @@ export class SwapClaim extends SolanaSwapModule {
      *
      * @param signer
      * @param swapData swap to claim
-     * @param blockheight blockheight of the bitcoin transaction
      * @param tx bitcoin transaction that satisfies the swap condition
      * @param vout vout of the bitcoin transaction that satisfies the swap condition
      * @param commitedHeader commited header data from btc relay (fetched internally if null)
      * @param synchronizer optional synchronizer to use in case we need to sync up the btc relay ourselves
      * @param initAta whether to initialize claimer's ATA
-     * @param storageAccHolder an object holder filled in with the created data account where tx data is written
      * @param feeRate fee rate to be used for the transactions
      */
     async txsClaimWithTxData(
         signer: PublicKey | SolanaSigner,
         swapData: SolanaSwapData,
-        tx: { blockhash: string, confirmations: number, txid: string, hex: string, height: number },
+        tx: { blockhash: string, txid: string, hex: string, height: number },
         vout: number,
         commitedHeader?: SolanaBtcStoredHeader | null,
         synchronizer?: RelaySynchronizer<any, SolanaTx, any>,
         initAta?: boolean,
-        storageAccHolder?: {storageAcc: PublicKey},
         feeRate?: string
-    ): Promise<SolanaTx[] | null> {
+    ): Promise<{txs: SolanaTx[], claimTxIndex: number, storageAcc: PublicKey}> {
         const claimerAta = swapData.claimerAta ?? await getAssociatedTokenAddress(swapData.token, swapData.claimer);
 
         const shouldInitAta = swapData.isPayOut() && !await this.root.Tokens.ataExists(claimerAta);
@@ -328,8 +325,7 @@ export class SwapClaim extends SolanaSwapModule {
         );
         if(commitedHeader==null) throw new Error("Cannot get committed header, did you pass synchronizer?");
 
-        const storeDataKey = await this.addTxsWriteTransactionData(signer, tx, vout, feeRate, txs);
-        if(storageAccHolder!=null) storageAccHolder.storageAcc = storeDataKey;
+        const storageAcc = await this.addTxsWriteTransactionData(signer, tx, vout, feeRate, txs);
 
         const shouldUnwrap = this.shouldUnwrap(signerKey, swapData);
         if(shouldInitAta) {
@@ -337,14 +333,15 @@ export class SwapClaim extends SolanaSwapModule {
             if(initAction==null) throw new SwapDataVerificationError("Invalid claimer token account address");
             await initAction.addToTxs(txs, feeRate);
         }
-        const claimAction = await this.VerifyAndClaim(signerKey, swapData, storeDataKey, merkleProof, commitedHeader);
+        const claimTxIndex = txs.length;
+        const claimAction = await this.VerifyAndClaim(signerKey, swapData, storageAcc, merkleProof, commitedHeader);
         await claimAction.addToTxs(txs, feeRate);
         if(shouldUnwrap) await this.root.Tokens.Unwrap(signerKey).addToTxs(txs, feeRate);
 
         this.logger.debug("txsClaimWithTxData(): creating claim transaction, swap: "+swapData.getClaimHash()+
             " initializingAta: "+shouldInitAta+" unwrapping: "+shouldUnwrap+" num txns: "+txs.length);
 
-        return txs;
+        return {txs, claimTxIndex, storageAcc};
     }
 
     public getClaimFeeRate(signer: PublicKey, swapData: SolanaSwapData): Promise<string> {

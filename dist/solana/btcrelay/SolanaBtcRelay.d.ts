@@ -66,7 +66,6 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param signer
      * @param headers headers to sync to the btc relay
      * @param storedHeader current latest stored block header for a given fork
-     * @param tipWork work of the current tip in a given fork
      * @param forkId forkId to submit to, forkId=0 means main chain
      * @param feeRate feeRate for the transaction
      * @param createTx transaction generator function
@@ -81,7 +80,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
         blockhash: string;
         chainWork: Buffer;
         blockheight: number;
-    }>;
+    } | null>;
     /**
      * Retrieves blockheader with a specific blockhash, returns null if requiredBlockheight is provided and
      *  btc relay contract is not synced up to the desired blockheight
@@ -103,14 +102,14 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      */
     retrieveLogByCommitHash(commitmentHashStr: string, blockData: {
         blockhash: string;
-    }): Promise<SolanaBtcStoredHeader>;
+    }): Promise<SolanaBtcStoredHeader | null>;
     /**
      * Retrieves latest known stored blockheader & blockheader from bitcoin RPC that is in the main chain
      */
     retrieveLatestKnownBlockLog(): Promise<{
         resultStoredHeader: SolanaBtcStoredHeader;
         resultBitcoinHeader: B;
-    }>;
+    } | null>;
     /**
      * Saves initial block header when the btc relay is in uninitialized state
      *

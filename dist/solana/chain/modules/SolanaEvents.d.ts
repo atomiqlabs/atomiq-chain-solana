@@ -21,5 +21,5 @@ export declare class SolanaEvents extends SolanaModule {
      * @param abortSignal
      * @param logFetchLimit
      */
-    findInSignatures<T>(topicKey: PublicKey, processor: (signatures: ConfirmedSignatureInfo[]) => Promise<T>, abortSignal?: AbortSignal, logFetchLimit?: number): Promise<T>;
+    findInSignatures<T>(topicKey: PublicKey, processor: (signatures: ConfirmedSignatureInfo[]) => Promise<T | null | undefined>, abortSignal?: AbortSignal, logFetchLimit?: number): Promise<T | null>;
 }
