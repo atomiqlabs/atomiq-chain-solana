@@ -250,6 +250,48 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
             " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
         return signatures;
     }
+    async sendSignedAndConfirm(signedTxs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
+        //Verify all txns are properly signed
+        signedTxs.forEach(val => {
+            const pubkeysSigned = new Set(val.signatures.map(val => val.publicKey.toString()));
+            val.instructions.forEach(ix => {
+                ix.keys.forEach(key => {
+                    if (key.isSigner && !pubkeysSigned.has(key.pubkey.toString()))
+                        throw new Error("Transaction requires signature by: " + key.pubkey.toString());
+                });
+            });
+        });
+        const options = {
+            skipPreflight: true
+        };
+        this.logger.debug("sendSignedAndConfirm(): sending transactions, count: " + signedTxs.length +
+            " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
+        const signatures = [];
+        const promises = [];
+        for (let i = 0; i < signedTxs.length; i++) {
+            const signedTx = {
+                tx: signedTxs[i],
+                signers: []
+            };
+            this.logger.debug("sendSignedAndConfirm(): sending transaction " + i + ", total count: " + signedTxs.length);
+            const signature = await this.sendSignedTransaction(signedTx, options, onBeforePublish);
+            const confirmPromise = this.confirmTransaction(signedTx, abortSignal, "confirmed");
+            if (!parallel) {
+                //Don't await the last one when not wait for confirmations
+                if (i < signedTxs.length - 1 || waitForConfirmation)
+                    await confirmPromise;
+            }
+            else {
+                promises.push(confirmPromise);
+            }
+            signatures.push(signature);
+        }
+        if (parallel && waitForConfirmation)
+            await Promise.all(promises);
+        this.logger.info("sendSignedAndConfirm(): sent transactions, count: " + signedTxs.length +
+            " waitForConfirmation: " + waitForConfirmation + " parallel: " + parallel);
+        return signatures;
+    }
     /**
      * Serializes the solana transaction, saves the transaction, signers & last valid blockheight
      *

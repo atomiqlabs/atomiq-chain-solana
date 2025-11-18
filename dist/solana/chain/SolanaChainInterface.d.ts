@@ -4,7 +4,7 @@ import { SolanaFees } from "./modules/SolanaFees";
 import { SolanaBlocks } from "./modules/SolanaBlocks";
 import { SolanaSlots } from "./modules/SolanaSlots";
 import { SolanaTokens } from "./modules/SolanaTokens";
-import { SolanaTransactions, SolanaTx } from "./modules/SolanaTransactions";
+import { SignedSolanaTx, SolanaTransactions, SolanaTx } from "./modules/SolanaTransactions";
 import { SolanaSignatures } from "./modules/SolanaSignatures";
 import { SolanaEvents } from "./modules/SolanaEvents";
 import { ChainInterface, TransactionConfirmationOptions } from "@atomiqlabs/base";
@@ -17,7 +17,7 @@ export type SolanaRetryPolicy = {
     exponential?: boolean;
     transactionResendInterval?: number;
 };
-export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SolanaSigner, "SOLANA", Wallet> {
+export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SignedSolanaTx, SolanaSigner, "SOLANA", Wallet> {
     readonly chainId = "SOLANA";
     readonly SLOT_TIME = 400;
     readonly TX_SLOT_VALIDITY = 151;
@@ -44,6 +44,7 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, So
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]>;
     transfer(signer: SolanaSigner, token: string, amount: bigint, dstAddress: string, txOptions?: TransactionConfirmationOptions): Promise<string>;
     sendAndConfirm(signer: SolanaSigner, txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
+    sendSignedAndConfirm(txs: SignedSolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
     serializeTx(tx: SolanaTx): Promise<string>;
     deserializeTx(txData: string): Promise<SolanaTx>;
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;

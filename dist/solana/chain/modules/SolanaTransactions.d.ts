@@ -7,6 +7,7 @@ export type SolanaTx = {
     tx: Transaction;
     signers: Signer[];
 };
+export type SignedSolanaTx = Transaction;
 export declare class SolanaTransactions extends SolanaModule {
     private cbkBeforeTxSigned?;
     /**
@@ -89,6 +90,7 @@ export declare class SolanaTransactions extends SolanaModule {
      * @param onBeforePublish a callback called before every transaction is published
      */
     sendAndConfirm(signer: SolanaSigner, _txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
+    sendSignedAndConfirm(signedTxs: SignedSolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
     /**
      * Serializes the solana transaction, saves the transaction, signers & last valid blockheight
      *
