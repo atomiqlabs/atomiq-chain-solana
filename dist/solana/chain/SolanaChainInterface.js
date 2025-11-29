@@ -68,10 +68,16 @@ class SolanaChainInterface {
         return this.Transactions.sendSignedAndConfirm(txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
     }
     serializeTx(tx) {
-        return this.Transactions.serializeTx(tx);
+        return Promise.resolve(this.Transactions.serializeUnsignedTx(tx));
     }
     deserializeTx(txData) {
-        return this.Transactions.deserializeTx(txData);
+        return Promise.resolve(this.Transactions.deserializeUnsignedTx(txData));
+    }
+    serializeSignedTx(tx) {
+        return Promise.resolve(this.Transactions.serializeSignedTx(tx));
+    }
+    deserializeSignedTx(txData) {
+        return Promise.resolve(this.Transactions.deserializeSignedTransaction(txData));
     }
     getTxIdStatus(txId) {
         return this.Transactions.getTxIdStatus(txId);

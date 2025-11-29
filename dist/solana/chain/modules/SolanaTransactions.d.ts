@@ -96,13 +96,25 @@ export declare class SolanaTransactions extends SolanaModule {
      *
      * @param tx
      */
-    serializeTx(tx: SolanaTx): Promise<string>;
+    serializeUnsignedTx(tx: SolanaTx): string;
+    /**
+     * Serializes the solana transaction
+     *
+     * @param signedTx
+     */
+    serializeSignedTx(signedTx: Transaction): string;
     /**
      * Deserializes saved solana transaction, extracting the transaction, signers & last valid blockheight
      *
      * @param txData
      */
-    deserializeTx(txData: string): Promise<SolanaTx>;
+    deserializeUnsignedTx(txData: string): SolanaTx;
+    /**
+     * Deserializes raw solana transaction
+     *
+     * @param txData
+     */
+    deserializeSignedTransaction(txData: string): Transaction;
     /**
      * Gets the status of the raw solana transaction, this also checks transaction expiry & can therefore report tx
      *  in "pending" status, however pending status doesn't necessarily mean that the transaction was sent (again,

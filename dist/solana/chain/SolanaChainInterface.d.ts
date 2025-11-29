@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { Connection, SendOptions } from "@solana/web3.js";
+import { Connection, SendOptions, Transaction } from "@solana/web3.js";
 import { SolanaFees } from "./modules/SolanaFees";
 import { SolanaBlocks } from "./modules/SolanaBlocks";
 import { SolanaSlots } from "./modules/SolanaSlots";
@@ -47,6 +47,8 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
     sendSignedAndConfirm(txs: SignedSolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
     serializeTx(tx: SolanaTx): Promise<string>;
     deserializeTx(txData: string): Promise<SolanaTx>;
+    serializeSignedTx(tx: Transaction): Promise<string>;
+    deserializeSignedTx(txData: string): Promise<Transaction>;
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;
     getTxStatus(tx: string): Promise<"not_found" | "pending" | "success" | "reverted">;
     getFinalizedBlock(): Promise<{

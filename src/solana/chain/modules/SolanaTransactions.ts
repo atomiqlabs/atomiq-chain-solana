@@ -73,7 +73,16 @@ export class SolanaTransactions extends SolanaModule {
                 const status = await this.getTxIdStatus(signature, finality).catch(
                     e => this.logger.error("txConfirmationAndResendWatchdog(): get tx id status error: ", e)
                 );
-                if(status==null || status==="not_found") return;
+                if(status==null || status==="not_found") {
+                    if(await this.connection.isBlockhashValid(solanaTx.tx.recentBlockhash, {commitment: finality})) return;
+                    try {
+                        //One list try to get the txId status
+                        const statusCheck = await this.getTxIdStatus(signature, finality);
+                        if(statusCheck=="not_found") reject(new Error("Transaction expired before confirmation, please try again!"));
+                    } catch (e) {
+                        this.logger.error("txConfirmationAndResendWatchdog(): re-check get tx id status error: ", e)
+                    }
+                }
                 if(status==="success") {
                     this.logger.info("txConfirmationAndResendWatchdog(): transaction confirmed from HTTP polling, signature: "+signature);
                     resolve(signature);
@@ -111,12 +120,17 @@ export class SolanaTransactions extends SolanaModule {
 
         let result: RpcResponseAndContext<SignatureResult>;
         try {
-            result = await this.connection.confirmTransaction({
-                signature: signature,
-                blockhash: solanaTx.tx.recentBlockhash,
-                lastValidBlockHeight: solanaTx.tx.lastValidBlockHeight,
-                abortSignal
-            }, finality);
+            result = await this.connection.confirmTransaction(
+                solanaTx.tx.lastValidBlockHeight==null
+                    ? signature
+                    : {
+                        signature: signature,
+                        blockhash: solanaTx.tx.recentBlockhash,
+                        lastValidBlockHeight: solanaTx.tx.lastValidBlockHeight,
+                        abortSignal
+                    },
+                finality
+            );
             this.logger.info("txConfirmFromWebsocket(): transaction confirmed from WS, signature: "+signature);
         } catch (err: any) {
             if(abortSignal!=null && abortSignal.aborted) throw err;
@@ -218,7 +232,7 @@ export class SolanaTransactions extends SolanaModule {
         if(solTx.tx.signature==null) throw new Error("Cannot broadcast tx without signature!");
         const signature = bs58.encode(solTx.tx.signature);
 
-        if(onBeforePublish!=null) await onBeforePublish(signature, await this.serializeTx(solTx));
+        if(onBeforePublish!=null) await onBeforePublish(signature, this.serializeSignedTx(solTx.tx));
         const serializedTx = solTx.tx.serialize();
         this.logger.debug("sendSignedTransaction(): sending transaction: "+serializedTx.toString("hex")+
             " signature: "+signature);
@@ -340,12 +354,21 @@ export class SolanaTransactions extends SolanaModule {
      *
      * @param tx
      */
-    public serializeTx(tx: SolanaTx): Promise<string> {
-        return Promise.resolve(JSON.stringify({
+    public serializeUnsignedTx(tx: SolanaTx): string {
+        return JSON.stringify({
             tx: tx.tx.serialize().toString("hex"),
             signers: tx.signers.map(e => Buffer.from(e.secretKey).toString("hex")),
             lastValidBlockheight: tx.tx.lastValidBlockHeight
-        }));
+        });
+    }
+
+    /**
+     * Serializes the solana transaction
+     *
+     * @param signedTx
+     */
+    public serializeSignedTx(signedTx: Transaction): string {
+        return signedTx.serialize().toString("hex");
     }
 
     /**
@@ -353,7 +376,7 @@ export class SolanaTransactions extends SolanaModule {
      *
      * @param txData
      */
-    public deserializeTx(txData: string): Promise<SolanaTx> {
+    public deserializeUnsignedTx(txData: string): SolanaTx {
         const jsonParsed: {
             tx: string,
             signers: string[],
@@ -363,10 +386,19 @@ export class SolanaTransactions extends SolanaModule {
         const transaction = Transaction.from(Buffer.from(jsonParsed.tx, "hex"));
         transaction.lastValidBlockHeight = jsonParsed.lastValidBlockheight;
 
-        return Promise.resolve({
+        return {
             tx: transaction,
             signers: jsonParsed.signers.map(e => Keypair.fromSecretKey(Buffer.from(e, "hex"))),
-        });
+        };
+    }
+
+    /**
+     * Deserializes raw solana transaction
+     *
+     * @param txData
+     */
+    public deserializeSignedTransaction(txData: string): Transaction {
+        return Transaction.from(Buffer.from(txData, "hex"));
     }
 
     /**
@@ -377,15 +409,15 @@ export class SolanaTransactions extends SolanaModule {
      * @param tx
      */
     public async getTxStatus(tx: string): Promise<"pending" | "success" | "not_found" | "reverted"> {
-        const parsedTx: SolanaTx = await this.deserializeTx(tx);
-        const signature = bs58.encode(parsedTx.tx.signature!);
+        const parsedTx: Transaction = this.deserializeSignedTransaction(tx);
+        const signature = bs58.encode(parsedTx.signature!);
         const txReceipt = await this.connection.getTransaction(signature, {
             commitment: "confirmed",
             maxSupportedTransactionVersion: 0
         });
         if(txReceipt==null) {
-            const currentBlockheight = await this.connection.getBlockHeight("processed");
-            if(parsedTx.tx.lastValidBlockHeight!=null && currentBlockheight>parsedTx.tx.lastValidBlockHeight) return "not_found";
+            const isValid = await this.connection.isBlockhashValid(parsedTx.recentBlockhash!, {commitment: "processed"});
+            if(!isValid) return "not_found";
             return "pending";
         }
         if(txReceipt.meta==null) throw new Error(`Cannot read status (meta) of Solana transaction: ${signature}`);
