@@ -27,7 +27,7 @@
     "@atomiqlabs/base": "github:atomiqlabs/atomiq-base#ab/ts-strict",
     "@noble/hashes": "^1.7.1",
     "bn.js": "5.2.1",
-    "bs58": "6.0.0",
+    "bs58": "^4.0.1",
     "buffer": "6.0.3",
     "tweetnacl": "1.0.3"
   },

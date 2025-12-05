@@ -3,7 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaTransactions = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const SolanaModule_1 = require("../SolanaModule");
-const bs58_1 = require("bs58");
+// @ts-ignore
+const bs58 = require("bs58");
 const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
 const base_1 = require("@atomiqlabs/base");
@@ -43,7 +44,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         if (solanaTx.tx.signature == null)
             throw new Error("Cannot check confirmation status of tx without signature!");
         const rawTx = solanaTx.tx.serialize();
-        const signature = bs58_1.default.encode(solanaTx.tx.signature);
+        const signature = bs58.encode(solanaTx.tx.signature);
         return new Promise((resolve, reject) => {
             let watchdogInterval;
             watchdogInterval = setInterval(async () => {
@@ -84,7 +85,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
             throw new Error("Cannot wait for confirmation for tx without recentBlockhash!");
         if (solanaTx.tx.lastValidBlockHeight == null)
             throw new Error("Cannot wait for confirmation for tx without lastValidBlockHeight!");
-        const signature = bs58_1.default.encode(solanaTx.tx.signature);
+        const signature = bs58.encode(solanaTx.tx.signature);
         let result;
         try {
             result = await this.connection.confirmTransaction({
@@ -191,7 +192,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
     async sendSignedTransaction(solTx, options, onBeforePublish) {
         if (solTx.tx.signature == null)
             throw new Error("Cannot broadcast tx without signature!");
-        const signature = bs58_1.default.encode(solTx.tx.signature);
+        const signature = bs58.encode(solTx.tx.signature);
         if (onBeforePublish != null)
             await onBeforePublish(signature, await this.serializeTx(solTx));
         const serializedTx = solTx.tx.serialize();
@@ -284,7 +285,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      */
     async getTxStatus(tx) {
         const parsedTx = await this.deserializeTx(tx);
-        const signature = bs58_1.default.encode(parsedTx.tx.signature);
+        const signature = bs58.encode(parsedTx.tx.signature);
         const txReceipt = await this.connection.getTransaction(signature, {
             commitment: "confirmed",
             maxSupportedTransactionVersion: 0

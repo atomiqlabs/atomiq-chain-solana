@@ -5,7 +5,8 @@ import {
     TransactionExpiredBlockheightExceededError
 } from "@solana/web3.js";
 import {SolanaModule} from "../SolanaModule";
-import bs58 from "bs58";
+// @ts-ignore
+import * as bs58 from "bs58";
 import {tryWithRetries} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
