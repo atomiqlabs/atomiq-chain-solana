@@ -18,6 +18,10 @@ class SolanaBlocks extends SolanaModule_1.SolanaModule {
             transactionDetails: "none",
             commitment: "confirmed",
             rewards: false
+        }).then(val => {
+            if (val.blockHeight == null || val.blockTime == null)
+                throw new Error(`Cannot get block for slot ${slot}: blockHeight or blockTime empty!`);
+            return val;
         });
         this.blockCache.set(slot, blockCacheData);
         blockCacheData.catch(e => {

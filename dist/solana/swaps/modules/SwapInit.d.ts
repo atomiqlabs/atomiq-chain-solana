@@ -53,14 +53,6 @@ export declare class SwapInit extends SolanaSwapModule {
      */
     private InitNotPayIn;
     private Wrap;
-    /**
-     * Extracts data about SOL to WSOL wrapping from the fee rate, fee rate is used to convey this information from
-     *  the user to the intermediary, such that the intermediary creates valid signature for transaction including
-     *  the SOL to WSOL wrapping instructions
-     *
-     * @param feeRate
-     * @private
-     */
     private extractAtaDataFromFeeRate;
     /**
      * Checks whether a wrap instruction (SOL -> WSOL) should be a part of the signed init message

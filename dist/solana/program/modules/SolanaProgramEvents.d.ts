@@ -18,7 +18,7 @@ export type SingleInstructionWithAccounts<I extends IdlInstruction, IDL extends 
     };
     data: ArgsTuple<I["args"], IdlTypes<IDL>>;
 };
-export type ProgramEvent<IDL extends Idl> = Event<IDL["events"][number], Record<string, any>>;
+export type ProgramEvent<IDL extends Idl> = Event<NonNullable<IDL["events"]>[number], Record<string, any>>;
 export declare class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
     private readonly programCoder;
     private readonly eventParser;
@@ -41,14 +41,14 @@ export declare class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      * @param abortSignal
      * @param logBatchSize how many signatures should be fetched in one getSignaturesForAddress call
      */
-    findInEvents<T>(topicKey: PublicKey, processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T>, abortSignal?: AbortSignal, logBatchSize?: number): Promise<T>;
+    findInEvents<T>(topicKey: PublicKey, processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T | null | undefined>, abortSignal?: AbortSignal, logBatchSize?: number): Promise<T | null>;
     /**
      * Decodes the instructions for this program from the transaction, leaves null in the returned instructions array
      *  for every instruction that doesn't correspond to this program (as those are impossible to parse)
      *
      * @param transactionMessage
      */
-    decodeInstructions(transactionMessage: ParsedMessage): InstructionWithAccounts<IDL>[];
+    decodeInstructions(transactionMessage: ParsedMessage): (InstructionWithAccounts<IDL> | null)[];
     /**
      * Parses program event related to this program from transaction logs
      *

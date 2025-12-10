@@ -5,11 +5,11 @@ import {SolanaChainInterface} from "./SolanaChainInterface";
 
 export class SolanaAction {
 
-    computeBudget: number;
+    computeBudget: number | null;
     readonly mainSigner: PublicKey;
     private readonly root: SolanaChainInterface;
     private readonly instructions: TransactionInstruction[];
-    private feeRate: string;
+    private feeRate?: string;
     private readonly signers: Signer[];
     private firstIxBeforeComputeBudget: boolean = false;
 
@@ -44,7 +44,7 @@ export class SolanaAction {
     public addIx(instruction: TransactionInstruction, computeBudget?: number, signers?: Signer[]) {
         this.instructions.push(instruction);
         if(this.computeBudget==null) {
-            this.computeBudget = computeBudget;
+            this.computeBudget = computeBudget ?? null;
         } else {
             if(computeBudget!=null) this.computeBudget+=computeBudget;
         }

@@ -167,7 +167,8 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         if (checkExpiry && await this.program.isExpired(swapData.claimer.toString(), swapData)) {
             throw new base_1.SwapDataVerificationError("Not enough time to reliably pay the invoice");
         }
-        const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);
+        const claimerAta = swapData.claimerAta ?? await (0, spl_token_1.getAssociatedTokenAddress)(swapData.token, swapData.claimer);
+        const shouldInitAta = !skipAtaCheck && swapData.isPayOut() && !await this.root.Tokens.ataExists(claimerAta);
         if (shouldInitAta && !initAta)
             throw new base_1.SwapDataVerificationError("ATA not initialized");
         if (feeRate == null)
@@ -175,7 +176,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const action = new SolanaAction_1.SolanaAction(signer, this.root);
         const shouldUnwrap = this.shouldUnwrap(signer, swapData);
         if (shouldInitAta) {
-            const initAction = this.root.Tokens.InitAta(signer, swapData.claimer, swapData.token, swapData.claimerAta);
+            const initAction = this.root.Tokens.InitAta(signer, swapData.claimer, swapData.token, claimerAta);
             if (initAction == null)
                 throw new base_1.SwapDataVerificationError("Invalid claimer token account address");
             action.add(initAction);
@@ -192,44 +193,46 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
      *
      * @param signer
      * @param swapData swap to claim
-     * @param blockheight blockheight of the bitcoin transaction
      * @param tx bitcoin transaction that satisfies the swap condition
      * @param vout vout of the bitcoin transaction that satisfies the swap condition
      * @param commitedHeader commited header data from btc relay (fetched internally if null)
      * @param synchronizer optional synchronizer to use in case we need to sync up the btc relay ourselves
      * @param initAta whether to initialize claimer's ATA
-     * @param storageAccHolder an object holder filled in with the created data account where tx data is written
      * @param feeRate fee rate to be used for the transactions
      */
-    async txsClaimWithTxData(signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, storageAccHolder, feeRate) {
-        const shouldInitAta = swapData.isPayOut() && !await this.root.Tokens.ataExists(swapData.claimerAta);
+    async txsClaimWithTxData(signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, feeRate) {
+        const claimerAta = swapData.claimerAta ?? await (0, spl_token_1.getAssociatedTokenAddress)(swapData.token, swapData.claimer);
+        const shouldInitAta = swapData.isPayOut() && !await this.root.Tokens.ataExists(claimerAta);
         if (shouldInitAta && !initAta)
             throw new base_1.SwapDataVerificationError("ATA not initialized");
         const signerKey = signer instanceof SolanaSigner_1.SolanaSigner ? signer.getPublicKey() : signer;
         if (feeRate == null)
             feeRate = await this.getClaimFeeRate(signerKey, swapData);
         const merkleProof = await this.btcRelay.bitcoinRpc.getMerkleProof(tx.txid, tx.blockhash);
+        if (merkleProof == null)
+            throw new Error(`Failed to generate merkle proof for tx: ${tx.txid}`);
         this.logger.debug("txsClaimWithTxData(): merkle proof computed: ", merkleProof);
         const txs = [];
         if (commitedHeader == null)
             commitedHeader = await this.getCommitedHeaderAndSynchronize(signerKey, tx.height, swapData.confirmations, tx.blockhash, txs, synchronizer);
-        const storeDataKey = await this.addTxsWriteTransactionData(signer, tx, vout, feeRate, txs);
-        if (storageAccHolder != null)
-            storageAccHolder.storageAcc = storeDataKey;
+        if (commitedHeader == null)
+            throw new Error("Cannot get committed header, did you pass synchronizer?");
+        const storageAcc = await this.addTxsWriteTransactionData(signer, tx, vout, feeRate, txs);
         const shouldUnwrap = this.shouldUnwrap(signerKey, swapData);
         if (shouldInitAta) {
-            const initAction = this.root.Tokens.InitAta(signerKey, swapData.claimer, swapData.token, swapData.claimerAta);
+            const initAction = this.root.Tokens.InitAta(signerKey, swapData.claimer, swapData.token, claimerAta);
             if (initAction == null)
                 throw new base_1.SwapDataVerificationError("Invalid claimer token account address");
             await initAction.addToTxs(txs, feeRate);
         }
-        const claimAction = await this.VerifyAndClaim(signerKey, swapData, storeDataKey, merkleProof, commitedHeader);
+        const claimTxIndex = txs.length;
+        const claimAction = await this.VerifyAndClaim(signerKey, swapData, storageAcc, merkleProof, commitedHeader);
         await claimAction.addToTxs(txs, feeRate);
         if (shouldUnwrap)
             await this.root.Tokens.Unwrap(signerKey).addToTxs(txs, feeRate);
         this.logger.debug("txsClaimWithTxData(): creating claim transaction, swap: " + swapData.getClaimHash() +
             " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap + " num txns: " + txs.length);
-        return txs;
+        return { txs, claimTxIndex, storageAcc };
     }
     getClaimFeeRate(signer, swapData) {
         const accounts = [signer];

@@ -68,7 +68,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
             message: this.getRefundMessage(swapData, prefix, timeout),
             publicKey: swapData.claimer.toBuffer(),
             signature: signature
-        }), 0, null, null, true);
+        }), 0, undefined, undefined, true);
         action.addAction(await this.Refund(swapData, BigInt(timeout)));
         return action;
     }
@@ -144,9 +144,16 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
         if (check && !await (0, Utils_1.tryWithRetries)(() => this.program.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy)) {
             throw new base_1.SwapDataVerificationError("Not refundable yet!");
         }
-        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
-        if (shouldInitAta && !initAta)
-            throw new base_1.SwapDataVerificationError("ATA not initialized");
+        let shouldInitAta = false;
+        if (swapData.isPayIn()) {
+            if (swapData.offererAta == null)
+                throw new Error("Swap data offererAta is null for payIn swap!");
+            if (!await this.root.Tokens.ataExists(swapData.offererAta)) {
+                if (!initAta)
+                    throw new base_1.SwapDataVerificationError("ATA not initialized");
+                shouldInitAta = true;
+            }
+        }
         if (feeRate == null)
             feeRate = await this.program.getRefundFeeRate(swapData);
         const shouldUnwrap = this.shouldUnwrap(swapData);
@@ -180,9 +187,16 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
             throw new base_1.SwapDataVerificationError("Not correctly committed");
         }
         await (0, Utils_1.tryWithRetries)(() => this.isSignatureValid(swapData, timeout, prefix, signature), this.retryPolicy, (e) => e instanceof base_1.SignatureVerificationError);
-        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
-        if (shouldInitAta && !initAta)
-            throw new base_1.SwapDataVerificationError("ATA not initialized");
+        let shouldInitAta = false;
+        if (swapData.isPayIn()) {
+            if (swapData.offererAta == null)
+                throw new Error("Swap data offererAta is null for payIn swap!");
+            if (!await this.root.Tokens.ataExists(swapData.offererAta)) {
+                if (!initAta)
+                    throw new base_1.SwapDataVerificationError("ATA not initialized");
+                shouldInitAta = true;
+            }
+        }
         if (feeRate == null)
             feeRate = await this.program.getRefundFeeRate(swapData);
         const signatureBuffer = buffer_1.Buffer.from(signature, "hex");

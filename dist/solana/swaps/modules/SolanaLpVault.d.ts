@@ -33,14 +33,14 @@ export declare class SolanaLpVault extends SolanaSwapModule {
     getIntermediaryData(address: PublicKey, token: PublicKey): Promise<{
         balance: bigint;
         reputation: IntermediaryReputationType;
-    }>;
+    } | null>;
     /**
      * Returns intermediary's reputation for a specific token
      *
      * @param address
      * @param token
      */
-    getIntermediaryReputation(address: PublicKey, token: PublicKey): Promise<IntermediaryReputationType>;
+    getIntermediaryReputation(address: PublicKey, token: PublicKey): Promise<IntermediaryReputationType | null>;
     /**
      * Returns the balance of the token an intermediary has in his LP vault
      *

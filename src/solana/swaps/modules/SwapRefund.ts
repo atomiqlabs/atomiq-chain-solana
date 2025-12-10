@@ -98,8 +98,8 @@ export class SwapRefund extends SolanaSwapModule {
                 signature: signature
             }),
             0,
-            null,
-            null,
+            undefined,
+            undefined,
             true
         );
         action.addAction(await this.Refund(swapData, BigInt(timeout)));
@@ -193,11 +193,19 @@ export class SwapRefund extends SolanaSwapModule {
         initAta?: boolean,
         feeRate?: string
     ): Promise<SolanaTx[]> {
+
         if(check && !await tryWithRetries(() => this.program.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy)) {
             throw new SwapDataVerificationError("Not refundable yet!");
         }
-        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
-        if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
+
+        let shouldInitAta = false;
+        if(swapData.isPayIn()) {
+            if(swapData.offererAta==null) throw new Error("Swap data offererAta is null for payIn swap!");
+            if(!await this.root.Tokens.ataExists(swapData.offererAta)) {
+                if(!initAta) throw new SwapDataVerificationError("ATA not initialized");
+                shouldInitAta = true;
+            }
+        }
 
         if(feeRate==null) feeRate = await this.program.getRefundFeeRate(swapData)
 
@@ -245,8 +253,15 @@ export class SwapRefund extends SolanaSwapModule {
             this.retryPolicy,
             (e) => e instanceof SignatureVerificationError
         );
-        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
-        if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
+
+        let shouldInitAta = false;
+        if(swapData.isPayIn()) {
+            if(swapData.offererAta==null) throw new Error("Swap data offererAta is null for payIn swap!");
+            if(!await this.root.Tokens.ataExists(swapData.offererAta)) {
+                if(!initAta) throw new SwapDataVerificationError("ATA not initialized");
+                shouldInitAta = true;
+            }
+        }
 
         if(feeRate==null) feeRate = await this.program.getRefundFeeRate(swapData);
 

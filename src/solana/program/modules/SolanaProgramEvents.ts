@@ -1,6 +1,6 @@
 import {SolanaEvents} from "../../chain/modules/SolanaEvents";
 import {BorshCoder, DecodeType, Event, EventParser, Idl, IdlTypes, Instruction} from "@coral-xyz/anchor";
-import {IdlField, IdlInstruction} from "@coral-xyz/anchor/dist/cjs/idl";
+import {IdlEvent, IdlField, IdlInstruction} from "@coral-xyz/anchor/dist/cjs/idl";
 import {ConfirmedSignatureInfo, ParsedMessage, PartiallyDecodedInstruction, PublicKey} from "@solana/web3.js";
 import {SolanaProgramBase} from "../SolanaProgramBase";
 import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
@@ -20,7 +20,7 @@ export type SingleInstructionWithAccounts<I extends IdlInstruction, IDL extends 
     data: ArgsTuple<I["args"], IdlTypes<IDL>>
 };
 
-export type ProgramEvent<IDL extends Idl> = Event<IDL["events"][number], Record<string, any>>;
+export type ProgramEvent<IDL extends Idl> = Event<NonNullable<IDL["events"]>[number], Record<string, any>>;
 
 export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
 
@@ -51,7 +51,10 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
             commitment: "confirmed",
             maxSupportedTransactionVersion: 0
         });
-        if(tx.meta.err) return [];
+        if(tx==null) throw new Error(`Cannot get Solana transaction: ${signature}!`);
+        if(tx.meta==null) throw new Error(`Cannot get Solana transaction: ${signature}, tx.meta is null!`);
+
+        if(tx.meta.err || tx.meta.logMessages==null) return [];
 
         const events = this.parseLogs(tx.meta.logMessages);
         events.reverse();
@@ -70,18 +73,19 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      */
     public findInEvents<T>(
         topicKey: PublicKey,
-        processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T>,
+        processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T | null | undefined>,
         abortSignal?: AbortSignal,
         logBatchSize?: number
-    ): Promise<T> {
+    ): Promise<T | null> {
         return this.findInSignatures<T>(topicKey, async (signatures: ConfirmedSignatureInfo[]) => {
             for(let data of signatures) {
                 for(let event of await this.getEvents(data.signature)) {
                     if(abortSignal!=null) abortSignal.throwIfAborted();
-                    const result: T = await processor(event, data);
+                    const result = await processor(event, data);
                     if(result!=null) return result;
                 }
             }
+            return null;
         }, abortSignal, logBatchSize);
     }
 
@@ -91,8 +95,8 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      *
      * @param transactionMessage
      */
-    public decodeInstructions(transactionMessage: ParsedMessage): InstructionWithAccounts<IDL>[] {
-        const instructions: InstructionWithAccounts<IDL>[] = [];
+    public decodeInstructions(transactionMessage: ParsedMessage): (InstructionWithAccounts<IDL> | null)[] {
+        const instructions: (InstructionWithAccounts<IDL> | null)[] = [];
 
         for(let _ix of transactionMessage.instructions) {
             if(!_ix.programId.equals(this.program.program.programId)) {
@@ -103,9 +107,10 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
             const ix: PartiallyDecodedInstruction = _ix as PartiallyDecodedInstruction;
             if(ix.data==null) continue;
 
-            const parsedIx: Instruction = this.programCoder.instruction.decode(ix.data, 'base58');
+            const parsedIx: Instruction | null = this.programCoder.instruction.decode(ix.data, 'base58');
+            if(parsedIx==null) throw new Error(`Failed to decode transaction instruction: ${ix.data}!`);
             const accountsData = this.nameMappedInstructions[parsedIx.name];
-            let accounts: {[name: string]: PublicKey};
+            let accounts: {[name: string]: PublicKey} | null = null;
             if(accountsData!=null && accountsData.accounts!=null) {
                 accounts = {};
                 for(let i=0;i<accountsData.accounts.length;i++) {

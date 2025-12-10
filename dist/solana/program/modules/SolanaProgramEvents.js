@@ -25,7 +25,11 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
             commitment: "confirmed",
             maxSupportedTransactionVersion: 0
         });
-        if (tx.meta.err)
+        if (tx == null)
+            throw new Error(`Cannot get Solana transaction: ${signature}!`);
+        if (tx.meta == null)
+            throw new Error(`Cannot get Solana transaction: ${signature}, tx.meta is null!`);
+        if (tx.meta.err || tx.meta.logMessages == null)
             return [];
         const events = this.parseLogs(tx.meta.logMessages);
         events.reverse();
@@ -51,6 +55,7 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
                         return result;
                 }
             }
+            return null;
         }, abortSignal, logBatchSize);
     }
     /**
@@ -70,8 +75,10 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
             if (ix.data == null)
                 continue;
             const parsedIx = this.programCoder.instruction.decode(ix.data, 'base58');
+            if (parsedIx == null)
+                throw new Error(`Failed to decode transaction instruction: ${ix.data}!`);
             const accountsData = this.nameMappedInstructions[parsedIx.name];
-            let accounts;
+            let accounts = null;
             if (accountsData != null && accountsData.accounts != null) {
                 accounts = {};
                 for (let i = 0; i < accountsData.accounts.length; i++) {

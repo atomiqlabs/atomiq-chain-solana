@@ -13,7 +13,7 @@ class SwapTypeEnum {
             return base_1.ChainSwapType.CHAIN_NONCED;
         if (text === "chainTxhash")
             return base_1.ChainSwapType.CHAIN_TXID;
-        return null;
+        throw new Error("Invalid data passed!");
     }
     static toNumber(data) {
         const text = Object.keys(data)[0];
@@ -25,7 +25,7 @@ class SwapTypeEnum {
             return 2;
         if (text === "chainTxhash")
             return 3;
-        return null;
+        throw new Error("Invalid data passed!");
     }
     static fromNumber(kind) {
         if (kind === 0)
@@ -36,6 +36,7 @@ class SwapTypeEnum {
             return { chainNonced: null };
         if (kind === 3)
             return { chainTxhash: null };
+        throw new Error("Invalid kind number!");
     }
 }
 exports.SwapTypeEnum = SwapTypeEnum;

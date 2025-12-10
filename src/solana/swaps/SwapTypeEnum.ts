@@ -8,7 +8,7 @@ export class SwapTypeEnum {
         if(text==="chain") return ChainSwapType.CHAIN;
         if(text==="chainNonced") return ChainSwapType.CHAIN_NONCED;
         if(text==="chainTxhash") return ChainSwapType.CHAIN_TXID;
-        return null;
+        throw new Error("Invalid data passed!");
     }
 
     static toNumber(data: any): number {
@@ -17,7 +17,7 @@ export class SwapTypeEnum {
         if(text==="chain") return 1;
         if(text==="chainNonced") return 2;
         if(text==="chainTxhash") return 3;
-        return null;
+        throw new Error("Invalid data passed!");
     }
 
     static fromNumber(kind: 0 | 1 | 2 | 3): {htlc?: never; chain?: never; chainNonced?: never;} & {chainTxhash: Record<string,never>} {
@@ -25,6 +25,7 @@ export class SwapTypeEnum {
         if(kind===1) return {chain: null} as any;
         if(kind===2) return {chainNonced: null} as any;
         if(kind===3) return {chainTxhash: null} as any;
+        throw new Error("Invalid kind number!");
     }
 
 };

@@ -11,16 +11,7 @@ export declare class SolanaTokens extends SolanaModule {
         TRANSFER: number;
         TRANSFER_SOL: number;
     };
-    /**
-     * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
-     *  public key
-     *
-     * @param signer
-     * @param publicKey public key address of the user for which to initiate the ATA
-     * @param token token identification for which the ATA should be initialized
-     * @param requiredAta optional required ata address to use, if the address doesn't match it returns null
-     * @constructor
-     */
+    InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey): SolanaAction;
     InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null;
     /**
      * Action for wrapping SOL to WSOL for a specific public key

@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaTransactions = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const SolanaModule_1 = require("../SolanaModule");
+// @ts-ignore
 const bs58 = require("bs58");
 const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
@@ -40,6 +41,8 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @private
      */
     txConfirmationAndResendWatchdog(solanaTx, finality, abortSignal) {
+        if (solanaTx.tx.signature == null)
+            throw new Error("Cannot check confirmation status of tx without signature!");
         const rawTx = solanaTx.tx.serialize();
         const signature = bs58.encode(solanaTx.tx.signature);
         return new Promise((resolve, reject) => {
@@ -76,6 +79,12 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @private
      */
     async txConfirmFromWebsocket(solanaTx, finality, abortSignal) {
+        if (solanaTx.tx.signature == null)
+            throw new Error("Cannot wait for confirmation for tx without signature!");
+        if (solanaTx.tx.recentBlockhash == null)
+            throw new Error("Cannot wait for confirmation for tx without recentBlockhash!");
+        if (solanaTx.tx.lastValidBlockHeight == null)
+            throw new Error("Cannot wait for confirmation for tx without lastValidBlockHeight!");
         const signature = bs58.encode(solanaTx.tx.signature);
         let result;
         try {
@@ -181,11 +190,14 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @private
      */
     async sendSignedTransaction(solTx, options, onBeforePublish) {
+        if (solTx.tx.signature == null)
+            throw new Error("Cannot broadcast tx without signature!");
+        const signature = bs58.encode(solTx.tx.signature);
         if (onBeforePublish != null)
-            await onBeforePublish(bs58.encode(solTx.tx.signature), await this.serializeTx(solTx));
+            await onBeforePublish(signature, await this.serializeTx(solTx));
         const serializedTx = solTx.tx.serialize();
         this.logger.debug("sendSignedTransaction(): sending transaction: " + serializedTx.toString("hex") +
-            " signature: " + bs58.encode(solTx.tx.signature));
+            " signature: " + signature);
         const txResult = await (0, Utils_1.tryWithRetries)(() => this.sendRawTransaction(serializedTx, options), this.retryPolicy);
         this.logger.info("sendSignedTransaction(): tx sent, signature: " + txResult);
         return txResult;
@@ -273,16 +285,19 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      */
     async getTxStatus(tx) {
         const parsedTx = await this.deserializeTx(tx);
-        const txReceipt = await this.connection.getTransaction(bs58.encode(parsedTx.tx.signature), {
+        const signature = bs58.encode(parsedTx.tx.signature);
+        const txReceipt = await this.connection.getTransaction(signature, {
             commitment: "confirmed",
             maxSupportedTransactionVersion: 0
         });
         if (txReceipt == null) {
             const currentBlockheight = await this.connection.getBlockHeight("processed");
-            if (currentBlockheight > parsedTx.tx.lastValidBlockHeight)
+            if (parsedTx.tx.lastValidBlockHeight != null && currentBlockheight > parsedTx.tx.lastValidBlockHeight)
                 return "not_found";
             return "pending";
         }
+        if (txReceipt.meta == null)
+            throw new Error(`Cannot read status (meta) of Solana transaction: ${signature}`);
         if (txReceipt.meta.err)
             return "reverted";
         return "success";
@@ -301,6 +316,8 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         });
         if (txReceipt == null)
             return "not_found";
+        if (txReceipt.meta == null)
+            throw new Error(`Cannot read status (meta) of Solana transaction: ${txId}`);
         if (txReceipt.meta.err)
             return "reverted";
         return "success";
@@ -309,14 +326,14 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         this.cbkBeforeTxSigned = callback;
     }
     offBeforeTxSigned(callback) {
-        this.cbkBeforeTxSigned = null;
+        delete this.cbkBeforeTxSigned;
         return true;
     }
     onSendTransaction(callback) {
         this.cbkSendTransaction = callback;
     }
     offSendTransaction(callback) {
-        this.cbkSendTransaction = null;
+        delete this.cbkSendTransaction;
         return true;
     }
 }

@@ -88,13 +88,13 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         if (swapData.isPayIn())
             throw new Error("Must be payIn==false");
         const action = new SolanaAction_1.SolanaAction(swapData.claimer, this.root);
-        action.addIx((0, spl_token_1.createAssociatedTokenAccountIdempotentInstruction)(swapData.claimer, swapData.claimerAta, swapData.claimer, swapData.token));
+        action.addIx((0, spl_token_1.createAssociatedTokenAccountIdempotentInstruction)(swapData.claimer, swapData.claimerAta ?? await (0, spl_token_1.getAssociatedTokenAddress)(swapData.token, swapData.claimer), swapData.claimer, swapData.token));
         action.addAction(await this.Init(swapData, timeout));
         return action;
     }
     Wrap(swapData, feeRate) {
         const data = this.extractAtaDataFromFeeRate(feeRate);
-        if (data == null)
+        if (feeRate == null || data == null)
             throw new Error("Tried to add wrap instruction, but feeRate malformed: " + feeRate);
         return this.root.Tokens.Wrap(swapData.offerer, swapData.getAmount() - data.balance, data.initAta);
     }
@@ -239,7 +239,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         if (!signer.getPublicKey().equals(swapData.isPayIn() ? swapData.claimer : swapData.offerer))
             throw new Error("Invalid signer, wrong public key!");
         if (preFetchedBlockData != null && Date.now() - preFetchedBlockData.timestamp > this.SIGNATURE_PREFETCH_DATA_VALIDITY)
-            preFetchedBlockData = null;
+            preFetchedBlockData = undefined;
         const { block: latestBlock, slot: latestSlot } = preFetchedBlockData || await this.root.Blocks.findLatestParsedBlock("finalized");
         const authTimeout = Math.floor(Date.now() / 1000) + authorizationTimeout;
         const txToSign = await this.getTxToSign(swapData, authTimeout.toString(10), feeRate);
@@ -248,6 +248,8 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         txToSign.sign(signer.keypair);
         this.logger.debug("signSwapInitialization(): Signed tx: ", txToSign);
         const sig = txToSign.signatures.find(e => e.publicKey.equals(signer.getPublicKey()));
+        if (sig == null || sig.signature == null)
+            throw new Error(`Unable to extract transaction signature! Signer: ${signer.getAddress()}`);
         return {
             prefix: this.getAuthPrefix(swapData),
             timeout: authTimeout.toString(10),
@@ -359,6 +361,9 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @param feeRate fee rate to use for the transaction
      */
     async txsInitPayIn(swapData, timeout, prefix, signature, skipChecks, feeRate) {
+        if (swapData.offererAta == undefined)
+            throw new base_1.SwapDataVerificationError("No offererAta specified for payIn swap!");
+        const offererAta = swapData.offererAta;
         if (!skipChecks) {
             const [_, payStatus] = await Promise.all([
                 (0, Utils_1.tryWithRetries)(() => this.isSignatureValid(swapData.getOfferer(), swapData, timeout, prefix, signature, feeRate), this.retryPolicy, (e) => e instanceof base_1.SignatureVerificationError),
@@ -373,8 +378,8 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         let isWrapping = false;
         const isWrappedInSignedTx = feeRate != null && feeRate.split("#").length > 1;
         if (!isWrappedInSignedTx && swapData.token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS)) {
-            const ataAcc = await (0, Utils_1.tryWithRetries)(() => this.root.Tokens.getATAOrNull(swapData.offererAta), this.retryPolicy);
-            const balance = ataAcc == null ? 0n : ataAcc.amount;
+            const ataAcc = await (0, Utils_1.tryWithRetries)(() => this.root.Tokens.getATAOrNull(offererAta), this.retryPolicy);
+            const balance = ataAcc?.amount ?? 0n;
             if (balance < swapData.getAmount()) {
                 //Need to wrap more SOL to WSOL
                 await this.root.Tokens.Wrap(swapData.offerer, swapData.getAmount() - balance, ataAcc == null)
@@ -433,15 +438,14 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         if (paymentHash != null)
             accounts.push(this.program.SwapEscrowState(buffer_1.Buffer.from(paymentHash, "hex")));
         const shouldCheckWSOLAta = token != null && offerer != null && token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS);
-        let [feeRate, _account] = await Promise.all([
+        let [feeRate, account] = await Promise.all([
             this.root.Fees.getFeeRate(accounts),
             shouldCheckWSOLAta ?
                 this.root.Tokens.getATAOrNull((0, spl_token_1.getAssociatedTokenAddressSync)(token, offerer)) :
                 Promise.resolve(null)
         ]);
         if (shouldCheckWSOLAta) {
-            const account = _account;
-            const balance = account == null ? 0n : account.amount;
+            const balance = account?.amount ?? 0n;
             //Add an indication about whether the ATA is initialized & balance it contains
             feeRate += "#" + (account != null ? "0" : "1") + ";" + balance.toString(10);
         }
@@ -497,7 +501,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     async getRawInitFee(swapData, feeRate) {
         if (swapData == null)
             return 10000n;
-        feeRate = feeRate ||
+        feeRate = feeRate ??
             (swapData.payIn
                 ? await this.getInitPayInFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash)
                 : await this.getInitFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash));

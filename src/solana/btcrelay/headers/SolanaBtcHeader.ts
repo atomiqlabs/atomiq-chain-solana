@@ -8,7 +8,7 @@ type SolanaBtcHeaderType = {
     timestamp: number,
     nbits: number,
     nonce: number,
-    hash?: Buffer
+    hash: Buffer
 }
 
 export class SolanaBtcHeader implements BtcHeader {
@@ -19,7 +19,7 @@ export class SolanaBtcHeader implements BtcHeader {
     timestamp: number;
     nbits: number;
     nonce: number;
-    hash?: Buffer;
+    hash: Buffer;
 
     constructor(obj: SolanaBtcHeaderType) {
         this.version = obj.version;
