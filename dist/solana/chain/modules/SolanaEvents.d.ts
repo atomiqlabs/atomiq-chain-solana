@@ -48,7 +48,7 @@ export declare class SolanaEvents extends SolanaModule {
     }, commitment?: "finalized" | "confirmed" | "processed"): Promise<{
         data: ParsedTransactionWithMeta[];
         paginationToken?: string;
-    }>;
+    } | null>;
     private _findInTxsTFA;
     /**
      * Runs a search backwards in time, processing transaction signatures for a specific topic public key
@@ -64,5 +64,5 @@ export declare class SolanaEvents extends SolanaModule {
     findInSignatures<T>(topicKey: PublicKey, processor: (data: {
         signatures?: ConfirmedSignatureInfo[];
         txs?: ParsedTransactionWithMeta[];
-    }) => Promise<T>, abortSignal?: AbortSignal, logFetchLimit?: number, startBlockheight?: number): Promise<T>;
+    }) => Promise<T | undefined | null>, abortSignal?: AbortSignal, logFetchLimit?: number, startBlockheight?: number): Promise<T | null>;
 }

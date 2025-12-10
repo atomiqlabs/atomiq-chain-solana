@@ -3,8 +3,31 @@ import * as BN from "bn.js";
 import { ChainSwapType, SwapData } from "@atomiqlabs/base";
 import { SwapProgram } from "./programTypes";
 import { IdlAccounts, IdlTypes } from "@coral-xyz/anchor";
+import { Serialized } from "../../utils/Utils";
 import { SingleInstructionWithAccounts } from "../program/modules/SolanaProgramEvents";
 export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
+export type SolanaSwapDataCtorArgs = {
+    offerer: PublicKey;
+    claimer: PublicKey;
+    token: PublicKey;
+    amount: BN;
+    paymentHash: string;
+    sequence: BN;
+    expiry: BN;
+    nonce: BN;
+    confirmations: number;
+    payOut: boolean;
+    kind: number;
+    payIn: boolean;
+    offererAta?: PublicKey;
+    claimerAta?: PublicKey;
+    securityDeposit: BN;
+    claimerBounty: BN;
+    txoHash?: string;
+};
+export declare function isSerializedData(obj: any): obj is ({
+    type: "sol";
+} & Serialized<SolanaSwapData>);
 export declare class SolanaSwapData extends SwapData {
     offerer: PublicKey;
     claimer: PublicKey;
@@ -22,14 +45,18 @@ export declare class SolanaSwapData extends SwapData {
     offererAta?: PublicKey;
     securityDeposit: BN;
     claimerBounty: BN;
-    txoHash: string;
-    constructor(offerer: PublicKey, claimer: PublicKey, token: PublicKey, amount: BN, paymentHash: string, sequence: BN, expiry: BN, nonce: BN, confirmations: number, payOut: boolean, kind: number, payIn: boolean, offererAta: PublicKey, claimerAta: PublicKey, securityDeposit: BN, claimerBounty: BN, txoHash: string);
-    constructor(data: any);
+    txoHash?: string;
+    constructor(args: SolanaSwapDataCtorArgs);
+    constructor(data: {
+        type: "sol";
+    } & Serialized<SolanaSwapData>);
     getOfferer(): string;
     setOfferer(newOfferer: string): void;
     getClaimer(): string;
     setClaimer(newClaimer: string): void;
-    serialize(): any;
+    serialize(): {
+        type: "sol";
+    } & Serialized<SolanaSwapData>;
     getAmount(): bigint;
     getToken(): string;
     isToken(token: string): boolean;
@@ -42,9 +69,9 @@ export declare class SolanaSwapData extends SwapData {
     getClaimHash(): string;
     getEscrowHash(): string;
     getSequence(): bigint;
-    getTxoHashHint(): string;
-    getHTLCHashHint(): string;
-    getExtraData(): string;
+    getTxoHashHint(): string | null;
+    getHTLCHashHint(): string | null;
+    getExtraData(): string | null;
     setExtraData(txoHash: string): void;
     getSecurityDeposit(): bigint;
     getClaimerBounty(): bigint;

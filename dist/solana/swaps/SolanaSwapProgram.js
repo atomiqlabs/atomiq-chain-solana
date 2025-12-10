@@ -18,7 +18,7 @@ const Utils_1 = require("../../utils/Utils");
 const SolanaTokens_1 = require("../chain/modules/SolanaTokens");
 const BN = require("bn.js");
 function toPublicKeyOrNull(str) {
-    return str == null ? null : new web3_js_1.PublicKey(str);
+    return str == null ? undefined : new web3_js_1.PublicKey(str);
 }
 const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
@@ -68,20 +68,20 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     getInitSignature(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate) {
         return this.Init.signSwapInitialization(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate);
     }
-    isValidInitAuthorization(signer, swapData, { timeout, prefix, signature }, feeRate, preFetchedData) {
-        return this.Init.isSignatureValid(signer, swapData, timeout, prefix, signature, feeRate, preFetchedData);
+    isValidInitAuthorization(signer, swapData, sig, feeRate, preFetchedData) {
+        return this.Init.isSignatureValid(signer, swapData, sig.timeout, sig.prefix, sig.signature, feeRate, preFetchedData);
     }
-    getInitAuthorizationExpiry(swapData, { timeout, prefix, signature }, preFetchedData) {
-        return this.Init.getSignatureExpiry(timeout, signature, preFetchedData);
+    getInitAuthorizationExpiry(swapData, sig, preFetchedData) {
+        return this.Init.getSignatureExpiry(sig.timeout, sig.signature, preFetchedData);
     }
-    isInitAuthorizationExpired(swapData, { timeout, prefix, signature }) {
-        return this.Init.isSignatureExpired(signature, timeout);
+    isInitAuthorizationExpired(swapData, sig) {
+        return this.Init.isSignatureExpired(sig.signature, sig.timeout);
     }
     getRefundSignature(signer, swapData, authorizationTimeout) {
         return this.Refund.signSwapRefund(signer, swapData, authorizationTimeout);
     }
-    isValidRefundAuthorization(swapData, { timeout, prefix, signature }) {
-        return this.Refund.isSignatureValid(swapData, timeout, prefix, signature);
+    isValidRefundAuthorization(swapData, sig) {
+        return this.Refund.isSignatureValid(swapData, sig.timeout, sig.prefix, sig.signature);
     }
     getDataSignature(signer, data) {
         return this.Chain.Signatures.getDataSignature(signer, data);
@@ -380,7 +380,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         }
         return {
             swaps: resultingSwaps,
-            latestBlockheight
+            latestBlockheight: latestBlockheight ?? startBlockheight
         };
     }
     ////////////////////////////////////////////
@@ -391,10 +391,28 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 throw new Error("Only SOL supported as deposit token!");
         }
         const tokenAddr = new web3_js_1.PublicKey(token);
-        const offererKey = offerer == null ? null : new web3_js_1.PublicKey(offerer);
-        const claimerKey = claimer == null ? null : new web3_js_1.PublicKey(claimer);
+        const offererKey = new web3_js_1.PublicKey(offerer);
+        const claimerKey = new web3_js_1.PublicKey(claimer);
         const { paymentHash, nonce, confirmations } = (0, Utils_1.fromClaimHash)(claimHash);
-        return Promise.resolve(new SolanaSwapData_1.SolanaSwapData(offererKey, claimerKey, tokenAddr, (0, Utils_1.toBN)(amount), paymentHash, (0, Utils_1.toBN)(sequence), (0, Utils_1.toBN)(expiry), nonce, confirmations, payOut, type == null ? null : SolanaSwapData_1.SolanaSwapData.typeToKind(type), payIn, offererKey == null ? null : payIn ? (0, spl_token_1.getAssociatedTokenAddressSync)(tokenAddr, offererKey) : web3_js_1.PublicKey.default, claimerKey == null ? null : payOut ? (0, spl_token_1.getAssociatedTokenAddressSync)(tokenAddr, claimerKey) : web3_js_1.PublicKey.default, (0, Utils_1.toBN)(securityDeposit), (0, Utils_1.toBN)(claimerBounty), null));
+        const swapData = new SolanaSwapData_1.SolanaSwapData({
+            offerer: offererKey,
+            claimer: claimerKey,
+            token: tokenAddr,
+            amount: (0, Utils_1.toBN)(amount),
+            paymentHash,
+            sequence: (0, Utils_1.toBN)(sequence),
+            expiry: (0, Utils_1.toBN)(expiry),
+            nonce,
+            confirmations,
+            payOut,
+            kind: SolanaSwapData_1.SolanaSwapData.typeToKind(type),
+            payIn,
+            offererAta: payIn ? (0, spl_token_1.getAssociatedTokenAddressSync)(tokenAddr, offererKey) : web3_js_1.PublicKey.default,
+            claimerAta: payOut ? (0, spl_token_1.getAssociatedTokenAddressSync)(tokenAddr, claimerKey) : web3_js_1.PublicKey.default,
+            securityDeposit: (0, Utils_1.toBN)(securityDeposit),
+            claimerBounty: (0, Utils_1.toBN)(claimerBounty)
+        });
+        return Promise.resolve(swapData);
     }
     ////////////////////////////////////////////
     //// Utils
@@ -420,31 +438,32 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     async txsClaimWithSecret(signer, swapData, secret, checkExpiry, initAta, feeRate, skipAtaCheck) {
         return this.Claim.txsClaimWithSecret(typeof (signer) === "string" ? new web3_js_1.PublicKey(signer) : signer.getPublicKey(), swapData, secret, checkExpiry, initAta, feeRate, skipAtaCheck);
     }
-    async txsClaimWithTxData(signer, swapData, tx, requiredConfirmations, vout, commitedHeader, synchronizer, initAta, feeRate, storageAccHolder) {
+    async txsClaimWithTxData(signer, swapData, tx, requiredConfirmations, vout, commitedHeader, synchronizer, initAta, feeRate) {
         if (swapData.confirmations !== requiredConfirmations)
             throw new Error("Invalid requiredConfirmations provided!");
-        return this.Claim.txsClaimWithTxData(typeof (signer) === "string" ? new web3_js_1.PublicKey(signer) : signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, storageAccHolder, feeRate);
+        const { txs } = await this.Claim.txsClaimWithTxData(typeof (signer) === "string" ? new web3_js_1.PublicKey(signer) : signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, feeRate);
+        return txs;
     }
     txsRefund(signer, swapData, check, initAta, feeRate) {
         if (!swapData.isOfferer(signer))
             throw new Error("Only offerer can refund on Solana");
         return this.Refund.txsRefund(swapData, check, initAta, feeRate);
     }
-    txsRefundWithAuthorization(signer, swapData, { timeout, prefix, signature }, check, initAta, feeRate) {
+    txsRefundWithAuthorization(signer, swapData, sig, check, initAta, feeRate) {
         if (!swapData.isOfferer(signer))
             throw new Error("Only offerer can refund on Solana");
-        return this.Refund.txsRefundWithAuthorization(swapData, timeout, prefix, signature, check, initAta, feeRate);
+        return this.Refund.txsRefundWithAuthorization(swapData, sig.timeout, sig.prefix, sig.signature, check, initAta, feeRate);
     }
-    txsInit(sender, swapData, { timeout, prefix, signature }, skipChecks, feeRate) {
+    txsInit(sender, swapData, sig, skipChecks, feeRate) {
         if (swapData.isPayIn()) {
             if (!swapData.isOfferer(sender))
                 throw new Error("Only offerer can create payIn=true swap");
-            return this.Init.txsInitPayIn(swapData, timeout, prefix, signature, skipChecks, feeRate);
+            return this.Init.txsInitPayIn(swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
         }
         else {
             if (!swapData.isClaimer(sender))
                 throw new Error("Only claimer can create payIn=false swap");
-            return this.Init.txsInit(swapData, timeout, prefix, signature, skipChecks, feeRate);
+            return this.Init.txsInit(swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
         }
     }
     txsWithdraw(signer, token, amount, feeRate) {
@@ -463,16 +482,10 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     async claimWithTxData(signer, swapData, tx, requiredConfirmations, vout, commitedHeader, synchronizer, initAta, txOptions) {
         if (requiredConfirmations !== swapData.confirmations)
             throw new Error("Invalid requiredConfirmations provided!");
-        const data = {
-            storageAcc: null
-        };
-        const txs = await this.Claim.txsClaimWithTxData(signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, data, txOptions?.feeRate);
-        if (txs === null)
-            throw new Error("Btc relay not synchronized to required blockheight!");
-        //TODO: This doesn't return proper tx signature
-        const [signature] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal);
-        await this.DataAccount.removeDataAccount(data.storageAcc);
-        return signature;
+        const { txs, claimTxIndex, storageAcc } = await this.Claim.txsClaimWithTxData(signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, txOptions?.feeRate);
+        const signatures = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        await this.DataAccount.removeDataAccount(storageAcc);
+        return signatures[claimTxIndex] ?? signatures[0];
     }
     async refund(signer, swapData, check, initAta, txOptions) {
         let result = await this.txsRefund(signer.getAddress(), swapData, check, initAta, txOptions?.feeRate);
@@ -494,15 +507,16 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 throw new Error("Invalid signer provided!");
         }
         const result = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
-        const [txSignature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
-        return txSignature;
+        const signatures = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        return signatures[signatures.length - 1];
     }
     async initAndClaimWithSecret(signer, swapData, signature, secret, skipChecks, txOptions) {
         if (!signer.getPublicKey().equals(swapData.claimer))
             throw new Error("Invalid signer provided!");
         const txsCommit = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
         const txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, false, txOptions?.feeRate, true);
-        return await this.Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const signatures = await this.Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        return [signatures[txsCommit.length - 1], signatures[signatures.length - 1]];
     }
     async withdraw(signer, token, amount, txOptions) {
         const txs = await this.LpVault.txsWithdraw(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, txOptions?.feeRate);
@@ -517,11 +531,11 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     ////////////////////////////////////////////
     //// Fees
     getInitPayInFeeRate(offerer, claimer, token, claimHash) {
-        const paymentHash = claimHash == null ? null : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
+        const paymentHash = claimHash == null ? undefined : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
         return this.Init.getInitPayInFeeRate(toPublicKeyOrNull(offerer), toPublicKeyOrNull(claimer), toPublicKeyOrNull(token), paymentHash);
     }
     getInitFeeRate(offerer, claimer, token, claimHash) {
-        const paymentHash = claimHash == null ? null : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
+        const paymentHash = claimHash == null ? undefined : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
         return this.Init.getInitFeeRate(toPublicKeyOrNull(offerer), toPublicKeyOrNull(claimer), toPublicKeyOrNull(token), paymentHash);
     }
     getRefundFeeRate(swapData) {

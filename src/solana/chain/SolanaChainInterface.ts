@@ -33,7 +33,7 @@ export class SolanaChainInterface implements ChainInterface<
     public readonly TX_SLOT_VALIDITY = 151;
 
     readonly connection: Connection;
-    readonly retryPolicy: SolanaRetryPolicy;
+    readonly retryPolicy?: SolanaRetryPolicy;
 
     public readonly Blocks: SolanaBlocks;
     public Fees: SolanaFees;

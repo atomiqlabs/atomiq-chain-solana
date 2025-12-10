@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaInitializer = exports.initializeSolana = void 0;
+const base_1 = require("@atomiqlabs/base");
 const web3_js_1 = require("@solana/web3.js");
 const SolanaChainInterface_1 = require("./chain/SolanaChainInterface");
 const SolanaFees_1 = require("./chain/modules/SolanaFees");
@@ -36,10 +37,13 @@ function initializeSolana(options, bitcoinRpc, network, storageCtor) {
     const connection = typeof (options.rpcUrl) === "string" ?
         new web3_js_1.Connection(options.rpcUrl) :
         options.rpcUrl;
+    const solanaChainData = SolanaChains_1.SolanaChains[network];
+    if (solanaChainData == null)
+        throw new Error(`Unsupported bitcoin network for Solana: ${base_1.BitcoinNetwork[network]}`);
     const Fees = options.fees ?? new SolanaFees_1.SolanaFees(connection, 200000, 4, 100);
     const chainInterface = new SolanaChainInterface_1.SolanaChainInterface(connection, options.retryPolicy ?? { transactionResendInterval: 1000 }, Fees);
-    const btcRelay = new SolanaBtcRelay_1.SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? SolanaChains_1.SolanaChains[network].addresses.btcRelayContract);
-    const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(chainInterface, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), options.swapContract ?? SolanaChains_1.SolanaChains[network].addresses.swapContract);
+    const btcRelay = new SolanaBtcRelay_1.SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? solanaChainData.addresses.btcRelayContract);
+    const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(chainInterface, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), options.swapContract ?? solanaChainData.addresses.swapContract);
     const chainEvents = new SolanaChainEventsBrowser_1.SolanaChainEventsBrowser(connection, swapContract);
     return {
         chainId,

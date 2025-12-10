@@ -17,6 +17,7 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         this.signaturesProcessing = {};
         this.processedSignatures = [];
         this.processedSignaturesIndex = 0;
+        this.stopped = true;
         this.directory = directory;
         this.logFetchInterval = logFetchInterval || LOG_FETCH_INTERVAL;
         this.logFetchLimit = logFetchLimit || LOG_FETCH_LIMIT;
@@ -69,7 +70,10 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
      * @returns {EventObject} parsed event object
      */
     getEventObjectFromTransaction(transaction) {
-        if (transaction.meta.err != null)
+        const signature = transaction.transaction.signatures[0];
+        if (transaction.meta == null)
+            throw new Error(`Transaction 'meta' not found for Solana tx: ${signature}`);
+        if (transaction.meta.err != null || transaction.meta.logMessages == null)
             return null;
         const instructions = this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
         const events = this.solanaSwapProgram.Events.parseLogs(transaction.meta.logMessages);
@@ -77,7 +81,7 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
             instructions,
             events,
             blockTime: transaction.blockTime,
-            signature: transaction.transaction.signatures[0]
+            signature: signature
         };
     }
     /**
@@ -122,7 +126,6 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
             this.logger.debug("getWsEventHandler(" + name + "): Process signature: ", signature);
             this.signaturesProcessing[signature] = this.processEvent({
                 events: [{ name, data: data }],
-                instructions: null,
                 blockTime: Math.floor(Date.now() / 1000),
                 signature
             }).then(() => true).catch(e => {
@@ -149,7 +152,7 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
                 //Check if newest returned signature (index 0) is older than the latest signature's slot, this is a sanity check
                 if (fetched.length > 0 && fetched[0].slot < lastProcessedSignature.slot) {
                     this.logger.debug("getNewSignatures(): Sanity check triggered, returned signature slot height is older than latest!");
-                    return;
+                    return null;
                 }
             }
             else {
@@ -219,7 +222,11 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
      */
     async checkEvents() {
         const lastSignature = await this.getLastSignature();
-        let signatures = lastSignature == null ? await this.getFirstSignature() : await this.getNewSignatures(lastSignature);
+        let signatures = lastSignature == null
+            ? await this.getFirstSignature()
+            : await this.getNewSignatures(lastSignature);
+        if (signatures == null)
+            return;
         let lastSuccessfulSignature = await this.processSignatures(signatures);
         if (lastSuccessfulSignature != null) {
             await this.saveLastSignature(lastSuccessfulSignature.signature, lastSuccessfulSignature.slot);

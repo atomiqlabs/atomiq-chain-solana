@@ -3,6 +3,17 @@ import * as BN from "bn.js";
 import {Buffer} from "buffer";
 import {sha256} from "@noble/hashes/sha2";
 
+export type Serialized<T> = {
+    [K in keyof T as T[K] extends Function ? never : K]:
+    T[K] extends infer U
+        ? U extends PublicKey | BN
+            ? string
+            : U extends object
+                ? Serialized<U>
+                : U
+        : never;
+};
+
 export function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(resolve, timeoutMillis)
@@ -28,13 +39,12 @@ export function onceAsync<T>(executor: () => Promise<T>): () => Promise<T> {
 
 export function getLogger(prefix: string) {
     return {
-        debug: (msg, ...args) => global.atomiqLogLevel >= 3 && console.debug(prefix+msg, ...args),
-        info: (msg, ...args) => global.atomiqLogLevel >= 2 && console.info(prefix+msg, ...args),
-        warn: (msg, ...args) => (global.atomiqLogLevel==null || global.atomiqLogLevel >= 1) && console.warn(prefix+msg, ...args),
-        error: (msg, ...args) => (global.atomiqLogLevel==null || global.atomiqLogLevel >= 0) && console.error(prefix+msg, ...args)
+        debug: (msg: string, ...args: any[]) => (global as any).atomiqLogLevel >= 3 && console.debug(prefix+msg, ...args),
+        info: (msg: string, ...args: any[]) => (global as any).atomiqLogLevel >= 2 && console.info(prefix+msg, ...args),
+        warn: (msg: string, ...args: any[]) => ((global as any).atomiqLogLevel==null || (global as any).atomiqLogLevel >= 1) && console.warn(prefix+msg, ...args),
+        error: (msg: string, ...args: any[]) => ((global as any).atomiqLogLevel==null || (global as any).atomiqLogLevel >= 0) && console.error(prefix+msg, ...args)
     };
 }
-
 const logger = getLogger("Utils: ");
 
 export async function tryWithRetries<T>(func: () => Promise<T>, retryPolicy?: {
@@ -169,12 +179,16 @@ export function toEscrowHash(paymentHash: string, sequence: BN): string {
     ]))).toString("hex");
 }
 
-export function toBN(value: bigint): BN {
+export function toBN(value: bigint): BN;
+export function toBN(value: null): null;
+export function toBN(value: bigint | null): BN | null {
     if(value==null) return null;
     return new BN(value.toString(10));
 }
 
-export function toBigInt(value: BN): bigint {
+export function toBigInt(value: BN): bigint;
+export function toBigInt(value: null): null;
+export function toBigInt(value: BN | null): bigint |  null {
     if(value==null) return null;
     return BigInt(value.toString(10));
 }

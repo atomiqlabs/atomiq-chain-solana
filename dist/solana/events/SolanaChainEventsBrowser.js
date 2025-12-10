@@ -23,7 +23,7 @@ class SolanaChainEventsBrowser {
      * Fetches and parses transaction instructions
      *
      * @private
-     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     * @returns {Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null>} array of parsed instructions
      */
     async getTransactionInstructions(signature) {
         const transaction = await (0, Utils_1.tryWithRetries)(async () => {
@@ -35,8 +35,8 @@ class SolanaChainEventsBrowser {
                 throw new Error("Transaction not found!");
             return res;
         });
-        if (transaction == null)
-            return null;
+        if (transaction.meta == null)
+            throw new Error("Transaction 'meta' not found!");
         if (transaction.meta.err != null)
             return null;
         return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
@@ -51,10 +51,12 @@ class SolanaChainEventsBrowser {
      */
     getSwapDataGetter(eventObject, txoHash) {
         return async () => {
-            if (eventObject.instructions == null)
-                eventObject.instructions = await this.getTransactionInstructions(eventObject.signature);
-            if (eventObject.instructions == null)
-                return null;
+            if (eventObject.instructions == null) {
+                const ixs = await this.getTransactionInstructions(eventObject.signature);
+                if (ixs == null)
+                    return null;
+                eventObject.instructions = ixs;
+            }
             const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
             if (initIx == null)
                 return null;
@@ -127,7 +129,6 @@ class SolanaChainEventsBrowser {
             this.logger.debug("wsEventHandler: Process signature: ", signature);
             this.processEvent({
                 events: [{ name, data: data }],
-                instructions: null,
                 blockTime: Math.floor(Date.now() / 1000),
                 signature
             }).then(() => true).catch(e => {

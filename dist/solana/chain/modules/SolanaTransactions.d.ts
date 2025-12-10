@@ -8,13 +8,13 @@ export type SolanaTx = {
     signers: Signer[];
 };
 export declare class SolanaTransactions extends SolanaModule {
-    private cbkBeforeTxSigned;
+    private cbkBeforeTxSigned?;
     /**
      * Callback for sending transaction, returns not null if it was successfully able to send the transaction, and null
      *  if the transaction should be sent through other means)
      * @private
      */
-    private cbkSendTransaction;
+    private cbkSendTransaction?;
     /**
      * Sends raw solana transaction, first through the cbkSendTransaction callback (for e.g. sending the transaction
      *  to a different specific RPC), the through the Fees handler (for e.g. Jito transaction) and last through the

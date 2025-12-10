@@ -26,8 +26,8 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
     } = {};
     private processedSignatures: string[] = [];
     private processedSignaturesIndex: number = 0;
-    private stopped: boolean;
-    private timeout: NodeJS.Timeout;
+    private stopped: boolean = true;
+    private timeout?: NodeJS.Timeout;
 
     constructor(
         directory: string,
@@ -60,7 +60,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
     private async getLastSignature(): Promise<{
         signature: string,
         slot: number
-    }> {
+    } | null> {
         try {
             const txt = (await fs.readFile(this.directory+BLOCKHEIGHT_FILENAME)).toString();
             const arr = txt.split(";");
@@ -93,8 +93,10 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
      * @private
      * @returns {EventObject} parsed event object
      */
-    private getEventObjectFromTransaction(transaction: ParsedTransactionWithMeta): EventObject {
-        if(transaction.meta.err!=null) return null;
+    private getEventObjectFromTransaction(transaction: ParsedTransactionWithMeta): EventObject | null {
+        const signature = transaction.transaction.signatures[0];
+        if(transaction.meta==null) throw new Error(`Transaction 'meta' not found for Solana tx: ${signature}`);
+        if(transaction.meta.err!=null || transaction.meta.logMessages==null) return null;
 
         const instructions = this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
         const events = this.solanaSwapProgram.Events.parseLogs(transaction.meta.logMessages);
@@ -102,8 +104,8 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         return {
             instructions,
             events,
-            blockTime: transaction.blockTime,
-            signature: transaction.transaction.signatures[0]
+            blockTime: transaction.blockTime!,
+            signature: signature
         };
     }
 
@@ -151,7 +153,6 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
 
             this.signaturesProcessing[signature] = this.processEvent({
                 events: [{name, data: data as any}],
-                instructions: null, //Instructions will be fetched on-demand if required
                 blockTime: Math.floor(Date.now()/1000),
                 signature
             }).then(() => true).catch(e => {
@@ -167,7 +168,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
      * @param lastProcessedSignature
      * @private
      */
-    private async getNewSignatures(lastProcessedSignature: {signature: string, slot: number}): Promise<ConfirmedSignatureInfo[]> {
+    private async getNewSignatures(lastProcessedSignature: {signature: string, slot: number}): Promise<ConfirmedSignatureInfo[] | null> {
         let signatures: ConfirmedSignatureInfo[] = [];
 
         let fetched = null;
@@ -180,7 +181,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
                 //Check if newest returned signature (index 0) is older than the latest signature's slot, this is a sanity check
                 if(fetched.length>0 && fetched[0].slot<lastProcessedSignature.slot) {
                     this.logger.debug("getNewSignatures(): Sanity check triggered, returned signature slot height is older than latest!");
-                    return;
+                    return null;
                 }
             } else {
                 fetched = await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
@@ -214,8 +215,8 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
      * @private
      * @returns {Promise<{signature: string, slot: number}>} latest processed transaction signature and slot height
      */
-    private async processSignatures(signatures: ConfirmedSignatureInfo[]): Promise<{signature: string, slot: number}> {
-        let lastSuccessfulSignature: {signature: string, slot: number} = null;
+    private async processSignatures(signatures: ConfirmedSignatureInfo[]): Promise<{signature: string, slot: number} | null> {
+        let lastSuccessfulSignature: {signature: string, slot: number} | null = null;
 
         try {
             for(let i=signatures.length-1;i>=0;i--) {
@@ -258,10 +259,12 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
     private async checkEvents() {
         const lastSignature = await this.getLastSignature();
 
-        let signatures: ConfirmedSignatureInfo[] =
-            lastSignature==null ? await this.getFirstSignature() : await this.getNewSignatures(lastSignature);
+        let signatures = lastSignature==null
+            ? await this.getFirstSignature()
+            : await this.getNewSignatures(lastSignature);
+        if(signatures==null) return;
 
-        let lastSuccessfulSignature: {signature: string, slot: number} = await this.processSignatures(signatures);
+        let lastSuccessfulSignature = await this.processSignatures(signatures);
 
         if(lastSuccessfulSignature!=null) {
             await this.saveLastSignature(lastSuccessfulSignature.signature, lastSuccessfulSignature.slot);
@@ -270,7 +273,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
 
     async setupHttpPolling() {
         this.stopped = false;
-        let func;
+        let func: () => Promise<void>;
         func = async () => {
             await this.checkEvents().catch(e => {
                 this.logger.error("setupHttpPolling(): Failed to fetch Solana log: ", e);

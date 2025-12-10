@@ -54,7 +54,7 @@ export class SolanaEvents extends SolanaModule {
     ): Promise<{
         data: ParsedTransactionWithMeta[],
         paginationToken?: string
-    }> {
+    } | null> {
         const limit = 100;
 
         //Try to use getPriorityFeeEstimate api of Helius
@@ -69,7 +69,7 @@ export class SolanaEvents extends SolanaModule {
                 encoding: "jsonParsed",
                 maxSupportedTransactionVersion: 0
             }
-        ]).catch(e => {
+        ]).catch((e: any) => {
             //Catching not supported errors
             if(e.message!=null && (e.message.includes("-32601") || e.message.includes("-32600") || e.message.includes("-32403"))) {
                 return {
@@ -89,16 +89,16 @@ export class SolanaEvents extends SolanaModule {
         }
 
         return {
-            data: response.result.data.map(val => {
+            data: response.result.data.map((val: any) => {
                 return {
                     ...val, //slot, blockTime, version
                     meta: val.meta==null ? undefined : {
                         //ParsedTransactionMeta
                         ...val.meta,
-                        innerInstructions: val.meta.innerInstructions==null ? undefined : val.meta.innerInstructions.map(innerIx => ({
+                        innerInstructions: val.meta.innerInstructions==null ? undefined : val.meta.innerInstructions.map((innerIx: any) => ({
                             //ParsedInnerInstruction
                             ...innerIx, //index
-                            instructions: innerIx.instructions.map(ix => {
+                            instructions: innerIx.instructions.map((ix: any) => {
                                 if(ix.program!=null && ix.programId!=null) {
                                     return {
                                         //ParsedInstruction
@@ -110,14 +110,14 @@ export class SolanaEvents extends SolanaModule {
                                         //PartiallyDecodedInstruction
                                         data: ix.data,
                                         programId: new PublicKey(ix.programId),
-                                        accounts: ix.accounts.map(pubkey => new PublicKey(pubkey))
+                                        accounts: ix.accounts.map((pubkey: string) => new PublicKey(pubkey))
                                     }
                                 }
                             })
                         })),
                         loadedAddresses: val.meta.loadedAddresses==null ? undefined : {
-                            writable: val.meta.loadedAddresses.writable.map(pubkey => new PublicKey(pubkey)),
-                            readonly: val.meta.loadedAddresses.readonly.map(pubkey => new PublicKey(pubkey)),
+                            writable: val.meta.loadedAddresses.writable.map((pubkey: string) => new PublicKey(pubkey)),
+                            readonly: val.meta.loadedAddresses.readonly.map((pubkey: string) => new PublicKey(pubkey)),
                         }
                     },
                     transaction: {
@@ -126,12 +126,12 @@ export class SolanaEvents extends SolanaModule {
                         message: {
                             //ParsedMessage
                             ...val.transaction.message, //recentBlockhash
-                            accountKeys: val.transaction.message.accountKeys.map(accountKey => ({
+                            accountKeys: val.transaction.message.accountKeys.map((accountKey: any) => ({
                                 //ParsedMessageAccount
                                 ...accountKey,
                                 pubkey: new PublicKey(accountKey.pubkey)
                             })),
-                            instructions: val.transaction.message.instructions.map(ix => {
+                            instructions: val.transaction.message.instructions.map((ix: any) => {
                                 if(ix.program!=null && ix.programId!=null) {
                                     return {
                                         //ParsedInstruction
@@ -143,15 +143,17 @@ export class SolanaEvents extends SolanaModule {
                                         //PartiallyDecodedInstruction
                                         data: ix.data,
                                         programId: new PublicKey(ix.programId),
-                                        accounts: ix.accounts.map(pubkey => new PublicKey(pubkey))
+                                        accounts: ix.accounts.map((pubkey: string) => new PublicKey(pubkey))
                                     }
                                 }
                             }),
-                            addressTableLookups: val.transaction.message.addressTableLookups==null ? undefined : val.transaction.message.addressTableLookups.map(addressTableLookup => ({
-                                //ParsedAddressTableLookup
-                                ...addressTableLookup,
-                                accountKey: new PublicKey(addressTableLookup.accountKey)
-                            }))
+                            addressTableLookups: val.transaction.message.addressTableLookups==null
+                                ? undefined
+                                : val.transaction.message.addressTableLookups.map((addressTableLookup: any) => ({
+                                    //ParsedAddressTableLookup
+                                    ...addressTableLookup,
+                                    accountKey: new PublicKey(addressTableLookup.accountKey)
+                                }))
                         }
                     }
                 }
@@ -165,9 +167,9 @@ export class SolanaEvents extends SolanaModule {
       processor: (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => Promise<T>,
       abortSignal?: AbortSignal,
       startBlockheight?: number
-    ): Promise<T> {
-        let paginationToken: string;
-        let txs: ParsedTransactionWithMeta[] = null;
+    ): Promise<T | undefined | null> {
+        let paginationToken: string | undefined;
+        let txs: ParsedTransactionWithMeta[] | undefined;
         while(txs==null || txs.length>0) {
             let filters = startBlockheight!=null ? {
                 slot: {gte: startBlockheight}
@@ -218,15 +220,15 @@ export class SolanaEvents extends SolanaModule {
      */
     private async _findInSignatures<T>(
         topicKey: PublicKey,
-        processor: (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => Promise<T>,
+        processor: (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => Promise<T | null | undefined>,
         abortSignal?: AbortSignal,
         logFetchLimit?: number,
         startBlockheight?: number
-    ): Promise<T> {
+    ): Promise<T | null> {
         if(logFetchLimit==null || logFetchLimit>this.LOG_FETCH_LIMIT) logFetchLimit = this.LOG_FETCH_LIMIT;
-        let signatures: ConfirmedSignatureInfo[] = null;
-        while(signatures==null || signatures.length>0) {
-            signatures = await this.getSignatures(topicKey, logFetchLimit, signatures!=null ? signatures[signatures.length-1].signature : null);
+        let signatures: ConfirmedSignatureInfo[] | undefined;
+        do {
+            signatures = await this.getSignatures(topicKey, logFetchLimit, signatures!=null ? signatures?.[signatures.length-1].signature : undefined);
             if(startBlockheight!=null) {
                 const endIndex = signatures.findIndex(val => val.slot < startBlockheight);
                 if(endIndex===0) return null;
@@ -240,20 +242,19 @@ export class SolanaEvents extends SolanaModule {
             }
 
             if(abortSignal!=null) abortSignal.throwIfAborted();
-            const result: T = await processor({signatures});
+            const result = await processor({signatures});
             if(result!=null) return result;
-            if(signatures.length<logFetchLimit) break;
-        }
+        } while(signatures.length>=logFetchLimit); //Only fetch next one if this response is full
         return null;
     }
 
     public async findInSignatures<T>(
         topicKey: PublicKey,
-        processor: (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => Promise<T>,
+        processor: (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => Promise<T | undefined | null>,
         abortSignal?: AbortSignal,
         logFetchLimit?: number,
         startBlockheight?: number
-    ) {
+    ): Promise<T | null> {
         if(this.usingHeliusTFA!=="no") {
             //Attempt to use Helius's gTFA
             const result = await this._findInTxsTFA(topicKey, processor, abortSignal, startBlockheight);

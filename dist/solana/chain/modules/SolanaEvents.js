@@ -53,7 +53,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                 encoding: "jsonParsed",
                 maxSupportedTransactionVersion: 0
             }
-        ]).catch(e => {
+        ]).catch((e) => {
             //Catching not supported errors
             if (e.message != null && (e.message.includes("-32601") || e.message.includes("-32600") || e.message.includes("-32403"))) {
                 return {
@@ -72,16 +72,16 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
             return null;
         }
         return {
-            data: response.result.data.map(val => {
+            data: response.result.data.map((val) => {
                 return {
                     ...val,
                     meta: val.meta == null ? undefined : {
                         //ParsedTransactionMeta
                         ...val.meta,
-                        innerInstructions: val.meta.innerInstructions == null ? undefined : val.meta.innerInstructions.map(innerIx => ({
+                        innerInstructions: val.meta.innerInstructions == null ? undefined : val.meta.innerInstructions.map((innerIx) => ({
                             //ParsedInnerInstruction
                             ...innerIx,
-                            instructions: innerIx.instructions.map(ix => {
+                            instructions: innerIx.instructions.map((ix) => {
                                 if (ix.program != null && ix.programId != null) {
                                     return {
                                         //ParsedInstruction
@@ -94,14 +94,14 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                                         //PartiallyDecodedInstruction
                                         data: ix.data,
                                         programId: new web3_js_1.PublicKey(ix.programId),
-                                        accounts: ix.accounts.map(pubkey => new web3_js_1.PublicKey(pubkey))
+                                        accounts: ix.accounts.map((pubkey) => new web3_js_1.PublicKey(pubkey))
                                     };
                                 }
                             })
                         })),
                         loadedAddresses: val.meta.loadedAddresses == null ? undefined : {
-                            writable: val.meta.loadedAddresses.writable.map(pubkey => new web3_js_1.PublicKey(pubkey)),
-                            readonly: val.meta.loadedAddresses.readonly.map(pubkey => new web3_js_1.PublicKey(pubkey)),
+                            writable: val.meta.loadedAddresses.writable.map((pubkey) => new web3_js_1.PublicKey(pubkey)),
+                            readonly: val.meta.loadedAddresses.readonly.map((pubkey) => new web3_js_1.PublicKey(pubkey)),
                         }
                     },
                     transaction: {
@@ -110,12 +110,12 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                         message: {
                             //ParsedMessage
                             ...val.transaction.message,
-                            accountKeys: val.transaction.message.accountKeys.map(accountKey => ({
+                            accountKeys: val.transaction.message.accountKeys.map((accountKey) => ({
                                 //ParsedMessageAccount
                                 ...accountKey,
                                 pubkey: new web3_js_1.PublicKey(accountKey.pubkey)
                             })),
-                            instructions: val.transaction.message.instructions.map(ix => {
+                            instructions: val.transaction.message.instructions.map((ix) => {
                                 if (ix.program != null && ix.programId != null) {
                                     return {
                                         //ParsedInstruction
@@ -128,15 +128,17 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                                         //PartiallyDecodedInstruction
                                         data: ix.data,
                                         programId: new web3_js_1.PublicKey(ix.programId),
-                                        accounts: ix.accounts.map(pubkey => new web3_js_1.PublicKey(pubkey))
+                                        accounts: ix.accounts.map((pubkey) => new web3_js_1.PublicKey(pubkey))
                                     };
                                 }
                             }),
-                            addressTableLookups: val.transaction.message.addressTableLookups == null ? undefined : val.transaction.message.addressTableLookups.map(addressTableLookup => ({
-                                //ParsedAddressTableLookup
-                                ...addressTableLookup,
-                                accountKey: new web3_js_1.PublicKey(addressTableLookup.accountKey)
-                            }))
+                            addressTableLookups: val.transaction.message.addressTableLookups == null
+                                ? undefined
+                                : val.transaction.message.addressTableLookups.map((addressTableLookup) => ({
+                                    //ParsedAddressTableLookup
+                                    ...addressTableLookup,
+                                    accountKey: new web3_js_1.PublicKey(addressTableLookup.accountKey)
+                                }))
                         }
                     }
                 };
@@ -146,7 +148,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
     }
     async _findInTxsTFA(topicKey, processor, abortSignal, startBlockheight) {
         let paginationToken;
-        let txs = null;
+        let txs;
         while (txs == null || txs.length > 0) {
             let filters = startBlockheight != null ? {
                 slot: { gte: startBlockheight }
@@ -193,9 +195,9 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
     async _findInSignatures(topicKey, processor, abortSignal, logFetchLimit, startBlockheight) {
         if (logFetchLimit == null || logFetchLimit > this.LOG_FETCH_LIMIT)
             logFetchLimit = this.LOG_FETCH_LIMIT;
-        let signatures = null;
-        while (signatures == null || signatures.length > 0) {
-            signatures = await this.getSignatures(topicKey, logFetchLimit, signatures != null ? signatures[signatures.length - 1].signature : null);
+        let signatures;
+        do {
+            signatures = await this.getSignatures(topicKey, logFetchLimit, signatures != null ? signatures?.[signatures.length - 1].signature : undefined);
             if (startBlockheight != null) {
                 const endIndex = signatures.findIndex(val => val.slot < startBlockheight);
                 if (endIndex === 0)
@@ -214,9 +216,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
             const result = await processor({ signatures });
             if (result != null)
                 return result;
-            if (signatures.length < logFetchLimit)
-                break;
-        }
+        } while (signatures.length >= logFetchLimit); //Only fetch next one if this response is full
         return null;
     }
     async findInSignatures(topicKey, processor, abortSignal, logFetchLimit, startBlockheight) {

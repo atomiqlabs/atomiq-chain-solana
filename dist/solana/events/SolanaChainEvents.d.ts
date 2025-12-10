@@ -15,7 +15,7 @@ export declare class SolanaChainEvents extends SolanaChainEventsBrowser {
     private processedSignatures;
     private processedSignaturesIndex;
     private stopped;
-    private timeout;
+    private timeout?;
     constructor(directory: string, connection: Connection, solanaSwapProgram: SolanaSwapProgram, logFetchInterval?: number, logFetchLimit?: number);
     private addProcessedSignature;
     private isSignatureProcessed;

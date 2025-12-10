@@ -8,7 +8,6 @@ class SolanaFees {
     constructor(connection, maxFeeMicroLamports = 250000, numSamples = 8, period = 150, useHeliusApi = "auto", heliusFeeLevel = "veryHigh", getStaticFee, bribeData) {
         this.heliusApiSupported = true;
         this.logger = (0, Utils_1.getLogger)("SolanaFees: ");
-        this.blockFeeCache = null;
         this.connection = connection;
         this.maxFeeMicroLamports = BigInt(maxFeeMicroLamports);
         this.numSamples = numSamples;
@@ -57,7 +56,7 @@ class SolanaFees {
                     "includeAllPriorityFeeLevels": true
                 }
             }
-        ]).catch(e => {
+        ]).catch((e) => {
             //Catching not supported errors
             if (e.message != null && (e.message.includes("-32601") || e.message.includes("-32600"))) {
                 return {
@@ -137,9 +136,11 @@ class SolanaFees {
      */
     async getBlockMeanFeeRate(slot) {
         const block = await this.getBlockWithSignature(slot);
-        if (block == null)
+        if (block == null || block.rewards == null)
             return null;
         const blockComission = block.rewards.find(e => e.rewardType === "Fee");
+        if (blockComission == null)
+            return null;
         const totalBlockFees = BigInt(blockComission.lamports) * 2n;
         //Subtract per-signature fees to get pure compute fees
         const totalTransactionBaseFees = BigInt(block.signatures.length) * 5000n;
@@ -180,10 +181,10 @@ class SolanaFees {
             })());
         }
         const meanFees = await Promise.all(promises);
-        let min = null;
-        meanFees.forEach(e => min == null || min > e ? min = e : 0);
-        if (min != null)
-            this.logger.debug("_getGlobalFeeRate(): slot: " + slot + " global fee minimum: " + min.toString(10));
+        const min = meanFees.reduce((prev, current) => prev == null || prev > current ? current : prev, null);
+        if (min == null)
+            throw new Error("Cannot estimate fee, meanFees length is 0");
+        this.logger.debug("_getGlobalFeeRate(): slot: " + slot + " global fee minimum: " + min.toString(10));
         return min;
     }
     /**
@@ -238,16 +239,15 @@ class SolanaFees {
      */
     getGlobalFeeRate() {
         if (this.blockFeeCache == null || Date.now() - this.blockFeeCache.timestamp > MAX_FEE_AGE) {
-            let obj = {
+            let obj;
+            this.blockFeeCache = obj = {
                 timestamp: Date.now(),
-                feeRate: null
+                feeRate: this._getGlobalFeeRate().catch(e => {
+                    if (this.blockFeeCache === obj)
+                        delete this.blockFeeCache;
+                    throw e;
+                })
             };
-            obj.feeRate = this._getGlobalFeeRate().catch(e => {
-                if (this.blockFeeCache === obj)
-                    this.blockFeeCache = null;
-                throw e;
-            });
-            this.blockFeeCache = obj;
         }
         return this.blockFeeCache.feeRate;
     }
@@ -304,7 +304,7 @@ class SolanaFees {
      */
     applyFeeRateBegin(tx, computeBudget, feeRate) {
         if (feeRate == null)
-            return false;
+            return;
         const hashArr = feeRate.split("#");
         if (hashArr.length > 1) {
             feeRate = hashArr[0];
@@ -340,7 +340,7 @@ class SolanaFees {
      */
     applyFeeRateEnd(tx, computeBudget, feeRate) {
         if (feeRate == null)
-            return false;
+            return;
         const hashArr = feeRate.split("#");
         if (hashArr.length > 1) {
             feeRate = hashArr[0];
@@ -348,10 +348,12 @@ class SolanaFees {
         //Check if bribe is included
         const arr = feeRate.split(";");
         if (arr.length > 2) {
-            const cuBigInt = BigInt(computeBudget || (200000 * (Utils_1.SolanaTxUtils.getNonComputeBudgetIxs(tx) + 1)));
+            const cuBigInt = BigInt(computeBudget ?? (200000 * (Utils_1.SolanaTxUtils.getNonComputeBudgetIxs(tx) + 1)));
             const cuPrice = BigInt(arr[0]);
             const staticFee = BigInt(arr[1]);
             const bribeAddress = new web3_js_1.PublicKey(arr[2]);
+            if (tx.feePayer == null)
+                throw new Error("Cannot apply tx bribe without feePayer being known!");
             tx.add(web3_js_1.SystemProgram.transfer({
                 fromPubkey: tx.feePayer,
                 toPubkey: bribeAddress,
@@ -371,7 +373,7 @@ class SolanaFees {
         const parsedTx = web3_js_1.Transaction.from(tx);
         const jitoFee = this.getJitoTxFee(parsedTx);
         if (jitoFee == null)
-            return null;
+            return Promise.resolve(null);
         this.logger.info("submitTx(): sending tx over Jito, signature: " + parsedTx.signature + " fee: " + jitoFee.toString(10));
         return this.sendJitoTx(tx, options);
     }
