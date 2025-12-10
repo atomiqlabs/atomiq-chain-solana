@@ -35,16 +35,16 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * Waits for the transaction to confirm by periodically checking the transaction status over HTTP, also
      *  re-sends the transaction at regular intervals
      *
-     * @param solanaTx solana tx to wait for confirmation for
+     * @param tx solana tx to wait for confirmation for
      * @param finality wait for this finality
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
      */
-    txConfirmationAndResendWatchdog(solanaTx, finality, abortSignal) {
-        if (solanaTx.tx.signature == null)
+    txConfirmationAndResendWatchdog(tx, finality, abortSignal) {
+        if (tx.signature == null)
             throw new Error("Cannot check confirmation status of tx without signature!");
-        const rawTx = solanaTx.tx.serialize();
-        const signature = bs58.encode(solanaTx.tx.signature);
+        const rawTx = tx.serialize();
+        const signature = bs58.encode(tx.signature);
         return new Promise((resolve, reject) => {
             let watchdogInterval;
             watchdogInterval = setInterval(async () => {
@@ -52,7 +52,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
                 this.logger.debug("txConfirmationAndResendWatchdog(): transaction re-sent: " + result);
                 const status = await this.getTxIdStatus(signature, finality).catch(e => this.logger.error("txConfirmationAndResendWatchdog(): get tx id status error: ", e));
                 if (status == null || status === "not_found") {
-                    if (await this.connection.isBlockhashValid(solanaTx.tx.recentBlockhash, { commitment: finality }))
+                    if (await this.connection.isBlockhashValid(tx.recentBlockhash, { commitment: finality }))
                         return;
                     try {
                         //One list try to get the txId status
@@ -84,27 +84,27 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      *  this therefore also runs an ultimate check on the transaction in case the WS handler rejects, checking if it
      *  really was expired
      *
-     * @param solanaTx solana tx to wait for confirmation for
+     * @param tx solana tx to wait for confirmation for
      * @param finality wait for this finality
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
      */
-    async txConfirmFromWebsocket(solanaTx, finality, abortSignal) {
-        if (solanaTx.tx.signature == null)
+    async txConfirmFromWebsocket(tx, finality, abortSignal) {
+        if (tx.signature == null)
             throw new Error("Cannot wait for confirmation for tx without signature!");
-        if (solanaTx.tx.recentBlockhash == null)
+        if (tx.recentBlockhash == null)
             throw new Error("Cannot wait for confirmation for tx without recentBlockhash!");
-        if (solanaTx.tx.lastValidBlockHeight == null)
+        if (tx.lastValidBlockHeight == null)
             throw new Error("Cannot wait for confirmation for tx without lastValidBlockHeight!");
-        const signature = bs58.encode(solanaTx.tx.signature);
+        const signature = bs58.encode(tx.signature);
         let result;
         try {
-            result = await this.connection.confirmTransaction(solanaTx.tx.lastValidBlockHeight == null
+            result = await this.connection.confirmTransaction(tx.lastValidBlockHeight == null
                 ? signature
                 : {
                     signature: signature,
-                    blockhash: solanaTx.tx.recentBlockhash,
-                    lastValidBlockHeight: solanaTx.tx.lastValidBlockHeight,
+                    blockhash: tx.recentBlockhash,
+                    lastValidBlockHeight: tx.lastValidBlockHeight,
                     abortSignal
                 }, finality);
             this.logger.info("txConfirmFromWebsocket(): transaction confirmed from WS, signature: " + signature);
@@ -112,7 +112,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         catch (err) {
             if (abortSignal != null && abortSignal.aborted)
                 throw err;
-            this.logger.debug("txConfirmFromWebsocket(): transaction rejected from WS, running ultimate check, expiry blockheight: " + solanaTx.tx.lastValidBlockHeight + " signature: " + signature + " error: " + err);
+            this.logger.debug("txConfirmFromWebsocket(): transaction rejected from WS, running ultimate check, expiry blockheight: " + tx.lastValidBlockHeight + " signature: " + signature + " error: " + err);
             const status = await (0, Utils_1.tryWithRetries)(() => this.getTxIdStatus(signature, finality));
             this.logger.info("txConfirmFromWebsocket(): transaction status: " + status + " signature: " + signature);
             if (status === "success")
@@ -134,12 +134,12 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * Waits for transaction confirmation using WS subscription and occasional HTTP polling, also re-sends
      *  the transaction at regular interval
      *
-     * @param solanaTx solana transaction to wait for confirmation for & keep re-sending until it confirms
+     * @param tx solana transaction to wait for confirmation for & keep re-sending until it confirms
      * @param abortSignal signal to abort waiting for tx confirmation
      * @param finality wait for specific finality
      * @private
      */
-    async confirmTransaction(solanaTx, abortSignal, finality) {
+    async confirmTransaction(tx, abortSignal, finality) {
         const abortController = new AbortController();
         if (abortSignal != null)
             abortSignal.addEventListener("abort", () => {
@@ -148,8 +148,8 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         let txSignature;
         try {
             txSignature = await Promise.race([
-                this.txConfirmationAndResendWatchdog(solanaTx, finality, abortController.signal),
-                this.txConfirmFromWebsocket(solanaTx, finality, abortController.signal)
+                this.txConfirmationAndResendWatchdog(tx, finality, abortController.signal),
+                this.txConfirmFromWebsocket(tx, finality, abortController.signal)
             ]);
         }
         catch (e) {
@@ -197,18 +197,18 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
     /**
      * Sends out a signed transaction to the RPC
      *
-     * @param solTx solana tx to send
+     * @param tx solana tx to send
      * @param options send options to be passed to the RPC
      * @param onBeforePublish a callback called before every transaction is published
      * @private
      */
-    async sendSignedTransaction(solTx, options, onBeforePublish) {
-        if (solTx.tx.signature == null)
+    async sendSignedTransaction(tx, options, onBeforePublish) {
+        if (tx.signature == null)
             throw new Error("Cannot broadcast tx without signature!");
-        const signature = bs58.encode(solTx.tx.signature);
+        const signature = bs58.encode(tx.signature);
         if (onBeforePublish != null)
-            await onBeforePublish(signature, this.serializeSignedTx(solTx.tx));
-        const serializedTx = solTx.tx.serialize();
+            await onBeforePublish(signature, this.serializeSignedTx(tx));
+        const serializedTx = tx.serialize();
         this.logger.debug("sendSignedTransaction(): sending transaction: " + serializedTx.toString("hex") +
             " signature: " + signature);
         const txResult = await (0, Utils_1.tryWithRetries)(() => this.sendRawTransaction(serializedTx, options), this.retryPolicy);
@@ -251,8 +251,8 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
             // however e.g. Jito could possibly handle sending a single package of up to 5 txns in order.
             for (let i = 0; i < txs.length; i++) {
                 const solTx = txs[i];
-                const signature = await this.sendSignedTransaction(solTx, options, onBeforePublish);
-                const confirmPromise = this.confirmTransaction(solTx, abortSignal, "confirmed");
+                const signature = await this.sendSignedTransaction(solTx.tx, options, onBeforePublish);
+                const confirmPromise = this.confirmTransaction(solTx.tx, abortSignal, "confirmed");
                 //Don't await the last promise when !waitForConfirmation
                 if (i < txs.length - 1 || e + 50 < _txs.length || waitForConfirmation)
                     await confirmPromise;
@@ -282,10 +282,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         const signatures = [];
         const promises = [];
         for (let i = 0; i < signedTxs.length; i++) {
-            const signedTx = {
-                tx: signedTxs[i],
-                signers: []
-            };
+            const signedTx = signedTxs[i];
             this.logger.debug("sendSignedAndConfirm(): sending transaction " + i + ", total count: " + signedTxs.length);
             const signature = await this.sendSignedTransaction(signedTx, options, onBeforePublish);
             const confirmPromise = this.confirmTransaction(signedTx, abortSignal, "confirmed");

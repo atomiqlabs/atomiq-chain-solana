@@ -30,7 +30,7 @@ export declare class SolanaTransactions extends SolanaModule {
      * Waits for the transaction to confirm by periodically checking the transaction status over HTTP, also
      *  re-sends the transaction at regular intervals
      *
-     * @param solanaTx solana tx to wait for confirmation for
+     * @param tx solana tx to wait for confirmation for
      * @param finality wait for this finality
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
@@ -41,7 +41,7 @@ export declare class SolanaTransactions extends SolanaModule {
      *  this therefore also runs an ultimate check on the transaction in case the WS handler rejects, checking if it
      *  really was expired
      *
-     * @param solanaTx solana tx to wait for confirmation for
+     * @param tx solana tx to wait for confirmation for
      * @param finality wait for this finality
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
@@ -51,7 +51,7 @@ export declare class SolanaTransactions extends SolanaModule {
      * Waits for transaction confirmation using WS subscription and occasional HTTP polling, also re-sends
      *  the transaction at regular interval
      *
-     * @param solanaTx solana transaction to wait for confirmation for & keep re-sending until it confirms
+     * @param tx solana transaction to wait for confirmation for & keep re-sending until it confirms
      * @param abortSignal signal to abort waiting for tx confirmation
      * @param finality wait for specific finality
      * @private
@@ -69,7 +69,7 @@ export declare class SolanaTransactions extends SolanaModule {
     /**
      * Sends out a signed transaction to the RPC
      *
-     * @param solTx solana tx to send
+     * @param tx solana tx to send
      * @param options send options to be passed to the RPC
      * @param onBeforePublish a callback called before every transaction is published
      * @private
