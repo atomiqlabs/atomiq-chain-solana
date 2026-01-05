@@ -282,12 +282,10 @@ export class SolanaSwapProgram
                     type: SwapCommitStateType.PAID,
                     getClaimTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
-                    getTxBlock: async () => {
-                        return {
-                            blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
-                            blockTime: tx.blockTime
-                        };
-                    }
+                    getTxBlock: () => Promise.resolve({
+                        blockHeight: tx.slot,
+                        blockTime: tx.blockTime
+                    })
                 }
             }
             if(event.name==="RefundEvent") {
@@ -297,12 +295,10 @@ export class SolanaSwapProgram
                 return {
                     type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
                     getRefundTxId: () => Promise.resolve(tx.transaction.signatures[0]),
-                    getTxBlock: async () => {
-                        return {
-                            blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
-                            blockTime: tx.blockTime
-                        };
-                    }
+                    getTxBlock: () => Promise.resolve({
+                        blockHeight: tx.slot,
+                        blockTime: tx.blockTime
+                    })
                 };
             }
         });
@@ -383,7 +379,19 @@ export class SolanaSwapProgram
     }
 
     async getHistoricalSwaps(signer: string, startBlockheight?: number): Promise<{
-        swaps: { [p: string]: { data?: SolanaSwapData; state: SwapCommitState } };
+        swaps: {
+            [escrowHash: string]: {
+                init?: {
+                    data: SolanaSwapData,
+                    getInitTxId: () => Promise<string>,
+                    getTxBlock: () => Promise<{
+                        blockTime: number,
+                        blockHeight: number
+                    }>
+                },
+                state: SwapCommitState
+            }
+        },
         latestBlockheight: number
     }> {
         let latestBlockheight: number;
@@ -395,8 +403,27 @@ export class SolanaSwapProgram
             events.push({event, tx});
         }, undefined, undefined, startBlockheight);
 
-        const swapsOpened: {[escrowHash: string]: SolanaSwapData} = {};
-        const resultingSwaps: { [escrowHash: string]: { data?: SolanaSwapData; state: SwapCommitState } } = {};
+        const swapsOpened: {[escrowHash: string]: {
+            data: SolanaSwapData,
+            getInitTxId: () => Promise<string>,
+            getTxBlock: () => Promise<{
+                blockTime: number,
+                blockHeight: number
+            }>
+        }} = {};
+        const resultingSwaps: {
+            [escrowHash: string]: {
+                init?: {
+                    data: SolanaSwapData,
+                    getInitTxId: () => Promise<string>,
+                    getTxBlock: () => Promise<{
+                        blockTime: number,
+                        blockHeight: number
+                    }>
+                },
+                state: SwapCommitState
+            }
+        } = {};
 
         events.reverse();
         for(let {event, tx} of events) {
@@ -421,24 +448,29 @@ export class SolanaSwapProgram
                     continue;
                 }
 
-                swapsOpened[escrowHash] = SolanaSwapData.fromInstruction(initIx, txoHash);
+                swapsOpened[escrowHash] = {
+                    data: SolanaSwapData.fromInstruction(initIx, txoHash),
+                    getInitTxId: () => Promise.resolve(txSignature),
+                    getTxBlock: () => Promise.resolve({
+                        blockHeight: tx.slot,
+                        blockTime: tx.blockTime
+                    })
+                };
             }
 
             if(event.name==="ClaimEvent") {
                 const foundSwapData = swapsOpened[escrowHash];
                 delete swapsOpened[escrowHash];
                 resultingSwaps[escrowHash] = {
-                    data: foundSwapData,
+                    init: foundSwapData,
                     state: {
                         type: SwapCommitStateType.PAID,
                         getClaimTxId: () => Promise.resolve(txSignature),
                         getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
-                        getTxBlock: async () => {
-                            return {
-                                blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
-                                blockTime: tx.blockTime
-                            };
-                        }
+                        getTxBlock: () => Promise.resolve({
+                            blockHeight: tx.slot,
+                            blockTime: tx.blockTime
+                        })
                     }
                 }
             }
@@ -446,18 +478,16 @@ export class SolanaSwapProgram
             if(event.name==="RefundEvent") {
                 const foundSwapData = swapsOpened[escrowHash];
                 delete swapsOpened[escrowHash];
-                const isExpired = foundSwapData!=null && await this.isExpired(signer, foundSwapData);
+                const isExpired = foundSwapData!=null && await this.isExpired(signer, foundSwapData.data);
                 resultingSwaps[escrowHash] = {
-                    data: foundSwapData,
+                    init: foundSwapData,
                     state: {
                         type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
                         getRefundTxId: () => Promise.resolve(txSignature),
-                        getTxBlock: async () => {
-                            return {
-                                blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
-                                blockTime: tx.blockTime
-                            };
-                        }
+                        getTxBlock: () => Promise.resolve({
+                            blockHeight: tx.slot,
+                            blockTime: tx.blockTime
+                        })
                     }
                 }
             }
@@ -465,10 +495,10 @@ export class SolanaSwapProgram
 
         for(let escrowHash in swapsOpened) {
             const foundSwapData = swapsOpened[escrowHash];
-            const isExpired = await this.isExpired(signer, foundSwapData);
+            const isExpired = await this.isExpired(signer, foundSwapData.data);
             resultingSwaps[escrowHash] = {
-                data: foundSwapData,
-                state: foundSwapData.isOfferer(signer) && isExpired
+                init: foundSwapData,
+                state: foundSwapData.data.isOfferer(signer) && isExpired
                   ? {type: SwapCommitStateType.REFUNDABLE}
                   : {type: SwapCommitStateType.COMMITED}
             }

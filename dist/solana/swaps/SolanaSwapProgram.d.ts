@@ -139,8 +139,15 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     getCommitedData(claimHashHex: string): Promise<SolanaSwapData>;
     getHistoricalSwaps(signer: string, startBlockheight?: number): Promise<{
         swaps: {
-            [p: string]: {
-                data?: SolanaSwapData;
+            [escrowHash: string]: {
+                init?: {
+                    data: SolanaSwapData;
+                    getInitTxId: () => Promise<string>;
+                    getTxBlock: () => Promise<{
+                        blockTime: number;
+                        blockHeight: number;
+                    }>;
+                };
                 state: SwapCommitState;
             };
         };
