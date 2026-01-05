@@ -85,7 +85,42 @@ export class SolanaEvents extends SolanaModule {
             return null;
         }
 
-        return response.result;
+        return {
+            data: response.result.data.map(val => {
+                return {
+                    ...val, //slot, blockTime, version
+                    meta: val.meta==null ? undefined : {
+                        //ParsedTransactionMeta
+                        ...val.meta,
+                        innerInstructions: val.meta.innerInstructions==null ? undefined : val.meta.innerInstructions.map(innerIx => ({
+                            //ParsedInnerInstruction
+                            ...innerIx, //index
+                            instructions: innerIx.instructions.map(ix => {
+                                if(ix.program!=null && ix.programId!=null) {
+                                    return {
+                                        //ParsedInstruction
+                                        ...ix,
+                                        programId: new PublicKey(ix.programId)
+                                    }
+                                } else {
+                                    return {
+                                        //PartiallyDecodedInstruction
+                                        data: ix.data,
+                                        programId: new PublicKey(ix.programId),
+                                        accounts: ix.accounts.map(pubkey => new PublicKey(pubkey))
+                                    }
+                                }
+                            })
+                        })),
+                        loadedAddresses: val.meta.loadedAddresses==null ? undefined : {
+                            writable: val.meta.loadedAddresses.writable.map(pubkey => new PublicKey(pubkey)),
+                            readonly: val.meta.loadedAddresses.readonly.map(pubkey => new PublicKey(pubkey)),
+                        }
+                    }
+                }
+            }),
+            paginationToken: response.result.paginationToken
+        };
     }
 
     private async _findInTxsTFA<T>(

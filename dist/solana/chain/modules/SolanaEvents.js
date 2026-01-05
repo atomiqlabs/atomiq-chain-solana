@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaEvents = void 0;
 const SolanaModule_1 = require("../SolanaModule");
+const web3_js_1 = require("@solana/web3.js");
 class SolanaEvents extends SolanaModule_1.SolanaModule {
     constructor() {
         super(...arguments);
@@ -68,7 +69,43 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                 throw new Error(response.error.message);
             return null;
         }
-        return response.result;
+        return {
+            data: response.result.data.map(val => {
+                return {
+                    ...val,
+                    meta: val.meta == null ? undefined : {
+                        //ParsedTransactionMeta
+                        ...val.meta,
+                        innerInstructions: val.meta.innerInstructions == null ? undefined : val.meta.innerInstructions.map(innerIx => ({
+                            //ParsedInnerInstruction
+                            ...innerIx,
+                            instructions: innerIx.instructions.map(ix => {
+                                if (ix.program != null && ix.programId != null) {
+                                    return {
+                                        //ParsedInstruction
+                                        ...ix,
+                                        programId: new web3_js_1.PublicKey(ix.programId)
+                                    };
+                                }
+                                else {
+                                    return {
+                                        //PartiallyDecodedInstruction
+                                        data: ix.data,
+                                        programId: new web3_js_1.PublicKey(ix.programId),
+                                        accounts: ix.accounts.map(pubkey => new web3_js_1.PublicKey(pubkey))
+                                    };
+                                }
+                            })
+                        })),
+                        loadedAddresses: val.meta.loadedAddresses == null ? undefined : {
+                            writable: val.meta.loadedAddresses.writable.map(pubkey => new web3_js_1.PublicKey(pubkey)),
+                            readonly: val.meta.loadedAddresses.readonly.map(pubkey => new web3_js_1.PublicKey(pubkey)),
+                        }
+                    }
+                };
+            }),
+            paginationToken: response.result.paginationToken
+        };
     }
     async _findInTxsTFA(topicKey, processor, abortSignal, startBlockheight) {
         let paginationToken;
