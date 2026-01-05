@@ -1,5 +1,5 @@
 import {ChainType} from "@atomiqlabs/base";
-import {SolanaTx} from "./chain/modules/SolanaTransactions";
+import {SignedSolanaTx, SolanaTx} from "./chain/modules/SolanaTransactions";
 import {SolanaPreFetchData, SolanaPreFetchVerification} from "./swaps/modules/SwapInit";
 import {SolanaSigner} from "./wallet/SolanaSigner";
 import {SolanaSwapProgram} from "./swaps/SolanaSwapProgram";
@@ -14,6 +14,7 @@ export type SolanaChainType = ChainType<
     SolanaPreFetchData,
     SolanaPreFetchVerification,
     SolanaTx,
+    SignedSolanaTx,
     SolanaSigner,
     Wallet,
     SolanaSwapData,

@@ -1,9 +1,9 @@
-import {Connection, Keypair, PublicKey, SendOptions} from "@solana/web3.js";
+import {Connection, Keypair, PublicKey, SendOptions, Transaction} from "@solana/web3.js";
 import {SolanaFees} from "./modules/SolanaFees";
 import {SolanaBlocks} from "./modules/SolanaBlocks";
 import {SolanaSlots} from "./modules/SolanaSlots";
 import {SolanaTokens} from "./modules/SolanaTokens";
-import {SolanaTransactions, SolanaTx} from "./modules/SolanaTransactions";
+import {SignedSolanaTx, SolanaTransactions, SolanaTx} from "./modules/SolanaTransactions";
 import {SolanaSignatures} from "./modules/SolanaSignatures";
 import {SolanaEvents} from "./modules/SolanaEvents";
 import {getLogger} from "../../utils/Utils";
@@ -23,6 +23,7 @@ export type SolanaRetryPolicy = {
 
 export class SolanaChainInterface implements ChainInterface<
     SolanaTx,
+    SignedSolanaTx,
     SolanaSigner,
     "SOLANA",
     Wallet
@@ -118,12 +119,30 @@ export class SolanaChainInterface implements ChainInterface<
         return this.Transactions.sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
     }
 
+    sendSignedAndConfirm(
+        txs: SignedSolanaTx[],
+        waitForConfirmation?: boolean,
+        abortSignal?: AbortSignal,
+        parallel?: boolean,
+        onBeforePublish?: (txId: string, rawTx: string) => Promise<void>
+    ): Promise<string[]> {
+        return this.Transactions.sendSignedAndConfirm(txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
+    }
+
     serializeTx(tx: SolanaTx): Promise<string> {
-        return this.Transactions.serializeTx(tx);
+        return Promise.resolve(this.Transactions.serializeUnsignedTx(tx));
     }
 
     deserializeTx(txData: string): Promise<SolanaTx> {
-        return this.Transactions.deserializeTx(txData);
+        return Promise.resolve(this.Transactions.deserializeUnsignedTx(txData));
+    }
+
+    serializeSignedTx(tx: Transaction): Promise<string> {
+        return Promise.resolve(this.Transactions.serializeSignedTx(tx));
+    }
+
+    deserializeSignedTx(txData: string): Promise<Transaction> {
+        return Promise.resolve(this.Transactions.deserializeSignedTransaction(txData));
     }
 
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted"> {
