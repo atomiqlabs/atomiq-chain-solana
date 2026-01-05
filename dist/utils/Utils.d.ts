@@ -1,7 +1,5 @@
 import { PublicKey, Transaction } from "@solana/web3.js";
 import * as BN from "bn.js";
-import { SolanaSwapData } from "../solana/swaps/SolanaSwapData";
-import { InitInstruction } from "../solana/events/SolanaChainEventsBrowser";
 export declare function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void>;
 export declare function onceAsync<T>(executor: () => Promise<T>): () => Promise<T>;
 export declare function getLogger(prefix: string): {
@@ -51,14 +49,5 @@ export declare function fromClaimHash(claimHash: string): {
     confirmations: number;
 };
 export declare function toEscrowHash(paymentHash: string, sequence: BN): string;
-/**
- * Converts initialize instruction data into {SolanaSwapData}
- *
- * @param initIx
- * @param txoHash
- * @private
- * @returns {SolanaSwapData} converted and parsed swap data
- */
-export declare function instructionToSwapData(initIx: InitInstruction, txoHash: string): SolanaSwapData;
 export declare function toBN(value: bigint): BN;
 export declare function toBigInt(value: BN): bigint;

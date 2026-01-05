@@ -3,7 +3,7 @@ import { SolanaSwapData } from "../swaps/SolanaSwapData";
 import { IdlEvents } from "@coral-xyz/anchor";
 import { SolanaSwapProgram } from "../swaps/SolanaSwapProgram";
 import { Connection } from "@solana/web3.js";
-import { InstructionWithAccounts, ProgramEvent, SingleInstructionWithAccounts } from "../program/modules/SolanaProgramEvents";
+import { InstructionWithAccounts, ProgramEvent } from "../program/modules/SolanaProgramEvents";
 import { SwapProgram } from "../swaps/programTypes";
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[];
@@ -11,7 +11,6 @@ export type EventObject = {
     blockTime: number;
     signature: string;
 };
-export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
 /**
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not

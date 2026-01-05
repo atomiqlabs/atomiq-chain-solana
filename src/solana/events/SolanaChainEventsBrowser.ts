@@ -1,18 +1,16 @@
 import {ChainEvents, ClaimEvent, EventListener, InitializeEvent, RefundEvent, SwapEvent} from "@atomiqlabs/base";
-import {SolanaSwapData} from "../swaps/SolanaSwapData";
+import {InitInstruction, SolanaSwapData} from "../swaps/SolanaSwapData";
 import {IdlEvents} from "@coral-xyz/anchor";
 import {SolanaSwapProgram} from "../swaps/SolanaSwapProgram";
 import {
-    getLogger, instructionToSwapData,
+    getLogger,
     onceAsync, toEscrowHash, tryWithRetries
 } from "../../utils/Utils";
-import {Connection, ParsedTransactionWithMeta, PublicKey} from "@solana/web3.js";
-import * as BN from "bn.js";
+import {Connection, ParsedTransactionWithMeta} from "@solana/web3.js";
 import {SwapTypeEnum} from "../swaps/SwapTypeEnum";
 import {
     InstructionWithAccounts,
-    ProgramEvent,
-    SingleInstructionWithAccounts
+    ProgramEvent
 } from "../program/modules/SolanaProgramEvents";
 import {SwapProgram} from "../swaps/programTypes";
 import {Buffer} from "buffer";
@@ -23,8 +21,6 @@ export type EventObject = {
     blockTime: number,
     signature: string
 };
-
-export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
 
 /**
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
@@ -82,7 +78,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
             ) as InitInstruction;
             if(initIx == null) return null;
 
-            return instructionToSwapData(initIx, txoHash);
+            return SolanaSwapData.fromInstruction(initIx, txoHash);
         }
     }
 

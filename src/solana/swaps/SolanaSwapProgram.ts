@@ -1,8 +1,8 @@
-import {SolanaSwapData} from "./SolanaSwapData";
+import {SolanaSwapData, InitInstruction} from "./SolanaSwapData";
 import {IdlAccounts} from "@coral-xyz/anchor";
 import {
-    ConfirmedSignatureInfo, ParsedTransactionWithMeta,
-    PublicKey, VersionedTransactionResponse,
+    ParsedTransactionWithMeta,
+    PublicKey,
 } from "@solana/web3.js";
 import {sha256} from "@noble/hashes/sha2";
 import {SolanaBtcRelay} from "../btcrelay/SolanaBtcRelay";
@@ -34,11 +34,10 @@ import {SwapClaim} from "./modules/SwapClaim";
 import {SolanaLpVault} from "./modules/SolanaLpVault";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../wallet/SolanaSigner";
-import {fromClaimHash, instructionToSwapData, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
+import {fromClaimHash, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
 import {SolanaTokens} from "../chain/modules/SolanaTokens";
 import * as BN from "bn.js";
 import {ProgramEvent} from "../program/modules/SolanaProgramEvents";
-import {InitInstruction} from "../events/SolanaChainEventsBrowser";
 
 function toPublicKeyOrNull(str: string | null): PublicKey | null {
     return str==null ? null : new PublicKey(str);
@@ -422,7 +421,7 @@ export class SolanaSwapProgram
                     continue;
                 }
 
-                swapsOpened[escrowHash] = instructionToSwapData(initIx, txoHash);
+                swapsOpened[escrowHash] = SolanaSwapData.fromInstruction(initIx, txoHash);
             }
 
             if(event.name==="ClaimEvent") {

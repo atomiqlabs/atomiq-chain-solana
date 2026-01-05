@@ -2,9 +2,6 @@ import {ComputeBudgetProgram, PublicKey, Transaction} from "@solana/web3.js";
 import * as BN from "bn.js";
 import {Buffer} from "buffer";
 import {sha256} from "@noble/hashes/sha2";
-import {SolanaSwapData} from "../solana/swaps/SolanaSwapData";
-import {SwapTypeEnum} from "../solana/swaps/SwapTypeEnum";
-import {InitInstruction} from "../solana/events/SolanaChainEventsBrowser";
 
 export function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void> {
     return new Promise((resolve, reject) => {
@@ -170,49 +167,6 @@ export function toEscrowHash(paymentHash: string, sequence: BN): string {
         Buffer.from(paymentHash, "hex"),
         sequence.toArrayLike(Buffer, "be", 8)
     ]))).toString("hex");
-}
-
-/**
- * Converts initialize instruction data into {SolanaSwapData}
- *
- * @param initIx
- * @param txoHash
- * @private
- * @returns {SolanaSwapData} converted and parsed swap data
- */
-export function instructionToSwapData(
-  initIx: InitInstruction,
-  txoHash: string
-): SolanaSwapData {
-    const paymentHash: Buffer = Buffer.from(initIx.data.swapData.hash);
-    let securityDeposit: BN = new BN(0);
-    let claimerBounty: BN = new BN(0);
-    let payIn: boolean = true;
-    if(initIx.name === "offererInitialize") {
-        payIn = false;
-        securityDeposit = initIx.data.securityDeposit;
-        claimerBounty = initIx.data.claimerBounty;
-    }
-
-    return new SolanaSwapData(
-      initIx.accounts.offerer,
-      initIx.accounts.claimer,
-      initIx.accounts.mint,
-      initIx.data.swapData.amount,
-      paymentHash.toString("hex"),
-      initIx.data.swapData.sequence,
-      initIx.data.swapData.expiry,
-      initIx.data.swapData.nonce,
-      initIx.data.swapData.confirmations,
-      initIx.data.swapData.payOut,
-      SwapTypeEnum.toNumber(initIx.data.swapData.kind),
-      payIn,
-      initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : PublicKey.default,
-      initIx.data.swapData.payOut ? initIx.accounts.claimerAta : PublicKey.default,
-      securityDeposit,
-      claimerBounty,
-      txoHash
-    );
 }
 
 export function toBN(value: bigint): BN {

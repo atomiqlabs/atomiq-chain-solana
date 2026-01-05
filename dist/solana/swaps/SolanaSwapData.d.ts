@@ -3,6 +3,8 @@ import * as BN from "bn.js";
 import { ChainSwapType, SwapData } from "@atomiqlabs/base";
 import { SwapProgram } from "./programTypes";
 import { IdlAccounts, IdlTypes } from "@coral-xyz/anchor";
+import { SingleInstructionWithAccounts } from "../program/modules/SolanaProgramEvents";
+export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
 export declare class SolanaSwapData extends SwapData {
     offerer: PublicKey;
     claimer: PublicKey;
@@ -50,6 +52,15 @@ export declare class SolanaSwapData extends SwapData {
     toSwapDataStruct(): IdlTypes<SwapProgram>["SwapData"];
     correctPDA(account: IdlAccounts<SwapProgram>["escrowState"]): boolean;
     equals(other: SolanaSwapData): boolean;
+    /**
+     * Converts initialize instruction data into {SolanaSwapData}
+     *
+     * @param initIx
+     * @param txoHash
+     * @private
+     * @returns {SolanaSwapData} converted and parsed swap data
+     */
+    static fromInstruction(initIx: InitInstruction, txoHash: string): SolanaSwapData;
     static fromEscrowState(account: IdlAccounts<SwapProgram>["escrowState"]): SolanaSwapData;
     static typeToKind(type: ChainSwapType): number;
     static kindToType(value: number): ChainSwapType;

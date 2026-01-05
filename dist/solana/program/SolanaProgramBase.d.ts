@@ -11,11 +11,6 @@ export declare class SolanaProgramBase<T extends Idl> {
     protected readonly logger: {
         debug: (msg: any, ...args: any[]) => void;
         info: (msg: any, ...args: any[]) => void;
-        /**
-         * Derives static PDA address from the seed
-         *
-         * @param seed
-         */
         warn: (msg: any, ...args: any[]) => void;
         error: (msg: any, ...args: any[]) => void;
     };

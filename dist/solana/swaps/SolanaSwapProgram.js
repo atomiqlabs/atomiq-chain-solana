@@ -327,7 +327,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot init instruction not found!`);
                     continue;
                 }
-                swapsOpened[escrowHash] = (0, Utils_1.instructionToSwapData)(initIx, txoHash);
+                swapsOpened[escrowHash] = SolanaSwapData_1.SolanaSwapData.fromInstruction(initIx, txoHash);
             }
             if (event.name === "ClaimEvent") {
                 const foundSwapData = swapsOpened[escrowHash];

@@ -8,6 +8,9 @@ import {Buffer} from "buffer";
 import {getAssociatedTokenAddressSync} from "@solana/spl-token";
 import {toBigInt, toClaimHash, toEscrowHash} from "../../utils/Utils";
 import {SolanaTokens} from "../chain/modules/SolanaTokens";
+import {SingleInstructionWithAccounts} from "../program/modules/SolanaProgramEvents";
+
+export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
 
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 
@@ -303,6 +306,49 @@ export class SolanaSwapData extends SwapData {
             other.securityDeposit.eq(this.securityDeposit) &&
             other.claimerBounty.eq(this.claimerBounty) &&
             other.token.equals(this.token)
+    }
+
+    /**
+     * Converts initialize instruction data into {SolanaSwapData}
+     *
+     * @param initIx
+     * @param txoHash
+     * @private
+     * @returns {SolanaSwapData} converted and parsed swap data
+     */
+    static fromInstruction(
+        initIx: InitInstruction,
+        txoHash: string
+    ): SolanaSwapData {
+        const paymentHash: Buffer = Buffer.from(initIx.data.swapData.hash);
+        let securityDeposit: BN = new BN(0);
+        let claimerBounty: BN = new BN(0);
+        let payIn: boolean = true;
+        if(initIx.name === "offererInitialize") {
+            payIn = false;
+            securityDeposit = initIx.data.securityDeposit;
+            claimerBounty = initIx.data.claimerBounty;
+        }
+
+        return new SolanaSwapData(
+            initIx.accounts.offerer,
+            initIx.accounts.claimer,
+            initIx.accounts.mint,
+            initIx.data.swapData.amount,
+            paymentHash.toString("hex"),
+            initIx.data.swapData.sequence,
+            initIx.data.swapData.expiry,
+            initIx.data.swapData.nonce,
+            initIx.data.swapData.confirmations,
+            initIx.data.swapData.payOut,
+            SwapTypeEnum.toNumber(initIx.data.swapData.kind),
+            payIn,
+            initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : PublicKey.default,
+            initIx.data.swapData.payOut ? initIx.accounts.claimerAta : PublicKey.default,
+            securityDeposit,
+            claimerBounty,
+            txoHash
+        );
     }
 
     static fromEscrowState(account: IdlAccounts<SwapProgram>["escrowState"]) {

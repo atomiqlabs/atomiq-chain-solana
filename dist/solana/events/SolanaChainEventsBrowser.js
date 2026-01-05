@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaChainEventsBrowser = void 0;
 const base_1 = require("@atomiqlabs/base");
+const SolanaSwapData_1 = require("../swaps/SolanaSwapData");
 const Utils_1 = require("../../utils/Utils");
 const SwapTypeEnum_1 = require("../swaps/SwapTypeEnum");
 const buffer_1 = require("buffer");
@@ -57,7 +58,7 @@ class SolanaChainEventsBrowser {
             const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
             if (initIx == null)
                 return null;
-            return (0, Utils_1.instructionToSwapData)(initIx, txoHash);
+            return SolanaSwapData_1.SolanaSwapData.fromInstruction(initIx, txoHash);
         };
     }
     parseInitializeEvent(data, eventObject) {

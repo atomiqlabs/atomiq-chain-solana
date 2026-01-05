@@ -218,6 +218,26 @@ class SolanaSwapData extends base_1.SwapData {
             other.claimerBounty.eq(this.claimerBounty) &&
             other.token.equals(this.token);
     }
+    /**
+     * Converts initialize instruction data into {SolanaSwapData}
+     *
+     * @param initIx
+     * @param txoHash
+     * @private
+     * @returns {SolanaSwapData} converted and parsed swap data
+     */
+    static fromInstruction(initIx, txoHash) {
+        const paymentHash = buffer_1.Buffer.from(initIx.data.swapData.hash);
+        let securityDeposit = new BN(0);
+        let claimerBounty = new BN(0);
+        let payIn = true;
+        if (initIx.name === "offererInitialize") {
+            payIn = false;
+            securityDeposit = initIx.data.securityDeposit;
+            claimerBounty = initIx.data.claimerBounty;
+        }
+        return new SolanaSwapData(initIx.accounts.offerer, initIx.accounts.claimer, initIx.accounts.mint, initIx.data.swapData.amount, paymentHash.toString("hex"), initIx.data.swapData.sequence, initIx.data.swapData.expiry, initIx.data.swapData.nonce, initIx.data.swapData.confirmations, initIx.data.swapData.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind), payIn, initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default, initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default, securityDeposit, claimerBounty, txoHash);
+    }
     static fromEscrowState(account) {
         const data = account.data;
         return new SolanaSwapData(account.offerer, account.claimer, account.mint, data.amount, buffer_1.Buffer.from(data.hash).toString("hex"), data.sequence, data.expiry, data.nonce, data.confirmations, data.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(data.kind), data.payIn, account.offererAta, account.claimerAta, account.securityDeposit, account.claimerBounty, null);
