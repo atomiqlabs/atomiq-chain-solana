@@ -114,8 +114,6 @@ export class SolanaTransactions extends SolanaModule {
         abortSignal?: AbortSignal
     ): Promise<string> {
         if(tx.signature==null) throw new Error("Cannot wait for confirmation for tx without signature!");
-        if(tx.recentBlockhash==null) throw new Error("Cannot wait for confirmation for tx without recentBlockhash!");
-        if(tx.lastValidBlockHeight==null) throw new Error("Cannot wait for confirmation for tx without lastValidBlockHeight!");
         const signature = bs58.encode(tx.signature);
 
         let result: RpcResponseAndContext<SignatureResult>;
