@@ -101,6 +101,41 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                             writable: val.meta.loadedAddresses.writable.map(pubkey => new web3_js_1.PublicKey(pubkey)),
                             readonly: val.meta.loadedAddresses.readonly.map(pubkey => new web3_js_1.PublicKey(pubkey)),
                         }
+                    },
+                    transaction: {
+                        //ParsedTransaction
+                        ...val.transaction,
+                        message: {
+                            //ParsedMessage
+                            ...val.transaction.message,
+                            accountKeys: val.transaction.message.accountKeys.map(accountKey => ({
+                                //ParsedMessageAccount
+                                ...accountKey,
+                                pubkey: new web3_js_1.PublicKey(accountKey.pubkey)
+                            })),
+                            instructions: val.transaction.message.instructions.map(ix => {
+                                if (ix.program != null && ix.programId != null) {
+                                    return {
+                                        //ParsedInstruction
+                                        ...ix,
+                                        programId: new web3_js_1.PublicKey(ix.programId)
+                                    };
+                                }
+                                else {
+                                    return {
+                                        //PartiallyDecodedInstruction
+                                        data: ix.data,
+                                        programId: new web3_js_1.PublicKey(ix.programId),
+                                        accounts: ix.accounts.map(pubkey => new web3_js_1.PublicKey(pubkey))
+                                    };
+                                }
+                            }),
+                            addressTableLookups: val.transaction.message.addressTableLookups == null ? undefined : val.transaction.message.addressTableLookups.map(addressTableLookup => ({
+                                //ParsedAddressTableLookup
+                                ...addressTableLookup,
+                                accountKey: new web3_js_1.PublicKey(addressTableLookup.accountKey)
+                            }))
+                        }
                     }
                 };
             }),
