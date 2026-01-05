@@ -37,15 +37,6 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
      */
     private getTransactionInstructions;
     /**
-     * Converts initialize instruction data into {SolanaSwapData}
-     *
-     * @param initIx
-     * @param txoHash
-     * @private
-     * @returns {SolanaSwapData} converted and parsed swap data
-     */
-    private instructionToSwapData;
-    /**
      * Returns async getter for fetching on-demand initialize event swap data
      *
      * @param eventObject

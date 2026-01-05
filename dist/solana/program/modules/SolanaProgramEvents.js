@@ -15,23 +15,6 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
         }
     }
     /**
-     * Gets events from specific transaction as specified by signature, events are ordered from newest to oldest
-     *
-     * @param signature
-     * @private
-     */
-    async getEvents(signature) {
-        const tx = await this.connection.getTransaction(signature, {
-            commitment: "confirmed",
-            maxSupportedTransactionVersion: 0
-        });
-        if (tx.meta.err)
-            return [];
-        const events = this.parseLogs(tx.meta.logMessages);
-        events.reverse();
-        return events;
-    }
-    /**
      * Runs a search backwards in time, processing the events for a specific topic public key
      *
      * @param topicKey
@@ -39,19 +22,47 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
      *  if the search should continue
      * @param abortSignal
      * @param logBatchSize how many signatures should be fetched in one getSignaturesForAddress call
+     * @param startBlockheight
      */
-    findInEvents(topicKey, processor, abortSignal, logBatchSize) {
-        return this.findInSignatures(topicKey, async (signatures) => {
-            for (let data of signatures) {
-                for (let event of await this.getEvents(data.signature)) {
-                    if (abortSignal != null)
-                        abortSignal.throwIfAborted();
-                    const result = await processor(event, data);
-                    if (result != null)
-                        return result;
+    findInEvents(topicKey, processor, abortSignal, logBatchSize, startBlockheight) {
+        return this.findInSignatures(topicKey, async (data) => {
+            if (data.signatures) {
+                for (let info of data.signatures) {
+                    if (info.err == null)
+                        continue;
+                    const tx = await this.connection.getParsedTransaction(info.signature, {
+                        commitment: "confirmed",
+                        maxSupportedTransactionVersion: 0
+                    });
+                    if (tx.meta.err)
+                        continue;
+                    const events = this.parseLogs(tx.meta.logMessages);
+                    events.reverse();
+                    for (let event of events) {
+                        if (abortSignal != null)
+                            abortSignal.throwIfAborted();
+                        const result = await processor(event, tx);
+                        if (result != null)
+                            return result;
+                    }
                 }
             }
-        }, abortSignal, logBatchSize);
+            else {
+                for (let tx of data.txs) {
+                    if (tx.meta.err)
+                        continue;
+                    const events = this.parseLogs(tx.meta.logMessages);
+                    events.reverse();
+                    for (let event of events) {
+                        if (abortSignal != null)
+                            abortSignal.throwIfAborted();
+                        const result = await processor(event, tx);
+                        if (result != null)
+                            return result;
+                    }
+                }
+            }
+        }, abortSignal, logBatchSize, startBlockheight);
     }
     /**
      * Decodes the instructions for this program from the transaction, leaves null in the returned instructions array

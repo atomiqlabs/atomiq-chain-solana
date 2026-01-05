@@ -1,7 +1,13 @@
 import {SolanaEvents} from "../../chain/modules/SolanaEvents";
 import {BorshCoder, DecodeType, Event, EventParser, Idl, IdlTypes, Instruction} from "@coral-xyz/anchor";
 import {IdlField, IdlInstruction} from "@coral-xyz/anchor/dist/cjs/idl";
-import {ConfirmedSignatureInfo, ParsedMessage, PartiallyDecodedInstruction, PublicKey} from "@solana/web3.js";
+import {
+    ConfirmedSignatureInfo,
+    ParsedMessage, ParsedTransactionWithMeta,
+    PartiallyDecodedInstruction,
+    PublicKey,
+    VersionedTransaction, VersionedTransactionResponse
+} from "@solana/web3.js";
 import {SolanaProgramBase} from "../SolanaProgramBase";
 import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
 
@@ -41,25 +47,6 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
     }
 
     /**
-     * Gets events from specific transaction as specified by signature, events are ordered from newest to oldest
-     *
-     * @param signature
-     * @private
-     */
-    private async getEvents(signature: string): Promise<ProgramEvent<IDL>[]> {
-        const tx = await this.connection.getTransaction(signature, {
-            commitment: "confirmed",
-            maxSupportedTransactionVersion: 0
-        });
-        if(tx.meta.err) return [];
-
-        const events = this.parseLogs(tx.meta.logMessages);
-        events.reverse();
-
-        return events;
-    }
-
-    /**
      * Runs a search backwards in time, processing the events for a specific topic public key
      *
      * @param topicKey
@@ -67,22 +54,50 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      *  if the search should continue
      * @param abortSignal
      * @param logBatchSize how many signatures should be fetched in one getSignaturesForAddress call
+     * @param startBlockheight
      */
     public findInEvents<T>(
         topicKey: PublicKey,
-        processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T>,
+        processor: (event: ProgramEvent<IDL>, tx: ParsedTransactionWithMeta) => Promise<T>,
         abortSignal?: AbortSignal,
-        logBatchSize?: number
+        logBatchSize?: number,
+        startBlockheight?: number
     ): Promise<T> {
-        return this.findInSignatures<T>(topicKey, async (signatures: ConfirmedSignatureInfo[]) => {
-            for(let data of signatures) {
-                for(let event of await this.getEvents(data.signature)) {
-                    if(abortSignal!=null) abortSignal.throwIfAborted();
-                    const result: T = await processor(event, data);
-                    if(result!=null) return result;
+        return this.findInSignatures<T>(topicKey, async (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => {
+            if(data.signatures) {
+                for(let info of data.signatures) {
+                    if(info.err==null) continue;
+
+                    const tx = await this.connection.getParsedTransaction(info.signature, {
+                        commitment: "confirmed",
+                        maxSupportedTransactionVersion: 0
+                    });
+                    if(tx.meta.err) continue;
+
+                    const events = this.parseLogs(tx.meta.logMessages);
+                    events.reverse();
+
+                    for(let event of events) {
+                        if(abortSignal!=null) abortSignal.throwIfAborted();
+                        const result: T = await processor(event, tx);
+                        if(result!=null) return result;
+                    }
+                }
+            } else {
+                for(let tx of data.txs) {
+                    if(tx.meta.err) continue;
+
+                    const events = this.parseLogs(tx.meta.logMessages);
+                    events.reverse();
+
+                    for(let event of events) {
+                        if(abortSignal!=null) abortSignal.throwIfAborted();
+                        const result: T = await processor(event, tx);
+                        if(result!=null) return result;
+                    }
                 }
             }
-        }, abortSignal, logBatchSize);
+        }, abortSignal, logBatchSize, startBlockheight);
     }
 
     /**

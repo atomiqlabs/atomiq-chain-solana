@@ -1,6 +1,6 @@
 import {PublicKey} from "@solana/web3.js";
 import * as BN from "bn.js";
-import {SwapData, ChainSwapType} from "@atomiqlabs/base";
+import {ChainSwapType, SwapData} from "@atomiqlabs/base";
 import {SwapProgram} from "./programTypes";
 import {IdlAccounts, IdlTypes} from "@coral-xyz/anchor";
 import {SwapTypeEnum} from "./SwapTypeEnum";
@@ -215,6 +215,11 @@ export class SolanaSwapData extends SwapData {
     getTxoHashHint(): string {
         if(this.txoHash==="0000000000000000000000000000000000000000000000000000000000000000") return null; //Txo hash opt-out flag
         return this.txoHash;
+    }
+
+    getHTLCHashHint(): string {
+        if(this.getType()===ChainSwapType.HTLC) return this.paymentHash;
+        return null;
     }
 
     getExtraData(): string {

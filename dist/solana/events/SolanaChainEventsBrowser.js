@@ -2,10 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaChainEventsBrowser = void 0;
 const base_1 = require("@atomiqlabs/base");
-const SolanaSwapData_1 = require("../swaps/SolanaSwapData");
 const Utils_1 = require("../../utils/Utils");
-const web3_js_1 = require("@solana/web3.js");
-const BN = require("bn.js");
 const SwapTypeEnum_1 = require("../swaps/SwapTypeEnum");
 const buffer_1 = require("buffer");
 /**
@@ -44,26 +41,6 @@ class SolanaChainEventsBrowser {
         return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
     }
     /**
-     * Converts initialize instruction data into {SolanaSwapData}
-     *
-     * @param initIx
-     * @param txoHash
-     * @private
-     * @returns {SolanaSwapData} converted and parsed swap data
-     */
-    instructionToSwapData(initIx, txoHash) {
-        const paymentHash = buffer_1.Buffer.from(initIx.data.swapData.hash);
-        let securityDeposit = new BN(0);
-        let claimerBounty = new BN(0);
-        let payIn = true;
-        if (initIx.name === "offererInitialize") {
-            payIn = false;
-            securityDeposit = initIx.data.securityDeposit;
-            claimerBounty = initIx.data.claimerBounty;
-        }
-        return new SolanaSwapData_1.SolanaSwapData(initIx.accounts.offerer, initIx.accounts.claimer, initIx.accounts.mint, initIx.data.swapData.amount, paymentHash.toString("hex"), initIx.data.swapData.sequence, initIx.data.swapData.expiry, initIx.data.swapData.nonce, initIx.data.swapData.confirmations, initIx.data.swapData.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind), payIn, initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default, initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default, securityDeposit, claimerBounty, txoHash);
-    }
-    /**
      * Returns async getter for fetching on-demand initialize event swap data
      *
      * @param eventObject
@@ -80,7 +57,7 @@ class SolanaChainEventsBrowser {
             const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
             if (initIx == null)
                 return null;
-            return this.instructionToSwapData(initIx, txoHash);
+            return (0, Utils_1.instructionToSwapData)(initIx, txoHash);
         };
     }
     parseInitializeEvent(data, eventObject) {

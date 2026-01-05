@@ -1,7 +1,7 @@
 import { SolanaEvents } from "../../chain/modules/SolanaEvents";
 import { DecodeType, Event, Idl, IdlTypes } from "@coral-xyz/anchor";
 import { IdlField, IdlInstruction } from "@coral-xyz/anchor/dist/cjs/idl";
-import { ConfirmedSignatureInfo, ParsedMessage, PublicKey } from "@solana/web3.js";
+import { ParsedMessage, ParsedTransactionWithMeta, PublicKey } from "@solana/web3.js";
 import { SolanaProgramBase } from "../SolanaProgramBase";
 import { SolanaChainInterface } from "../../chain/SolanaChainInterface";
 type DecodedFieldOrNull<D, Defined> = D extends IdlField ? DecodeType<D["type"], Defined> : unknown;
@@ -26,13 +26,6 @@ export declare class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
     private readonly nameMappedInstructions;
     constructor(chain: SolanaChainInterface, program: SolanaProgramBase<IDL>);
     /**
-     * Gets events from specific transaction as specified by signature, events are ordered from newest to oldest
-     *
-     * @param signature
-     * @private
-     */
-    private getEvents;
-    /**
      * Runs a search backwards in time, processing the events for a specific topic public key
      *
      * @param topicKey
@@ -40,8 +33,9 @@ export declare class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
      *  if the search should continue
      * @param abortSignal
      * @param logBatchSize how many signatures should be fetched in one getSignaturesForAddress call
+     * @param startBlockheight
      */
-    findInEvents<T>(topicKey: PublicKey, processor: (event: ProgramEvent<IDL>, info: ConfirmedSignatureInfo) => Promise<T>, abortSignal?: AbortSignal, logBatchSize?: number): Promise<T>;
+    findInEvents<T>(topicKey: PublicKey, processor: (event: ProgramEvent<IDL>, tx: ParsedTransactionWithMeta) => Promise<T>, abortSignal?: AbortSignal, logBatchSize?: number, startBlockheight?: number): Promise<T>;
     /**
      * Decodes the instructions for this program from the transaction, leaves null in the returned instructions array
      *  for every instruction that doesn't correspond to this program (as those are impossible to parse)

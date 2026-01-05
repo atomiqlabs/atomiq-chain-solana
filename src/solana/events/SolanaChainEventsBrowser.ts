@@ -3,7 +3,7 @@ import {SolanaSwapData} from "../swaps/SolanaSwapData";
 import {IdlEvents} from "@coral-xyz/anchor";
 import {SolanaSwapProgram} from "../swaps/SolanaSwapProgram";
 import {
-    getLogger,
+    getLogger, instructionToSwapData,
     onceAsync, toEscrowHash, tryWithRetries
 } from "../../utils/Utils";
 import {Connection, ParsedTransactionWithMeta, PublicKey} from "@solana/web3.js";
@@ -65,49 +65,6 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
     }
 
     /**
-     * Converts initialize instruction data into {SolanaSwapData}
-     *
-     * @param initIx
-     * @param txoHash
-     * @private
-     * @returns {SolanaSwapData} converted and parsed swap data
-     */
-    private instructionToSwapData(
-        initIx: InitInstruction,
-        txoHash: string
-    ): SolanaSwapData {
-        const paymentHash: Buffer = Buffer.from(initIx.data.swapData.hash);
-        let securityDeposit: BN = new BN(0);
-        let claimerBounty: BN = new BN(0);
-        let payIn: boolean = true;
-        if(initIx.name === "offererInitialize") {
-            payIn = false;
-            securityDeposit = initIx.data.securityDeposit;
-            claimerBounty = initIx.data.claimerBounty;
-        }
-
-        return new SolanaSwapData(
-            initIx.accounts.offerer,
-            initIx.accounts.claimer,
-            initIx.accounts.mint,
-            initIx.data.swapData.amount,
-            paymentHash.toString("hex"),
-            initIx.data.swapData.sequence,
-            initIx.data.swapData.expiry,
-            initIx.data.swapData.nonce,
-            initIx.data.swapData.confirmations,
-            initIx.data.swapData.payOut,
-            SwapTypeEnum.toNumber(initIx.data.swapData.kind),
-            payIn,
-            initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : PublicKey.default,
-            initIx.data.swapData.payOut ? initIx.accounts.claimerAta : PublicKey.default,
-            securityDeposit,
-            claimerBounty,
-            txoHash
-        );
-    }
-
-    /**
      * Returns async getter for fetching on-demand initialize event swap data
      *
      * @param eventObject
@@ -125,7 +82,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
             ) as InitInstruction;
             if(initIx == null) return null;
 
-            return this.instructionToSwapData(initIx, txoHash);
+            return instructionToSwapData(initIx, txoHash);
         }
     }
 

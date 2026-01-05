@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import * as BN from "bn.js";
-import { SwapData, ChainSwapType } from "@atomiqlabs/base";
+import { ChainSwapType, SwapData } from "@atomiqlabs/base";
 import { SwapProgram } from "./programTypes";
 import { IdlAccounts, IdlTypes } from "@coral-xyz/anchor";
 export declare class SolanaSwapData extends SwapData {
@@ -41,6 +41,7 @@ export declare class SolanaSwapData extends SwapData {
     getEscrowHash(): string;
     getSequence(): bigint;
     getTxoHashHint(): string;
+    getHTLCHashHint(): string;
     getExtraData(): string;
     setExtraData(txoHash: string): void;
     getSecurityDeposit(): bigint;

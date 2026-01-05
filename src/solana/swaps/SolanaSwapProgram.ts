@@ -1,7 +1,8 @@
 import {SolanaSwapData} from "./SolanaSwapData";
 import {IdlAccounts} from "@coral-xyz/anchor";
 import {
-    PublicKey,
+    ConfirmedSignatureInfo, ParsedTransactionWithMeta,
+    PublicKey, VersionedTransactionResponse,
 } from "@solana/web3.js";
 import {sha256} from "@noble/hashes/sha2";
 import {SolanaBtcRelay} from "../btcrelay/SolanaBtcRelay";
@@ -33,9 +34,11 @@ import {SwapClaim} from "./modules/SwapClaim";
 import {SolanaLpVault} from "./modules/SolanaLpVault";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../wallet/SolanaSigner";
-import {fromClaimHash, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
+import {fromClaimHash, instructionToSwapData, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
 import {SolanaTokens} from "../chain/modules/SolanaTokens";
 import * as BN from "bn.js";
+import {ProgramEvent} from "../program/modules/SolanaProgramEvents";
+import {InitInstruction} from "../events/SolanaChainEventsBrowser";
 
 function toPublicKeyOrNull(str: string | null): PublicKey | null {
     return str==null ? null : new PublicKey(str);
@@ -271,19 +274,19 @@ export class SolanaSwapProgram
         }
 
         //Check if paid or what
-        const status: SwapNotCommitedState | SwapExpiredState | SwapPaidState = await this.Events.findInEvents(escrowStateKey, async (event, info) => {
+        const status: SwapNotCommitedState | SwapExpiredState | SwapPaidState = await this.Events.findInEvents(escrowStateKey, async (event, tx) => {
             if(event.name==="ClaimEvent") {
                 const paymentHash = Buffer.from(event.data.hash).toString("hex");
                 if(paymentHash!==data.paymentHash) return null;
                 if(!event.data.sequence.eq(data.sequence)) return null;
                 return {
                     type: SwapCommitStateType.PAID,
-                    getClaimTxId: () => Promise.resolve(info.signature),
+                    getClaimTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
                     getTxBlock: async () => {
                         return {
-                            blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
-                            blockTime: info.blockTime
+                            blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                            blockTime: tx.blockTime
                         };
                     }
                 }
@@ -294,11 +297,11 @@ export class SolanaSwapProgram
                 if(!event.data.sequence.eq(data.sequence)) return null;
                 return {
                     type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
-                    getRefundTxId: () => Promise.resolve(info.signature),
+                    getRefundTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getTxBlock: async () => {
                         return {
-                            blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
-                            blockTime: info.blockTime
+                            blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                            blockTime: tx.blockTime
                         };
                     }
                 };
@@ -378,6 +381,104 @@ export class SolanaSwapProgram
         if(account==null) return null;
 
         return SolanaSwapData.fromEscrowState(account);
+    }
+
+    async getHistoricalSwaps(signer: string, startBlockheight?: number): Promise<{
+        swaps: { [p: string]: { data?: SolanaSwapData; state: SwapCommitState } };
+        latestBlockheight: number
+    }> {
+        let latestBlockheight: number;
+
+        const events: {event: ProgramEvent<SwapProgram>, tx: ParsedTransactionWithMeta}[] = [];
+
+        await this.Events.findInEvents(new PublicKey(signer), async (event, tx) => {
+            if(latestBlockheight==null) latestBlockheight = tx.slot;
+            events.push({event, tx});
+        }, undefined, undefined, startBlockheight);
+
+        const swapsOpened: {[escrowHash: string]: SolanaSwapData} = {};
+        const resultingSwaps: { [escrowHash: string]: { data?: SolanaSwapData; state: SwapCommitState } } = {};
+
+        events.reverse();
+        for(let {event, tx} of events) {
+            const txSignature = tx.transaction.signatures[0];
+            const paymentHash: string = Buffer.from(event.data.hash).toString("hex");
+            const escrowHash = toEscrowHash(paymentHash, event.data.sequence);
+
+            if(event.name==="InitializeEvent") {
+                //Parse swap data from initialize event
+                const txoHash: string = Buffer.from(event.data.txoHash).toString("hex");
+                const instructions = this.Events.decodeInstructions(tx.transaction.message);
+                if(instructions == null) {
+                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot parse instructions!`);
+                    continue;
+                }
+
+                const initIx = instructions.find(
+                  ix => ix!=null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize")
+                ) as InitInstruction;
+                if(initIx == null) {
+                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot init instruction not found!`);
+                    continue;
+                }
+
+                swapsOpened[escrowHash] = instructionToSwapData(initIx, txoHash);
+            }
+
+            if(event.name==="ClaimEvent") {
+                const foundSwapData = swapsOpened[escrowHash];
+                delete swapsOpened[escrowHash];
+                resultingSwaps[escrowHash] = {
+                    data: foundSwapData,
+                    state: {
+                        type: SwapCommitStateType.PAID,
+                        getClaimTxId: () => Promise.resolve(txSignature),
+                        getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
+                        getTxBlock: async () => {
+                            return {
+                                blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                                blockTime: tx.blockTime
+                            };
+                        }
+                    }
+                }
+            }
+
+            if(event.name==="RefundEvent") {
+                const foundSwapData = swapsOpened[escrowHash];
+                delete swapsOpened[escrowHash];
+                const isExpired = foundSwapData!=null && await this.isExpired(signer, foundSwapData);
+                resultingSwaps[escrowHash] = {
+                    data: foundSwapData,
+                    state: {
+                        type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
+                        getRefundTxId: () => Promise.resolve(txSignature),
+                        getTxBlock: async () => {
+                            return {
+                                blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                                blockTime: tx.blockTime
+                            };
+                        }
+                    }
+                }
+            }
+        }
+
+        for(let escrowHash in swapsOpened) {
+            const foundSwapData = swapsOpened[escrowHash];
+            const isExpired = await this.isExpired(signer, foundSwapData);
+            resultingSwaps[escrowHash] = {
+                data: foundSwapData,
+                state: foundSwapData.isOfferer(signer) && isExpired
+                  ? {type: SwapCommitStateType.REFUNDABLE}
+                  : {type: SwapCommitStateType.COMMITED}
+            }
+        }
+
+        return {
+            swaps: resultingSwaps,
+            latestBlockheight
+        }
     }
 
     ////////////////////////////////////////////

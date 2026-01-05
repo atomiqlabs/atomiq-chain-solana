@@ -135,6 +135,11 @@ class SolanaSwapData extends base_1.SwapData {
             return null; //Txo hash opt-out flag
         return this.txoHash;
     }
+    getHTLCHashHint() {
+        if (this.getType() === base_1.ChainSwapType.HTLC)
+            return this.paymentHash;
+        return null;
+    }
     getExtraData() {
         return this.txoHash;
     }

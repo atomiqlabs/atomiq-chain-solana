@@ -195,7 +195,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             return { type: base_1.SwapCommitStateType.NOT_COMMITED };
         }
         //Check if paid or what
-        const status = await this.Events.findInEvents(escrowStateKey, async (event, info) => {
+        const status = await this.Events.findInEvents(escrowStateKey, async (event, tx) => {
             if (event.name === "ClaimEvent") {
                 const paymentHash = buffer_1.Buffer.from(event.data.hash).toString("hex");
                 if (paymentHash !== data.paymentHash)
@@ -204,12 +204,12 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     return null;
                 return {
                     type: base_1.SwapCommitStateType.PAID,
-                    getClaimTxId: () => Promise.resolve(info.signature),
+                    getClaimTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getClaimResult: () => Promise.resolve(buffer_1.Buffer.from(event.data.secret).toString("hex")),
                     getTxBlock: async () => {
                         return {
-                            blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
-                            blockTime: info.blockTime
+                            blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                            blockTime: tx.blockTime
                         };
                     }
                 };
@@ -222,11 +222,11 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     return null;
                 return {
                     type: isExpired ? base_1.SwapCommitStateType.EXPIRED : base_1.SwapCommitStateType.NOT_COMMITED,
-                    getRefundTxId: () => Promise.resolve(info.signature),
+                    getRefundTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getTxBlock: async () => {
                         return {
-                            blockHeight: (await this.Chain.Blocks.getParsedBlock(info.slot)).blockHeight,
-                            blockTime: info.blockTime
+                            blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                            blockTime: tx.blockTime
                         };
                     }
                 };
@@ -298,6 +298,88 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         if (account == null)
             return null;
         return SolanaSwapData_1.SolanaSwapData.fromEscrowState(account);
+    }
+    async getHistoricalSwaps(signer, startBlockheight) {
+        let latestBlockheight;
+        const events = [];
+        await this.Events.findInEvents(new web3_js_1.PublicKey(signer), async (event, tx) => {
+            if (latestBlockheight == null)
+                latestBlockheight = tx.slot;
+            events.push({ event, tx });
+        }, undefined, undefined, startBlockheight);
+        const swapsOpened = {};
+        const resultingSwaps = {};
+        events.reverse();
+        for (let { event, tx } of events) {
+            const txSignature = tx.transaction.signatures[0];
+            const paymentHash = buffer_1.Buffer.from(event.data.hash).toString("hex");
+            const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, event.data.sequence);
+            if (event.name === "InitializeEvent") {
+                //Parse swap data from initialize event
+                const txoHash = buffer_1.Buffer.from(event.data.txoHash).toString("hex");
+                const instructions = this.Events.decodeInstructions(tx.transaction.message);
+                if (instructions == null) {
+                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot parse instructions!`);
+                    continue;
+                }
+                const initIx = instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
+                if (initIx == null) {
+                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot init instruction not found!`);
+                    continue;
+                }
+                swapsOpened[escrowHash] = (0, Utils_1.instructionToSwapData)(initIx, txoHash);
+            }
+            if (event.name === "ClaimEvent") {
+                const foundSwapData = swapsOpened[escrowHash];
+                delete swapsOpened[escrowHash];
+                resultingSwaps[escrowHash] = {
+                    data: foundSwapData,
+                    state: {
+                        type: base_1.SwapCommitStateType.PAID,
+                        getClaimTxId: () => Promise.resolve(txSignature),
+                        getClaimResult: () => Promise.resolve(buffer_1.Buffer.from(event.data.secret).toString("hex")),
+                        getTxBlock: async () => {
+                            return {
+                                blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                                blockTime: tx.blockTime
+                            };
+                        }
+                    }
+                };
+            }
+            if (event.name === "RefundEvent") {
+                const foundSwapData = swapsOpened[escrowHash];
+                delete swapsOpened[escrowHash];
+                const isExpired = foundSwapData != null && await this.isExpired(signer, foundSwapData);
+                resultingSwaps[escrowHash] = {
+                    data: foundSwapData,
+                    state: {
+                        type: isExpired ? base_1.SwapCommitStateType.EXPIRED : base_1.SwapCommitStateType.NOT_COMMITED,
+                        getRefundTxId: () => Promise.resolve(txSignature),
+                        getTxBlock: async () => {
+                            return {
+                                blockHeight: (await this.Chain.Blocks.getParsedBlock(tx.slot)).blockHeight,
+                                blockTime: tx.blockTime
+                            };
+                        }
+                    }
+                };
+            }
+        }
+        for (let escrowHash in swapsOpened) {
+            const foundSwapData = swapsOpened[escrowHash];
+            const isExpired = await this.isExpired(signer, foundSwapData);
+            resultingSwaps[escrowHash] = {
+                data: foundSwapData,
+                state: foundSwapData.isOfferer(signer) && isExpired
+                    ? { type: base_1.SwapCommitStateType.REFUNDABLE }
+                    : { type: base_1.SwapCommitStateType.COMMITED }
+            };
+        }
+        return {
+            swaps: resultingSwaps,
+            latestBlockheight
+        };
     }
     ////////////////////////////////////////////
     //// Swap data initializer
