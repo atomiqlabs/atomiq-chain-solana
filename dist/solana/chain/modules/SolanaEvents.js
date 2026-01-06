@@ -53,7 +53,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
             }
         ]).catch(e => {
             //Catching not supported errors
-            if (e.message != null && (e.message.includes("-32601") || e.message.includes("-32600"))) {
+            if (e.message != null && (e.message.includes("-32601") || e.message.includes("-32600") || e.message.includes("-32403"))) {
                 return {
                     error: {
                         code: -32601,
@@ -65,7 +65,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
         });
         if (response.error != null) {
             //Catching not supported errors
-            if (response.error.code !== -32601 && response.error.code !== -32600)
+            if (response.error.code !== -32601 && response.error.code !== -32600 && response.error.code !== -32403)
                 throw new Error(response.error.message);
             return null;
         }
