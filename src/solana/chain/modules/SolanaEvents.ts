@@ -54,6 +54,8 @@ export class SolanaEvents extends SolanaModule {
         data: ParsedTransactionWithMeta[],
         paginationToken?: string
     }> {
+        const limit = 100;
+
         //Try to use getPriorityFeeEstimate api of Helius
         const response = await (this.connection as any)._rpcRequest("getTransactionsForAddress", [
             account.toString(),
@@ -61,7 +63,7 @@ export class SolanaEvents extends SolanaModule {
                 ...options,
                 transactionDetails: "full",
                 sortOrder: "desc",
-                limit: 100,
+                limit,
                 commitment: commitment ?? "confirmed",
                 encoding: "jsonParsed",
                 maxSupportedTransactionVersion: 0
@@ -153,7 +155,7 @@ export class SolanaEvents extends SolanaModule {
                     }
                 }
             }),
-            paginationToken: response.result.paginationToken
+            paginationToken: response.result.data.length<limit ? null : response.result.paginationToken
         };
     }
 

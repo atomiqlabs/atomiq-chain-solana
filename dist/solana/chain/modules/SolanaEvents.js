@@ -39,6 +39,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
      * @param commitment
      */
     async getTransactionsForAddress(account, options, commitment) {
+        const limit = 100;
         //Try to use getPriorityFeeEstimate api of Helius
         const response = await this.connection._rpcRequest("getTransactionsForAddress", [
             account.toString(),
@@ -46,7 +47,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                 ...options,
                 transactionDetails: "full",
                 sortOrder: "desc",
-                limit: 100,
+                limit,
                 commitment: commitment ?? "confirmed",
                 encoding: "jsonParsed",
                 maxSupportedTransactionVersion: 0
@@ -139,7 +140,7 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
                     }
                 };
             }),
-            paginationToken: response.result.paginationToken
+            paginationToken: response.result.data.length < limit ? null : response.result.paginationToken
         };
     }
     async _findInTxsTFA(topicKey, processor, abortSignal, startBlockheight) {
