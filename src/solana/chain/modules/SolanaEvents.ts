@@ -2,6 +2,7 @@ import {SolanaModule} from "../SolanaModule";
 import {ConfirmedSignatureInfo, ParsedTransactionWithMeta, PublicKey} from "@solana/web3.js";
 import {sign} from "tweetnacl";
 import {ProgramEvent} from "../../program/modules/SolanaProgramEvents";
+import {tryWithRetries} from "../../../utils/Utils";
 
 export class SolanaEvents extends SolanaModule {
 
@@ -171,13 +172,16 @@ export class SolanaEvents extends SolanaModule {
             let filters = startBlockheight!=null ? {
                 slot: {gte: startBlockheight}
             } : {};
-            const tfaResult = await this.getTransactionsForAddress(topicKey, {
-                paginationToken,
-                filters: {
-                    ...filters,
-                    status: "succeeded"
-                }
-            }, "confirmed");
+            const tfaResult = await tryWithRetries(
+                () => this.getTransactionsForAddress(topicKey, {
+                    paginationToken,
+                    filters: {
+                        ...filters,
+                        status: "succeeded"
+                    }
+                }, "confirmed"),
+                undefined, undefined, abortSignal
+            );
 
             if(tfaResult==null) {
                 //Not supported

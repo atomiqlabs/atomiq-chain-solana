@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaEvents = void 0;
 const SolanaModule_1 = require("../SolanaModule");
 const web3_js_1 = require("@solana/web3.js");
+const Utils_1 = require("../../../utils/Utils");
 class SolanaEvents extends SolanaModule_1.SolanaModule {
     constructor() {
         super(...arguments);
@@ -150,13 +151,13 @@ class SolanaEvents extends SolanaModule_1.SolanaModule {
             let filters = startBlockheight != null ? {
                 slot: { gte: startBlockheight }
             } : {};
-            const tfaResult = await this.getTransactionsForAddress(topicKey, {
+            const tfaResult = await (0, Utils_1.tryWithRetries)(() => this.getTransactionsForAddress(topicKey, {
                 paginationToken,
                 filters: {
                     ...filters,
                     status: "succeeded"
                 }
-            }, "confirmed");
+            }, "confirmed"), undefined, undefined, abortSignal);
             if (tfaResult == null) {
                 //Not supported
                 return undefined;
