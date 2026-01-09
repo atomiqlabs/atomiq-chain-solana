@@ -5,7 +5,7 @@ import {sign} from "tweetnacl";
 import {SignatureVerificationError, SwapDataVerificationError} from "@atomiqlabs/base";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
 import {
-    Ed25519Program,
+    Ed25519Program, Keypair,
     PublicKey,
     SYSVAR_INSTRUCTIONS_PUBKEY
 } from "@solana/web3.js";
@@ -265,7 +265,18 @@ export class SwapRefund extends SolanaSwapModule {
             " initializingAta: "+shouldInitAta+" unwrapping: "+shouldUnwrap+
             " auth expiry: "+timeout+" signature: "+signature);
 
-        return [await action.tx(feeRate)];
+        //Push a random keypair to the TX signer such that pesky Phantom
+        // doesn't fuck up the instructions order!
+        const tx = await action.tx(feeRate);
+        const signer = Keypair.generate();
+        tx.tx.instructions.find(val => val.programId.equals(this.program.program.programId)).keys.push({
+            pubkey: signer.publicKey,
+            isSigner: true,
+            isWritable: false
+        });
+        (tx.signers ??= []).push(signer);
+
+        return [tx];
     }
 
     public getRefundFeeRate(swapData: SolanaSwapData): Promise<string> {
@@ -301,13 +312,13 @@ export class SwapRefund extends SolanaSwapModule {
      * Get the estimated solana transaction fee of the refund transaction
      */
     async getRawRefundFee(swapData: SolanaSwapData, feeRate?: string): Promise<bigint> {
-        if(swapData==null) return 10000n;
+        if(swapData==null) return 15000n;
 
         feeRate = feeRate || await this.getRefundFeeRate(swapData);
 
         const computeBudget = swapData.payIn ? SwapRefund.CUCosts.REFUND_PAY_OUT : SwapRefund.CUCosts.REFUND;
 
-        return 10000n + this.root.Fees.getPriorityFee(computeBudget, feeRate);
+        return 15000n + this.root.Fees.getPriorityFee(computeBudget, feeRate);
     }
 
 }
