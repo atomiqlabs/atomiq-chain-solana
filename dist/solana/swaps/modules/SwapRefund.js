@@ -199,7 +199,11 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
         this.logger.debug("txsRefundWithAuthorization(): creating claim transaction, swap: " + swapData.getClaimHash() +
             " initializingAta: " + shouldInitAta + " unwrapping: " + shouldUnwrap +
             " auth expiry: " + timeout + " signature: " + signature);
-        return [await action.tx(feeRate)];
+        //Push a random keypair to the TX signer such that pesky Phantom
+        // doesn't fuck up the instructions order!
+        const tx = await action.tx(feeRate);
+        (tx.signers ?? (tx.signers = [])).push(web3_js_1.Keypair.generate());
+        return [tx];
     }
     getRefundFeeRate(swapData) {
         const accounts = [];
