@@ -202,7 +202,13 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
         //Push a random keypair to the TX signer such that pesky Phantom
         // doesn't fuck up the instructions order!
         const tx = await action.tx(feeRate);
-        (tx.signers ?? (tx.signers = [])).push(web3_js_1.Keypair.generate());
+        const signer = web3_js_1.Keypair.generate();
+        tx.tx.instructions.find(val => val.programId.equals(this.program.program.programId)).keys.push({
+            pubkey: signer.publicKey,
+            isSigner: true,
+            isWritable: false
+        });
+        (tx.signers ?? (tx.signers = [])).push(signer);
         return [tx];
     }
     getRefundFeeRate(swapData) {
@@ -243,10 +249,10 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      */
     async getRawRefundFee(swapData, feeRate) {
         if (swapData == null)
-            return 10000n;
+            return 15000n;
         feeRate = feeRate || await this.getRefundFeeRate(swapData);
         const computeBudget = swapData.payIn ? SwapRefund.CUCosts.REFUND_PAY_OUT : SwapRefund.CUCosts.REFUND;
-        return 10000n + this.root.Fees.getPriorityFee(computeBudget, feeRate);
+        return 15000n + this.root.Fees.getPriorityFee(computeBudget, feeRate);
     }
 }
 exports.SwapRefund = SwapRefund;
