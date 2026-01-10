@@ -303,6 +303,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 latestBlockheight = tx.slot;
             events.push({ event, tx });
         }, undefined, undefined, startBlockheight);
+        this.logger.debug(`getHistoricalSwaps(): Found ${events.length} atomiq related events!`);
         const swapsOpened = {};
         const resultingSwaps = {};
         events.reverse();
@@ -320,7 +321,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 }
                 const initIx = instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
                 if (initIx == null) {
-                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot init instruction not found!`);
+                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because init instruction not found!`);
                     continue;
                 }
                 swapsOpened[escrowHash] = {
@@ -365,6 +366,8 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                 };
             }
         }
+        this.logger.debug(`getHistoricalSwaps(): Found ${Object.keys(resultingSwaps).length} settled swaps!`);
+        this.logger.debug(`getHistoricalSwaps(): Found ${Object.keys(swapsOpened).length} unsettled swaps!`);
         for (let escrowHash in swapsOpened) {
             const foundSwapData = swapsOpened[escrowHash];
             const isExpired = await this.isExpired(signer, foundSwapData.data);

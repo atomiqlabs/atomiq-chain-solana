@@ -403,6 +403,8 @@ export class SolanaSwapProgram
             events.push({event, tx});
         }, undefined, undefined, startBlockheight);
 
+        this.logger.debug(`getHistoricalSwaps(): Found ${events.length} atomiq related events!`);
+
         const swapsOpened: {[escrowHash: string]: {
             data: SolanaSwapData,
             getInitTxId: () => Promise<string>,
@@ -444,7 +446,7 @@ export class SolanaSwapProgram
                   ix => ix!=null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize")
                 ) as InitInstruction;
                 if(initIx == null) {
-                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot init instruction not found!`);
+                    this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because init instruction not found!`);
                     continue;
                 }
 
@@ -492,6 +494,9 @@ export class SolanaSwapProgram
                 }
             }
         }
+
+        this.logger.debug(`getHistoricalSwaps(): Found ${Object.keys(resultingSwaps).length} settled swaps!`);
+        this.logger.debug(`getHistoricalSwaps(): Found ${Object.keys(swapsOpened).length} unsettled swaps!`);
 
         for(let escrowHash in swapsOpened) {
             const foundSwapData = swapsOpened[escrowHash];
