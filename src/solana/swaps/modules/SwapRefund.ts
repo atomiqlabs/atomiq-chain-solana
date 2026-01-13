@@ -32,7 +32,6 @@ export class SwapRefund extends SolanaSwapModule {
      *
      * @param swapData
      * @param refundAuthTimeout optional refund authorization timeout (should be 0 for refunding expired swaps)
-     * @constructor
      * @private
      */
     private async Refund(swapData: SolanaSwapData, refundAuthTimeout?: bigint): Promise<SolanaAction> {
@@ -82,7 +81,6 @@ export class SwapRefund extends SolanaSwapModule {
      * @param timeout
      * @param prefix
      * @param signature
-     * @constructor
      * @private
      */
     private async RefundWithSignature(

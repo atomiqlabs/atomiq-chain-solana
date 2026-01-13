@@ -25,7 +25,6 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private async Withdraw(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
@@ -53,7 +52,6 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private async Deposit(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {

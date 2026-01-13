@@ -30,7 +30,6 @@ export class SolanaTokens extends SolanaModule {
      * @param publicKey public key address of the user for which to initiate the ATA
      * @param token token identification for which the ATA should be initialized
      * @param requiredAta optional required ata address to use, if the address doesn't match it returns null
-     * @constructor
      */
     public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null {
         const ata = getAssociatedTokenAddressSync(token, publicKey, true);
@@ -54,7 +53,6 @@ export class SolanaTokens extends SolanaModule {
      * @param publicKey public key of the user for which to wrap the SOL
      * @param amount amount of SOL in lamports (smallest unit) to wrap
      * @param initAta whether we should also initialize the ATA before depositing SOL
-     * @constructor
      */
     public Wrap(publicKey: PublicKey, amount: bigint, initAta: boolean): SolanaAction {
         const ata = getAssociatedTokenAddressSync(SolanaTokens.WSOL_ADDRESS, publicKey, true);
@@ -79,7 +77,6 @@ export class SolanaTokens extends SolanaModule {
      * Action for unwrapping WSOL to SOL for a specific public key
      *
      * @param publicKey public key of the user for which to unwrap the sol
-     * @constructor
      */
     public Unwrap(publicKey: PublicKey): SolanaAction {
         const ata = getAssociatedTokenAddressSync(SolanaTokens.WSOL_ADDRESS, publicKey, true);
@@ -100,7 +97,6 @@ export class SolanaTokens extends SolanaModule {
      * @param signer
      * @param recipient
      * @param amount
-     * @constructor
      * @private
      */
     private SolTransfer(signer: PublicKey, recipient: PublicKey, amount: bigint): SolanaAction {
@@ -121,7 +117,6 @@ export class SolanaTokens extends SolanaModule {
      * @param recipient
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private Transfer(signer: PublicKey, recipient: PublicKey, token: PublicKey, amount: bigint): SolanaAction {

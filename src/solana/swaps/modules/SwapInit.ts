@@ -112,7 +112,6 @@ export class SwapInit extends SolanaSwapModule {
      * @param swapData
      * @param timeout
      * @param feeRate
-     * @constructor
      * @private
      */
     private async InitPayIn(swapData: SolanaSwapData, timeout: bigint, feeRate?: string): Promise<SolanaAction> {
@@ -129,7 +128,6 @@ export class SwapInit extends SolanaSwapModule {
      *
      * @param swapData
      * @param timeout
-     * @constructor
      * @private
      */
     private async InitNotPayIn(swapData: SolanaSwapData, timeout: bigint): Promise<SolanaAction> {

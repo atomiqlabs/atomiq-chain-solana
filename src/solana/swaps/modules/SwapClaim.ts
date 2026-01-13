@@ -31,7 +31,6 @@ export class SwapClaim extends SolanaSwapModule {
      * @param signer
      * @param swapData
      * @param secret
-     * @constructor
      * @private
      */
     private Claim(signer: PublicKey, swapData: SolanaSwapData, secret: string): Promise<SolanaAction>;
@@ -41,7 +40,6 @@ export class SwapClaim extends SolanaSwapModule {
      * @param signer
      * @param swapData
      * @param dataKey
-     * @constructor
      * @private
      */
     private Claim(signer: PublicKey, swapData: SolanaSwapData, dataKey: PublicKey): Promise<SolanaAction>;
@@ -101,7 +99,6 @@ export class SwapClaim extends SolanaSwapModule {
      * @param storeDataKey
      * @param merkleProof
      * @param commitedHeader
-     * @constructor
      * @private
      */
     private async VerifyAndClaim(

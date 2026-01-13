@@ -42,7 +42,6 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param header
      * @param epochStart
      * @param pastBlocksTimestamps
-     * @constructor
      * @private
      */
     private async Initialize(signer: PublicKey, header: B, epochStart: number, pastBlocksTimestamps: number[]): Promise<SolanaAction> {
