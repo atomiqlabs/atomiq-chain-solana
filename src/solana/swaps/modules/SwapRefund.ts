@@ -284,12 +284,15 @@ export class SwapRefund extends SolanaSwapModule {
         // doesn't fuck up the instructions order!
         const tx = await action.tx(feeRate);
         const signer = Keypair.generate();
-        tx.tx.instructions.find(val => val.programId.equals(this.program.program.programId)).keys.push({
-            pubkey: signer.publicKey,
-            isSigner: true,
-            isWritable: false
-        });
-        (tx.signers ??= []).push(signer);
+        const ix = tx.tx.instructions.find(val => val.programId.equals(this.program.program.programId));
+        if(ix!=null){
+            ix.keys.push({
+                pubkey: signer.publicKey,
+                isSigner: true,
+                isWritable: false
+            });
+            (tx.signers ??= []).push(signer);
+        }
 
         return [tx];
     }
