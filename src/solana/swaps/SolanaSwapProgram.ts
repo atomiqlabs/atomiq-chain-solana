@@ -45,6 +45,9 @@ function toPublicKeyOrNull(str: string | null | undefined): PublicKey | undefine
 
 const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 
+/**
+ * @category Swaps
+ */
 export class SolanaSwapProgram
     extends SolanaProgramBase<SwapProgram>
     implements SwapContract<

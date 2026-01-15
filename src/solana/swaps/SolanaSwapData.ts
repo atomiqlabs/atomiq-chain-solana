@@ -41,6 +41,9 @@ export function isSerializedData(obj: any): obj is ({type: "sol"} & Serialized<S
     return obj.type==="sol";
 }
 
+/**
+ * @category Swaps
+ */
 export class SolanaSwapData extends SwapData {
 
     offerer: PublicKey;

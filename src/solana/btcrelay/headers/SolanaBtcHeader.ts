@@ -11,6 +11,9 @@ type SolanaBtcHeaderType = {
     hash: Buffer
 }
 
+/**
+ * @category BTC Relay
+ */
 export class SolanaBtcHeader implements BtcHeader {
 
     version: number;

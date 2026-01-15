@@ -33,6 +33,9 @@ function serializeBlockHeader(e: BtcBlock): SolanaBtcHeader {
     });
 };
 
+/**
+ * @category BTC Relay
+ */
 export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> implements BtcRelay<SolanaBtcStoredHeader, {tx: Transaction, signers: Signer[]}, B, SolanaSigner> {
 
     /**

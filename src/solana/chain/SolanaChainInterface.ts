@@ -14,6 +14,10 @@ import {Buffer} from "buffer";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
 import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
 
+/**
+ * Retry policy configuration for Solana RPC calls
+ * @category Chain Interface
+ */
 export type SolanaRetryPolicy = {
     maxRetries?: number,
     delay?: number,
@@ -21,6 +25,10 @@ export type SolanaRetryPolicy = {
     transactionResendInterval?: number
 }
 
+/**
+ * Main chain interface for interacting with Solana blockchain
+ * @category Chain Interface
+ */
 export class SolanaChainInterface implements ChainInterface<
     SolanaTx,
     SignedSolanaTx,

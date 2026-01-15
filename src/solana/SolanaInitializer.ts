@@ -20,6 +20,10 @@ import {SolanaSwapData} from "./swaps/SolanaSwapData";
 
 const chainId = "SOLANA" as const;
 
+/**
+ * Token assets available on Solana
+ * @category Chain Interface
+ */
 export type SolanaAssetsType = BaseTokenType<"WBTC" | "USDC" | "USDT" | "SOL" | "BONK">;
 const SolanaAssets: SolanaAssetsType = {
     WBTC: {
@@ -44,6 +48,10 @@ const SolanaAssets: SolanaAssetsType = {
     }
 } as const;
 
+/**
+ * Configuration options for initializing Solana chain
+ * @category Chain Interface
+ */
 export type SolanaSwapperOptions = {
     rpcUrl: string | Connection,
     dataAccountStorage?: IStorageManager<StoredDataAccount>,
@@ -55,6 +63,10 @@ export type SolanaSwapperOptions = {
     fees?: SolanaFees
 };
 
+/**
+ * Initialize Solana chain integration
+ * @category Chain Interface
+ */
 export function initializeSolana(
     options: SolanaSwapperOptions,
     bitcoinRpc: BitcoinRpc<any>,
@@ -95,7 +107,16 @@ export function initializeSolana(
     };
 }
 
+/**
+ * Type definition for the Solana chain initializer
+ * @category Chain Interface
+ */
 export type SolanaInitializerType = ChainInitializer<SolanaSwapperOptions, SolanaChainType, SolanaAssetsType>;
+
+/**
+ * Solana chain initializer instance
+ * @category Chain Interface
+ */
 export const SolanaInitializer: SolanaInitializerType = {
     chainId,
     chainType: null as unknown as SolanaChainType,

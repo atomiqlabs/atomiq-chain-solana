@@ -9,6 +9,10 @@ import {SolanaBtcRelay} from "./btcrelay/SolanaBtcRelay";
 import {SolanaChainInterface} from "./chain/SolanaChainInterface";
 import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
 
+/**
+ * Type definition for the Solana chain implementation
+ * @category Chain Interface
+ */
 export type SolanaChainType = ChainType<
     "SOLANA",
     SolanaPreFetchData,
