@@ -28,7 +28,7 @@ class SolanaProgramEvents extends SolanaEvents_1.SolanaEvents {
         return this.findInSignatures(topicKey, async (data) => {
             if (data.signatures) {
                 for (let info of data.signatures) {
-                    if (info.err == null)
+                    if (info.err)
                         continue;
                     const tx = await this.connection.getParsedTransaction(info.signature, {
                         commitment: "confirmed",

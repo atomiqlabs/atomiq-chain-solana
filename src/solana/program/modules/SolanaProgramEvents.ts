@@ -66,7 +66,7 @@ export class SolanaProgramEvents<IDL extends Idl> extends SolanaEvents {
         return this.findInSignatures<T>(topicKey, async (data: {signatures?: ConfirmedSignatureInfo[], txs?: ParsedTransactionWithMeta[]}) => {
             if(data.signatures) {
                 for(let info of data.signatures) {
-                    if(info.err==null) continue;
+                    if(info.err) continue;
 
                     const tx = await this.connection.getParsedTransaction(info.signature, {
                         commitment: "confirmed",
