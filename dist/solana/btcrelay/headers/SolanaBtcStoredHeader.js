@@ -3,6 +3,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaBtcStoredHeader = void 0;
 const base_1 = require("@atomiqlabs/base");
 const buffer_1 = require("buffer");
+/**
+ * @category BTC Relay
+ */
 class SolanaBtcStoredHeader {
     constructor(obj) {
         this.chainWork = obj.chainWork;

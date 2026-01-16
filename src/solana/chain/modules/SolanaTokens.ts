@@ -8,7 +8,6 @@ import {
 } from "@solana/spl-token";
 import {SolanaTx} from "./SolanaTransactions";
 import {SolanaAction} from "../SolanaAction";
-import {tryWithRetries} from "../../../utils/Utils";
 
 export class SolanaTokens extends SolanaModule {
 
@@ -224,10 +223,7 @@ export class SolanaTokens extends SolanaModule {
      * @param ata
      */
     public async ataExists(ata: PublicKey) {
-        const account = await tryWithRetries<Account | null>(
-            () => this.getATAOrNull(ata),
-            this.retryPolicy
-        );
+        const account = await this.getATAOrNull(ata);
         return account!=null;
     }
 

@@ -2,6 +2,9 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaBtcHeader = void 0;
 const buffer_1 = require("buffer");
+/**
+ * @category BTC Relay
+ */
 class SolanaBtcHeader {
     constructor(obj) {
         this.version = obj.version;

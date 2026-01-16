@@ -4,7 +4,6 @@ import {IStorageManager, StorageObject} from "@atomiqlabs/base";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaAction} from "../../chain/SolanaAction";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
-import {tryWithRetries} from "../../../utils/Utils";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {randomBytes} from "@noble/hashes/utils";
 import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
@@ -66,10 +65,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
         dataLength: number
     ): Promise<SolanaAction> {
         const accountSize = 32+dataLength;
-        const lamportsDeposit = await tryWithRetries(
-            () => this.connection.getMinimumBalanceForRentExemption(accountSize),
-            this.retryPolicy
-        );
+        const lamportsDeposit = await this.connection.getMinimumBalanceForRentExemption(accountSize);
 
         return new SolanaAction(signer, this.root, [
             SystemProgram.createAccount({
@@ -263,10 +259,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
         let fetchedDataAccount: AccountInfo<Buffer> | null = null;
         if(signer instanceof SolanaSigner && signer.keypair!=null) {
             txDataKey = this.SwapTxDataAlt(reversedTxId, signer.keypair);
-            fetchedDataAccount = await tryWithRetries<AccountInfo<Buffer> | null>(
-                () => this.connection.getAccountInfo(txDataKey.publicKey),
-                this.retryPolicy
-            );
+            fetchedDataAccount = await this.connection.getAccountInfo(txDataKey.publicKey);
         } else {
             const secret = Buffer.from(randomBytes(32));
             txDataKey = this.SwapTxDataAltBuffer(reversedTxId, secret);

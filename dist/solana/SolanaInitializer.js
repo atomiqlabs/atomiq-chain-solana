@@ -33,6 +33,10 @@ const SolanaAssets = {
         decimals: 5
     }
 };
+/**
+ * Initialize Solana chain integration
+ * @category Chain Interface
+ */
 function initializeSolana(options, bitcoinRpc, network, storageCtor) {
     const connection = typeof (options.rpcUrl) === "string" ?
         new web3_js_1.Connection(options.rpcUrl) :
@@ -58,6 +62,10 @@ function initializeSolana(options, bitcoinRpc, network, storageCtor) {
     };
 }
 exports.initializeSolana = initializeSolana;
+/**
+ * Solana chain initializer instance
+ * @category Chain Interface
+ */
 exports.SolanaInitializer = {
     chainId,
     chainType: null,

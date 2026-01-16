@@ -4,7 +4,6 @@ exports.SolanaDataAccount = exports.StoredDataAccount = void 0;
 const SolanaSwapModule_1 = require("../SolanaSwapModule");
 const web3_js_1 = require("@solana/web3.js");
 const SolanaAction_1 = require("../../chain/SolanaAction");
-const Utils_1 = require("../../../utils/Utils");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
 const utils_1 = require("@noble/hashes/utils");
 class StoredDataAccount {
@@ -37,7 +36,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
      */
     async InitDataAccount(signer, accountKey, dataLength) {
         const accountSize = 32 + dataLength;
-        const lamportsDeposit = await (0, Utils_1.tryWithRetries)(() => this.connection.getMinimumBalanceForRentExemption(accountSize), this.retryPolicy);
+        const lamportsDeposit = await this.connection.getMinimumBalanceForRentExemption(accountSize);
         return new SolanaAction_1.SolanaAction(signer, this.root, [
             web3_js_1.SystemProgram.createAccount({
                 fromPubkey: signer,
@@ -193,7 +192,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
         let fetchedDataAccount = null;
         if (signer instanceof SolanaSigner_1.SolanaSigner && signer.keypair != null) {
             txDataKey = this.SwapTxDataAlt(reversedTxId, signer.keypair);
-            fetchedDataAccount = await (0, Utils_1.tryWithRetries)(() => this.connection.getAccountInfo(txDataKey.publicKey), this.retryPolicy);
+            fetchedDataAccount = await this.connection.getAccountInfo(txDataKey.publicKey);
         }
         else {
             const secret = Buffer.from((0, utils_1.randomBytes)(32));

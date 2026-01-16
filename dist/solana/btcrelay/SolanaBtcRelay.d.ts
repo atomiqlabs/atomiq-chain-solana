@@ -7,6 +7,9 @@ import { SolanaAction } from "../chain/SolanaAction";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
+/**
+ * @category BTC Relay
+ */
 export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> implements BtcRelay<SolanaBtcStoredHeader, {
     tx: Transaction;
     signers: Signer[];
@@ -18,7 +21,6 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param header
      * @param epochStart
      * @param pastBlocksTimestamps
-     * @constructor
      * @private
      */
     private Initialize;

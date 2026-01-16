@@ -19,14 +19,12 @@ export declare class SolanaTokens extends SolanaModule {
      * @param publicKey public key of the user for which to wrap the SOL
      * @param amount amount of SOL in lamports (smallest unit) to wrap
      * @param initAta whether we should also initialize the ATA before depositing SOL
-     * @constructor
      */
     Wrap(publicKey: PublicKey, amount: bigint, initAta: boolean): SolanaAction;
     /**
      * Action for unwrapping WSOL to SOL for a specific public key
      *
      * @param publicKey public key of the user for which to unwrap the sol
-     * @constructor
      */
     Unwrap(publicKey: PublicKey): SolanaAction;
     static readonly WSOL_ADDRESS: PublicKey;
@@ -37,7 +35,6 @@ export declare class SolanaTokens extends SolanaModule {
      * @param signer
      * @param recipient
      * @param amount
-     * @constructor
      * @private
      */
     private SolTransfer;
@@ -48,7 +45,6 @@ export declare class SolanaTokens extends SolanaModule {
      * @param recipient
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private Transfer;

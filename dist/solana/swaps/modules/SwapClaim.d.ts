@@ -17,7 +17,6 @@ export declare class SwapClaim extends SolanaSwapModule {
      * @param signer
      * @param swapData
      * @param secret
-     * @constructor
      * @private
      */
     private Claim;
@@ -31,7 +30,6 @@ export declare class SwapClaim extends SolanaSwapModule {
      * @param storeDataKey
      * @param merkleProof
      * @param commitedHeader
-     * @constructor
      * @private
      */
     private VerifyAndClaim;

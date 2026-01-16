@@ -168,7 +168,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
         for (let tx of txs) {
             if (tx.tx.recentBlockhash == null) {
                 if (latestBlockData == null) {
-                    latestBlockData = await (0, Utils_1.tryWithRetries)(() => this.connection.getLatestBlockhash("confirmed"), this.retryPolicy);
+                    latestBlockData = await this.connection.getLatestBlockhash("confirmed");
                     this.logger.debug("prepareTransactions(): fetched latest block data for transactions," +
                         " blockhash: " + latestBlockData.blockhash + " expiry blockheight: " + latestBlockData.lastValidBlockHeight);
                 }

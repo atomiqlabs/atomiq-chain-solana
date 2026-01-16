@@ -14,7 +14,7 @@ import {
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import {SolanaAction} from "../../chain/SolanaAction";
-import {toBN, tryWithRetries} from "../../../utils/Utils";
+import {toBN} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {SolanaTokens} from "../../chain/modules/SolanaTokens";
@@ -192,7 +192,7 @@ export class SwapRefund extends SolanaSwapModule {
         feeRate?: string
     ): Promise<SolanaTx[]> {
 
-        if(check && !await tryWithRetries(() => this.program.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy)) {
+        if(check && !await this.program.isRequestRefundable(swapData.offerer.toString(), swapData)) {
             throw new SwapDataVerificationError("Not refundable yet!");
         }
 
@@ -243,14 +243,10 @@ export class SwapRefund extends SolanaSwapModule {
         initAta?: boolean,
         feeRate?: string
     ): Promise<SolanaTx[]> {
-        if(check && !await tryWithRetries(() => this.program.isCommited(swapData), this.retryPolicy)) {
+        if(check && !await this.program.isCommited(swapData)) {
             throw new SwapDataVerificationError("Not correctly committed");
         }
-        await tryWithRetries(
-            () => this.isSignatureValid(swapData, timeout, prefix, signature),
-            this.retryPolicy,
-            (e) => e instanceof SignatureVerificationError
-        );
+        await this.isSignatureValid(swapData, timeout, prefix, signature);
 
         let shouldInitAta = false;
         if(swapData.isPayIn()) {

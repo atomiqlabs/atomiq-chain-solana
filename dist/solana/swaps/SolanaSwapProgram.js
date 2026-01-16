@@ -21,6 +21,9 @@ function toPublicKeyOrNull(str) {
     return str == null ? undefined : new web3_js_1.PublicKey(str);
 }
 const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
+/**
+ * @category Swaps
+ */
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     constructor(chainInterface, btcRelay, storage, programAddress) {
         super(chainInterface, programIdl, programAddress);

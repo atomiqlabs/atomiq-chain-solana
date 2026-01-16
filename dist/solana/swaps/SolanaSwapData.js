@@ -14,6 +14,9 @@ function isSerializedData(obj) {
     return obj.type === "sol";
 }
 exports.isSerializedData = isSerializedData;
+/**
+ * @category Swaps
+ */
 class SolanaSwapData extends base_1.SwapData {
     constructor(data) {
         super();

@@ -9,6 +9,9 @@ export type SolanaBtcStoredHeaderType = {
     blockheight: number;
     prevBlockTimestamps: number[];
 };
+/**
+ * @category BTC Relay
+ */
 export declare class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
     chainWork: number[];
     header: SolanaBtcHeader;

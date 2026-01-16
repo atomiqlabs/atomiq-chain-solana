@@ -23,6 +23,9 @@ function serializeBlockHeader(e) {
     });
 }
 ;
+/**
+ * @category BTC Relay
+ */
 class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
     /**
      * Creates initialization action for initializing the btc relay
@@ -31,7 +34,6 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
      * @param header
      * @param epochStart
      * @param pastBlocksTimestamps
-     * @constructor
      * @private
      */
     async Initialize(signer, header, epochStart, pastBlocksTimestamps) {

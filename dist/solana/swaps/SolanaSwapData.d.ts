@@ -28,6 +28,9 @@ export type SolanaSwapDataCtorArgs = {
 export declare function isSerializedData(obj: any): obj is ({
     type: "sol";
 } & Serialized<SolanaSwapData>);
+/**
+ * @category Swaps
+ */
 export declare class SolanaSwapData extends SwapData {
     offerer: PublicKey;
     claimer: PublicKey;

@@ -481,11 +481,8 @@ export class SwapInit extends SolanaSwapModule {
 
         if(!skipChecks) {
             const [_, payStatus] = await Promise.all([
-                tryWithRetries(
-                    () => this.isSignatureValid(swapData.getOfferer(), swapData, timeout, prefix, signature, feeRate),
-                    this.retryPolicy, (e) => e instanceof SignatureVerificationError
-                ),
-                tryWithRetries(() => this.program.getClaimHashStatus(swapData.getClaimHash()), this.retryPolicy)
+                this.isSignatureValid(swapData.getOfferer(), swapData, timeout, prefix, signature, feeRate),
+                this.program.getClaimHashStatus(swapData.getClaimHash())
             ]);
             if(payStatus!==SwapCommitStateType.NOT_COMMITED) throw new SwapDataVerificationError("Invoice already being paid for or paid");
         }
@@ -493,7 +490,7 @@ export class SwapInit extends SolanaSwapModule {
         const [slotNumber, signatureStr] = signature.split(";");
         const block = await tryWithRetries(
             () => this.root.Blocks.getParsedBlock(parseInt(slotNumber)),
-            this.retryPolicy
+            {maxRetries: 3, delay: 100, exponential: true}
         );
 
         const txs: SolanaTx[] = [];
@@ -501,10 +498,7 @@ export class SwapInit extends SolanaSwapModule {
         let isWrapping: boolean = false;
         const isWrappedInSignedTx = feeRate!=null && feeRate.split("#").length>1;
         if(!isWrappedInSignedTx && swapData.token.equals(SolanaTokens.WSOL_ADDRESS)) {
-            const ataAcc = await tryWithRetries<Account | null>(
-                () => this.root.Tokens.getATAOrNull(offererAta),
-                this.retryPolicy
-            );
+            const ataAcc = await this.root.Tokens.getATAOrNull(offererAta);
             const balance: bigint = ataAcc?.amount ?? 0n;
 
             if(balance < swapData.getAmount()) {
@@ -537,17 +531,13 @@ export class SwapInit extends SolanaSwapModule {
      */
     public async txsInit(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]> {
         if(!skipChecks) {
-            await tryWithRetries(
-                () => this.isSignatureValid(swapData.getClaimer(), swapData, timeout, prefix, signature, feeRate),
-                this.retryPolicy,
-                (e) => e instanceof SignatureVerificationError
-            );
+            await this.isSignatureValid(swapData.getClaimer(), swapData, timeout, prefix, signature, feeRate);
         }
 
         const [slotNumber, signatureStr] = signature.split(";");
         const block = await tryWithRetries(
             () => this.root.Blocks.getParsedBlock(parseInt(slotNumber)),
-            this.retryPolicy
+            {maxRetries: 3, delay: 100, exponential: true}
         );
 
         const initTx = await (await this.InitNotPayIn(swapData, BigInt(timeout))).tx(feeRate, block);

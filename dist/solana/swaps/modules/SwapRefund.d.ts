@@ -11,7 +11,6 @@ export declare class SwapRefund extends SolanaSwapModule {
      *
      * @param swapData
      * @param refundAuthTimeout optional refund authorization timeout (should be 0 for refunding expired swaps)
-     * @constructor
      * @private
      */
     private Refund;
@@ -22,7 +21,6 @@ export declare class SwapRefund extends SolanaSwapModule {
      * @param timeout
      * @param prefix
      * @param signature
-     * @constructor
      * @private
      */
     private RefundWithSignature;

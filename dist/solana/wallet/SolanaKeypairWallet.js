@@ -2,6 +2,10 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaKeypairWallet = void 0;
 const web3_js_1 = require("@solana/web3.js");
+/**
+ * Keypair-based wallet implementation for Solana
+ * @category Wallets
+ */
 class SolanaKeypairWallet {
     constructor(payer) {
         this.payer = payer;

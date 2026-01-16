@@ -6,7 +6,6 @@ const SolanaAction_1 = require("../../chain/SolanaAction");
 const spl_token_1 = require("@solana/spl-token");
 const base_1 = require("@atomiqlabs/base");
 const web3_js_1 = require("@solana/web3.js");
-const Utils_1 = require("../../../utils/Utils");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
 const SolanaTokens_1 = require("../../chain/modules/SolanaTokens");
 const BN = require("bn.js");
@@ -55,7 +54,6 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
      * @param storeDataKey
      * @param merkleProof
      * @param commitedHeader
-     * @constructor
      * @private
      */
     async VerifyAndClaim(signer, swapData, storeDataKey, merkleProof, commitedHeader) {
@@ -100,9 +98,9 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
      */
     async getCommitedHeaderAndSynchronize(signer, txBlockheight, requiredConfirmations, blockhash, txs, synchronizer) {
         const requiredBlockheight = txBlockheight + requiredConfirmations - 1;
-        const result = await (0, Utils_1.tryWithRetries)(() => this.btcRelay.retrieveLogAndBlockheight({
+        const result = await this.btcRelay.retrieveLogAndBlockheight({
             blockhash: blockhash
-        }, requiredBlockheight), this.retryPolicy);
+        }, requiredBlockheight);
         if (result != null)
             return result.header;
         //Need to synchronize

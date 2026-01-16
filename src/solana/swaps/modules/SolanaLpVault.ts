@@ -8,7 +8,7 @@ import {
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
-import {toBigInt, toBN, tryWithRetries} from "../../../utils/Utils";
+import {toBigInt, toBN} from "../../../utils/Utils";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
 import {SolanaTokens} from "../../chain/modules/SolanaTokens";
 
@@ -181,10 +181,7 @@ export class SolanaLpVault extends SolanaSwapModule {
 
         let wrapping: boolean = false;
         if(token.equals(SolanaTokens.WSOL_ADDRESS)) {
-            const account = await tryWithRetries<Account | null>(
-                () => this.root.Tokens.getATAOrNull(ata),
-                this.retryPolicy
-            );
+            const account = await this.root.Tokens.getATAOrNull(ata);
             let balance: bigint = account==null ? 0n : account.amount;
             if(balance < amount) {
                 action.add(this.root.Tokens.Wrap(signer, amount - balance, account==null));

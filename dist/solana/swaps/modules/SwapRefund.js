@@ -18,7 +18,6 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      *
      * @param swapData
      * @param refundAuthTimeout optional refund authorization timeout (should be 0 for refunding expired swaps)
-     * @constructor
      * @private
      */
     async Refund(swapData, refundAuthTimeout) {
@@ -60,7 +59,6 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @param timeout
      * @param prefix
      * @param signature
-     * @constructor
      * @private
      */
     async RefundWithSignature(swapData, timeout, prefix, signature) {
@@ -141,7 +139,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @param feeRate fee rate to be used for the transactions
      */
     async txsRefund(swapData, check, initAta, feeRate) {
-        if (check && !await (0, Utils_1.tryWithRetries)(() => this.program.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy)) {
+        if (check && !await this.program.isRequestRefundable(swapData.offerer.toString(), swapData)) {
             throw new base_1.SwapDataVerificationError("Not refundable yet!");
         }
         let shouldInitAta = false;
@@ -183,10 +181,10 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
      * @param feeRate fee rate to be used for the transactions
      */
     async txsRefundWithAuthorization(swapData, timeout, prefix, signature, check, initAta, feeRate) {
-        if (check && !await (0, Utils_1.tryWithRetries)(() => this.program.isCommited(swapData), this.retryPolicy)) {
+        if (check && !await this.program.isCommited(swapData)) {
             throw new base_1.SwapDataVerificationError("Not correctly committed");
         }
-        await (0, Utils_1.tryWithRetries)(() => this.isSignatureValid(swapData, timeout, prefix, signature), this.retryPolicy, (e) => e instanceof base_1.SignatureVerificationError);
+        await this.isSignatureValid(swapData, timeout, prefix, signature);
         let shouldInitAta = false;
         if (swapData.isPayIn()) {
             if (swapData.offererAta == null)

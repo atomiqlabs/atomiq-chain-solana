@@ -6,7 +6,6 @@ import {ChainSwapType, RelaySynchronizer, SwapDataVerificationError} from "@atom
 import {PublicKey, SYSVAR_INSTRUCTIONS_PUBKEY} from "@solana/web3.js";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
 import {SolanaBtcStoredHeader} from "../../btcrelay/headers/SolanaBtcStoredHeader";
-import {tryWithRetries} from "../../../utils/Utils";
 import {SolanaBtcRelay} from "../../btcrelay/SolanaBtcRelay";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
@@ -166,12 +165,9 @@ export class SwapClaim extends SolanaSwapModule {
     ): Promise<SolanaBtcStoredHeader | null> {
         const requiredBlockheight = txBlockheight+requiredConfirmations-1;
 
-        const result = await tryWithRetries(
-            () => this.btcRelay.retrieveLogAndBlockheight({
-                blockhash: blockhash
-            }, requiredBlockheight),
-            this.retryPolicy
-        );
+        const result = await this.btcRelay.retrieveLogAndBlockheight({
+            blockhash: blockhash
+        }, requiredBlockheight);
 
         if(result!=null) return result.header;
 

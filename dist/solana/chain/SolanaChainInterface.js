@@ -13,6 +13,10 @@ const Utils_1 = require("../../utils/Utils");
 const SolanaAddresses_1 = require("./modules/SolanaAddresses");
 const SolanaSigner_1 = require("../wallet/SolanaSigner");
 const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
+/**
+ * Main chain interface for interacting with Solana blockchain
+ * @category Chain Interface
+ */
 class SolanaChainInterface {
     constructor(connection, retryPolicy, solanaFeeEstimator = new SolanaFees_1.SolanaFees(connection)) {
         this.chainId = "SOLANA";

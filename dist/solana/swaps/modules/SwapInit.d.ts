@@ -38,7 +38,6 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param swapData
      * @param timeout
      * @param feeRate
-     * @constructor
      * @private
      */
     private InitPayIn;
@@ -48,7 +47,6 @@ export declare class SwapInit extends SolanaSwapModule {
      *
      * @param swapData
      * @param timeout
-     * @constructor
      * @private
      */
     private InitNotPayIn;

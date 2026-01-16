@@ -10,7 +10,6 @@ export declare class SolanaLpVault extends SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private Withdraw;
@@ -20,7 +19,6 @@ export declare class SolanaLpVault extends SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private Deposit;

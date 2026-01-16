@@ -15,6 +15,9 @@ import { SwapClaim } from "./modules/SwapClaim";
 import { SolanaLpVault } from "./modules/SolanaLpVault";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
+/**
+ * @category Swaps
+ */
 export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
     readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
     readonly SwapVaultAuthority: PublicKey;

@@ -11,12 +11,20 @@ import { ChainInterface, TransactionConfirmationOptions } from "@atomiqlabs/base
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { Buffer } from "buffer";
 import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
+/**
+ * Retry policy configuration for Solana RPC calls
+ * @category Chain Interface
+ */
 export type SolanaRetryPolicy = {
     maxRetries?: number;
     delay?: number;
     exponential?: boolean;
     transactionResendInterval?: number;
 };
+/**
+ * Main chain interface for interacting with Solana blockchain
+ * @category Chain Interface
+ */
 export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SignedSolanaTx, SolanaSigner, "SOLANA", Wallet> {
     readonly chainId = "SOLANA";
     readonly SLOT_TIME = 400;
