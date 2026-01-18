@@ -156,7 +156,7 @@ export class SolanaEvents extends SolanaModule {
                     }
                 }
             }),
-            paginationToken: response.result.data.length<limit ? null : response.result.paginationToken
+            paginationToken: response.result.paginationToken
         };
     }
 
@@ -190,6 +190,12 @@ export class SolanaEvents extends SolanaModule {
 
             txs = tfaResult.data;
             paginationToken = tfaResult.paginationToken;
+
+            if(txs.length===0) {
+                this.logger.debug(`_findInTxsTFA(): Got ${txs.length} txns (empty response), paginationToken: ${paginationToken}`);
+            } else {
+                this.logger.debug(`_findInTxsTFA(): Got ${txs.length} txns (${txs[0]}..${txs[txs.length-1]}), paginationToken: ${paginationToken}`);
+            }
 
             if(abortSignal!=null) abortSignal.throwIfAborted();
             const result: T = await processor({txs});
@@ -226,6 +232,13 @@ export class SolanaEvents extends SolanaModule {
                 if(endIndex===0) return null;
                 if(endIndex!==-1) signatures = signatures.slice(0, endIndex - 1);
             }
+
+            if(signatures.length===0) {
+                this.logger.debug(`_findInSignatures(): Got ${signatures.length} txns (empty response)`);
+            } else {
+                this.logger.debug(`_findInSignatures(): Got ${signatures.length} txns (${signatures[0]}..${signatures[signatures.length-1]})`);
+            }
+
             if(abortSignal!=null) abortSignal.throwIfAborted();
             const result: T = await processor({signatures});
             if(result!=null) return result;
@@ -250,6 +263,7 @@ export class SolanaEvents extends SolanaModule {
             if(this.usingHeliusTFA==="yes") throw new Error("Helius gTFA is not supported with current provider!");
             //If set to auto, we can manually set to "no"
             this.usingHeliusTFA = "no";
+            this.logger.warn("findInSignatures(): Helius gTFA is not supported, switching back to using gSFA!")
         }
         return await this._findInSignatures(topicKey, processor, abortSignal, logFetchLimit, startBlockheight);
     }
