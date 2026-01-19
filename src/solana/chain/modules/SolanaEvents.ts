@@ -194,7 +194,7 @@ export class SolanaEvents extends SolanaModule {
             if(txs.length===0) {
                 this.logger.debug(`_findInTxsTFA(): Got ${txs.length} txns (empty response), paginationToken: ${paginationToken}`);
             } else {
-                this.logger.debug(`_findInTxsTFA(): Got ${txs.length} txns (${txs[0]}..${txs[txs.length-1]}), paginationToken: ${paginationToken}`);
+                this.logger.debug(`_findInTxsTFA(): Got ${txs.length} txns (${txs[0].transaction.signatures[0]}..${txs[txs.length-1].transaction.signatures[0]}), paginationToken: ${paginationToken}`);
             }
 
             if(abortSignal!=null) abortSignal.throwIfAborted();
@@ -236,7 +236,7 @@ export class SolanaEvents extends SolanaModule {
             if(signatures.length===0) {
                 this.logger.debug(`_findInSignatures(): Got ${signatures.length} txns (empty response)`);
             } else {
-                this.logger.debug(`_findInSignatures(): Got ${signatures.length} txns (${signatures[0]}..${signatures[signatures.length-1]})`);
+                this.logger.debug(`_findInSignatures(): Got ${signatures.length} txns (${signatures[0].signature}..${signatures[signatures.length-1].signature})`);
             }
 
             if(abortSignal!=null) abortSignal.throwIfAborted();
