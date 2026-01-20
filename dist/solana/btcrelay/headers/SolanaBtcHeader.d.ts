@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { BtcHeader } from "@atomiqlabs/base";
 import { Buffer } from "buffer";
 type SolanaBtcHeaderType = {

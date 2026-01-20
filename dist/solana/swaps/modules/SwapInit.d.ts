@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { ParsedAccountsModeBlockResponse, PublicKey } from "@solana/web3.js";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaSwapModule } from "../SolanaSwapModule";

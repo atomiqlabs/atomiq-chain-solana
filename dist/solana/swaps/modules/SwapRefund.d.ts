@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaTx } from "../../chain/modules/SolanaTransactions";

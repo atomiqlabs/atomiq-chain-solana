@@ -63,7 +63,7 @@ export class SolanaTransactions extends SolanaModule {
         const rawTx = tx.serialize();
         const signature = bs58.encode(tx.signature);
         return new Promise((resolve, reject) => {
-            let watchdogInterval: NodeJS.Timer;
+            let watchdogInterval: any;
             watchdogInterval = setInterval(async () => {
                 const result = await this.sendRawTransaction(rawTx, {skipPreflight: true}).catch(
                     e => this.logger.error("txConfirmationAndResendWatchdog(): transaction re-sent error: ", e)

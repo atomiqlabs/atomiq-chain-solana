@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Idl, Program } from "@coral-xyz/anchor";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 import { SolanaProgramEvents } from "./modules/SolanaProgramEvents";

@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Connection, SendOptions, Transaction } from "@solana/web3.js";
 import { SolanaFees } from "./modules/SolanaFees";
 import { SolanaBlocks } from "./modules/SolanaBlocks";

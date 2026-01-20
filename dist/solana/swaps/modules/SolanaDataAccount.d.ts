@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { PublicKey, Signer } from "@solana/web3.js";
 import { IStorageManager, StorageObject } from "@atomiqlabs/base";

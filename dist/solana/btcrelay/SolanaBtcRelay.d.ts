@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { PublicKey, Signer, Transaction } from "@solana/web3.js";
 import { SolanaBtcStoredHeader } from "./headers/SolanaBtcStoredHeader";
 import { BitcoinRpc, BtcBlock, BtcRelay } from "@atomiqlabs/base";

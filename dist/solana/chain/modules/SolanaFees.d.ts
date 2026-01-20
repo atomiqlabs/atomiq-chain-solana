@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Connection, PublicKey, SendOptions, Transaction } from "@solana/web3.js";
 export type FeeBribeData = {
     address: string;

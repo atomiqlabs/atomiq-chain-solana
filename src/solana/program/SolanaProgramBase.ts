@@ -59,7 +59,7 @@ export class SolanaProgramBase<T extends Idl> {
         return (...args: T) => {
             const res = func(...args);
             return PublicKey.findProgramAddressSync(
-                [Buffer.from(seed)].concat(res),
+                [Buffer.from(seed)].concat(res as Buffer<ArrayBuffer>[]),
                 this.program.programId
             )[0]
         }

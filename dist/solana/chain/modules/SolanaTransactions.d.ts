@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Finality, SendOptions, Signer, Transaction } from "@solana/web3.js";
 import { SolanaModule } from "../SolanaModule";
 import { Buffer } from "buffer";
