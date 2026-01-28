@@ -127,6 +127,9 @@ class SolanaSwapData extends base_1.SwapData {
     isPayOut() {
         return this.payOut;
     }
+    isTrackingReputation() {
+        return !this.payOut;
+    }
     getClaimHash() {
         return (0, Utils_1.toClaimHash)(this.paymentHash, (0, Utils_1.toBigInt)(this.nonce), this.confirmations);
     }

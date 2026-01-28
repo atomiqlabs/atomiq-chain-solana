@@ -191,6 +191,10 @@ export class SolanaSwapData extends SwapData {
         return this.payOut;
     }
 
+    isTrackingReputation(): boolean {
+        return !this.payOut;
+    }
+
     getClaimHash(): string {
         return toClaimHash(this.paymentHash, toBigInt(this.nonce), this.confirmations);
     }

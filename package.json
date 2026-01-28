@@ -1,6 +1,6 @@
 {
   "name": "@atomiqlabs/chain-solana",
-  "version": "13.0.8",
+  "version": "13.0.9",
   "description": "Solana specific base implementation",
   "main": "./dist/index.js",
   "types:": "./dist/index.d.ts",
@@ -39,6 +39,6 @@
   "devDependencies": {
     "@types/bn.js": "5.1.6",
     "@types/node": "^25.0.9",
-    "typescript": ">=4"
+    "typescript": "^5.9.3"
   }
 }

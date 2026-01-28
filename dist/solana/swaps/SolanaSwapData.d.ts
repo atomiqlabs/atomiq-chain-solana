@@ -69,6 +69,7 @@ export declare class SolanaSwapData extends SwapData {
     getNonceHint(): bigint;
     isPayIn(): boolean;
     isPayOut(): boolean;
+    isTrackingReputation(): boolean;
     getClaimHash(): string;
     getEscrowHash(): string;
     getSequence(): bigint;
