@@ -24,7 +24,7 @@
   "author": "adambor",
   "license": "ISC",
   "dependencies": {
-    "@atomiqlabs/base": "github:atomiqlabs/atomiq-base#develop",
+    "@atomiqlabs/base": "^13.0.4",
     "@coral-xyz/anchor": "0.29.0",
     "@noble/hashes": "^1.7.1",
     "@solana/spl-token": "0.4.14",
