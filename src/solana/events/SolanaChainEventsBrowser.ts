@@ -356,9 +356,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
     }
 
     /**
-     * Polls for new events & processes them
-     *
-     * @private
+     * @inheritDoc
      */
     async poll(lastSignature?: SolanaEventListenerState): Promise<SolanaEventListenerState | null> {
         let signatures = lastSignature==null
@@ -371,12 +369,18 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         return lastSuccessfulSignature ?? lastSignature ?? null;
     }
 
+    /**
+     * @inheritDoc
+     */
     init(noAutomaticPoll?: boolean): Promise<void> {
         if(noAutomaticPoll) return Promise.resolve();
         this.setupWebsocket();
         return Promise.resolve();
     }
 
+    /**
+     * @inheritDoc
+     */
     async stop(): Promise<void> {
         for(let num of this.eventListeners) {
             await this.solanaSwapProgram.program.removeEventListener(num);
@@ -384,10 +388,16 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         this.eventListeners = [];
     }
 
+    /**
+     * @inheritDoc
+     */
     registerListener(cbk: EventListener<SolanaSwapData>): void {
         this.listeners.push(cbk);
     }
 
+    /**
+     * @inheritDoc
+     */
     unregisterListener(cbk: EventListener<SolanaSwapData>): boolean {
         const index = this.listeners.indexOf(cbk);
         if(index>=0) {

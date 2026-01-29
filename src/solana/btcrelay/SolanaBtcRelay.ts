@@ -227,7 +227,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Returns data about current main chain tip stored in the btc relay
+     * @inheritDoc
      */
     public async getTipData(): Promise<{ commitHash: string; blockhash: string, chainWork: Buffer, blockheight: number } | null> {
         const data: any = await this.program.account.mainState.fetchNullable(this.BtcRelayMainState);
@@ -242,11 +242,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Retrieves blockheader with a specific blockhash, returns null if requiredBlockheight is provided and
-     *  btc relay contract is not synced up to the desired blockheight
-     *
-     * @param blockData
-     * @param requiredBlockheight
+     * @inheritDoc
      */
     public async retrieveLogAndBlockheight(blockData: {blockhash: string}, requiredBlockheight?: number): Promise<{
         header: SolanaBtcStoredHeader,
@@ -281,10 +277,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Retrieves blockheader data by blockheader's commit hash,
-     *
-     * @param commitmentHashStr
-     * @param blockData
+     * @inheritDoc
      */
     public async retrieveLogByCommitHash(commitmentHashStr: string, blockData: {blockhash: string}): Promise<SolanaBtcStoredHeader | null> {
         const blockHashBuffer = Buffer.from(blockData.blockhash, "hex").reverse();
@@ -305,7 +298,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Retrieves latest known stored blockheader & blockheader from bitcoin RPC that is in the main chain
+     * @inheritDoc
      */
     public async retrieveLatestKnownBlockLog(): Promise<{
         resultStoredHeader: SolanaBtcStoredHeader,
@@ -341,13 +334,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Saves initial block header when the btc relay is in uninitialized state
-     *
-     * @param signer
-     * @param header a bitcoin blockheader to submit
-     * @param epochStart timestamp of the start of the epoch (block timestamp at blockheight-(blockheight%2016))
-     * @param pastBlocksTimestamps timestamp of the past 10 blocks
-     * @param feeRate fee rate to use for the transaction
+     * @inheritDoc
      */
     async saveInitialHeader(
         signer: string,
@@ -367,12 +354,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Saves blockheaders as a bitcoin main chain to the btc relay
-     *
-     * @param signer
-     * @param mainHeaders
-     * @param storedHeader
-     * @param feeRate
+     * @inheritDoc
      */
     public async saveMainHeaders(signer: string, mainHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, feeRate?: string) {
         feeRate ??= await this.getMainFeeRate(signer);
@@ -393,13 +375,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Creates a new long fork and submits the headers to it
-     *
-     * @param signer
-     * @param forkHeaders
-     * @param storedHeader
-     * @param tipWork
-     * @param feeRate
+     * @inheritDoc
      */
     public async saveNewForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, tipWork: Buffer, feeRate?: string) {
         const mainState: any = await this.program.account.mainState.fetch(this.BtcRelayMainState);
@@ -435,14 +411,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Continues submitting blockheaders to a given fork
-     *
-     * @param signer
-     * @param forkHeaders
-     * @param storedHeader
-     * @param forkId
-     * @param tipWork
-     * @param feeRate
+     * @inheritDoc
      */
     public async saveForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, forkId: number, tipWork: Buffer, feeRate?: string) {
         feeRate ??= await this.getForkFeeRate(signer, forkId);
@@ -477,13 +446,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Submits short fork with given blockheaders
-     *
-     * @param signer
-     * @param forkHeaders
-     * @param storedHeader
-     * @param tipWork
-     * @param feeRate
+     * @inheritDoc
      */
     public async saveShortForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, tipWork: Buffer, feeRate?: string) {
         feeRate ??= await this.getMainFeeRate(signer);
@@ -514,11 +477,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Sweeps fork data PDAs back to self
-     *
-     * @param signer
-     * @param lastSweepId lastCheckedId returned from the previous sweepForkData() call
-     * @returns {number} lastCheckedId that should be passed to the next call of sweepForkData()
+     * @inheritDoc
      */
     public async sweepForkData(signer: SolanaSigner, lastSweepId?: number): Promise<number | null> {
         const mainState: any = await this.program.account.mainState.fetch(this.BtcRelayMainState);
@@ -560,10 +519,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Estimate required synchronization fee (worst case) to synchronize btc relay to the required blockheight
-     *
-     * @param requiredBlockheight
-     * @param feeRate
+     * @inheritDoc
      */
     public async estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<bigint> {
         const tipData = await this.getTipData();
@@ -582,9 +538,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Returns fee required (in SOL) to synchronize a single block to btc relay
-     *
-     * @param feeRate
+     * @inheritDoc
      */
     public async getFeePerBlock(feeRate?: string): Promise<bigint> {
         // feeRate = feeRate || await this.getMainFeeRate(null);
@@ -593,7 +547,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Gets fee rate required for submitting blockheaders to the main chain
+     * @inheritDoc
      */
     public getMainFeeRate(signer: string | null): Promise<string> {
         const _signer = signer==null ? null : new PublicKey(signer);
@@ -604,7 +558,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Gets fee rate required for submitting blockheaders to the specific fork
+     * @inheritDoc
      */
     public getForkFeeRate(signer: string, forkId: number): Promise<string> {
         const _signer = new PublicKey(signer);

@@ -21,6 +21,9 @@ export class SolanaSigner implements AbstractSigner {
         return this.wallet.publicKey;
     }
 
+    /**
+     * @inheritDoc
+     */
     getAddress(): string {
         return this.wallet.publicKey.toString();
     }

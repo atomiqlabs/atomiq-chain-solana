@@ -110,20 +110,32 @@ export class SolanaSwapData extends SwapData {
         }
     }
 
+    /**
+     * @inheritDoc
+     */
     getOfferer(): string {
         return this.offerer.toBase58();
     }
 
+    /**
+     * @inheritDoc
+     */
     setOfferer(newOfferer: string) {
         this.offerer = new PublicKey(newOfferer);
         this.offererAta = getAssociatedTokenAddressSync(this.token, this.offerer);
         this.payIn = true;
     }
 
+    /**
+     * @inheritDoc
+     */
     getClaimer(): string {
         return this.claimer.toBase58();
     }
 
+    /**
+     * @inheritDoc
+     */
     setClaimer(newClaimer: string) {
         this.claimer = new PublicKey(newClaimer);
         this.payIn = false;
@@ -131,6 +143,9 @@ export class SolanaSwapData extends SwapData {
         this.claimerAta = getAssociatedTokenAddressSync(this.token, this.claimer);
     }
 
+    /**
+     * @inheritDoc
+     */
     serialize(): {type: "sol"} & Serialized<SolanaSwapData> {
         return {
             type: "sol",
@@ -154,85 +169,145 @@ export class SolanaSwapData extends SwapData {
         }
     }
 
+    /**
+     * @inheritDoc
+     */
     getAmount(): bigint {
         return toBigInt(this.amount);
     }
 
+    /**
+     * @inheritDoc
+     */
     getToken(): string {
         return this.token.toString();
     }
 
+    /**
+     * @inheritDoc
+     */
     isToken(token: string): boolean {
         return this.token.equals(new PublicKey(token));
     }
 
+    /**
+     * @inheritDoc
+     */
     getType(): ChainSwapType {
         return SolanaSwapData.kindToType(this.kind);
     }
 
+    /**
+     * @inheritDoc
+     */
     getExpiry(): bigint {
         if(this.expiry.lt(EXPIRY_BLOCKHEIGHT_THRESHOLD)) throw new Error("Expiry expressed as bitcoin blockheight!");
         return toBigInt(this.expiry);
     }
 
+    /**
+     * @inheritDoc
+     */
     getConfirmationsHint(): number {
         return this.confirmations;
     }
 
+    /**
+     * @inheritDoc
+     */
     getNonceHint(): bigint {
         return toBigInt(this.nonce);
     }
 
+    /**
+     * @inheritDoc
+     */
     isPayIn(): boolean {
         return this.payIn;
     }
 
+    /**
+     * @inheritDoc
+     */
     isPayOut(): boolean {
         return this.payOut;
     }
 
+    /**
+     * @inheritDoc
+     */
     isTrackingReputation(): boolean {
         return !this.payOut;
     }
 
+    /**
+     * @inheritDoc
+     */
     getClaimHash(): string {
         return toClaimHash(this.paymentHash, toBigInt(this.nonce), this.confirmations);
     }
 
+    /**
+     * @inheritDoc
+     */
     getEscrowHash(): string {
         return toEscrowHash(this.paymentHash, this.sequence);
     }
 
+    /**
+     * @inheritDoc
+     */
     getSequence(): bigint {
         return toBigInt(this.sequence);
     }
 
+    /**
+     * @inheritDoc
+     */
     getTxoHashHint(): string | null {
         if(this.txoHash==="0000000000000000000000000000000000000000000000000000000000000000") return null; //Txo hash opt-out flag
         return this.txoHash ?? null
     }
 
+    /**
+     * @inheritDoc
+     */
     getHTLCHashHint(): string | null {
         if(this.getType()===ChainSwapType.HTLC) return this.paymentHash;
         return null;
     }
 
+    /**
+     * @inheritDoc
+     */
     getExtraData(): string | null {
         return this.txoHash ?? null;
     }
 
+    /**
+     * @inheritDoc
+     */
     setExtraData(txoHash: string): void {
         this.txoHash = txoHash;
     }
 
+    /**
+     * @inheritDoc
+     */
     getSecurityDeposit(): bigint {
         return toBigInt(this.securityDeposit);
     }
 
+    /**
+     * @inheritDoc
+     */
     getClaimerBounty(): bigint {
         return toBigInt(this.claimerBounty);
     }
 
+    /**
+     * @inheritDoc
+     */
     getTotalDeposit(): bigint {
         return toBigInt(this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty);
     }
@@ -271,6 +346,9 @@ export class SolanaSwapData extends SwapData {
             this.securityDeposit.eq(account.securityDeposit);
     }
 
+    /**
+     * @inheritDoc
+     */
     equals(other: SolanaSwapData): boolean {
         if(this.claimerAta==null && other.claimerAta!=null) return false;
         if(this.claimerAta!=null && other.claimerAta==null) return false;
@@ -393,6 +471,9 @@ export class SolanaSwapData extends SwapData {
         throw new Error("Unknown swap kind type!");
     }
 
+    /**
+     * @inheritDoc
+     */
     isClaimer(address: string) {
         const _address = new PublicKey(address);
         if(this.isPayOut()) {
@@ -403,14 +484,23 @@ export class SolanaSwapData extends SwapData {
         return this.claimer.equals(new PublicKey(address));
     }
 
+    /**
+     * @inheritDoc
+     */
     isOfferer(address: string) {
         return this.offerer.equals(new PublicKey(address));
     }
 
+    /**
+     * @inheritDoc
+     */
     getDepositToken(): string {
         return SolanaTokens.WSOL_ADDRESS.toString();
     }
 
+    /**
+     * @inheritDoc
+     */
     isDepositToken(token: string): boolean {
         return SolanaTokens.WSOL_ADDRESS.equals(new PublicKey(token));
     }
