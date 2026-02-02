@@ -6,7 +6,9 @@
     "outDir": "./dist",
     "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true
   },
   "include": [
     "./src/**/*"

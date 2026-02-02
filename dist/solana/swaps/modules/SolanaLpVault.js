@@ -14,7 +14,6 @@ class SolanaLpVault extends SolanaSwapModule_1.SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     async Withdraw(signer, token, amount) {
@@ -38,7 +37,6 @@ class SolanaLpVault extends SolanaSwapModule_1.SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     async Deposit(signer, token, amount) {
@@ -91,7 +89,7 @@ class SolanaLpVault extends SolanaSwapModule_1.SolanaSwapModule {
      */
     async getIntermediaryReputation(address, token) {
         const intermediaryData = await this.getIntermediaryData(address, token);
-        return intermediaryData?.reputation;
+        return intermediaryData?.reputation ?? null;
     }
     /**
      * Returns the balance of the token an intermediary has in his LP vault
@@ -101,9 +99,9 @@ class SolanaLpVault extends SolanaSwapModule_1.SolanaSwapModule {
      */
     async getIntermediaryBalance(address, token) {
         const intermediaryData = await this.getIntermediaryData(address, token);
-        const balance = intermediaryData?.balance;
+        const balance = intermediaryData?.balance ?? 0n;
         this.logger.debug("getIntermediaryBalance(): token LP balance fetched, token: " + token.toString() +
-            " address: " + address + " amount: " + (balance == null ? "null" : balance.toString()));
+            " address: " + address + " amount: " + balance.toString());
         return balance;
     }
     /**
@@ -144,7 +142,7 @@ class SolanaLpVault extends SolanaSwapModule_1.SolanaSwapModule {
         const action = new SolanaAction_1.SolanaAction(signer, this.root);
         let wrapping = false;
         if (token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS)) {
-            const account = await (0, Utils_1.tryWithRetries)(() => this.root.Tokens.getATAOrNull(ata), this.retryPolicy);
+            const account = await this.root.Tokens.getATAOrNull(ata);
             let balance = account == null ? 0n : account.amount;
             if (balance < amount) {
                 action.add(this.root.Tokens.Wrap(signer, amount - balance, account == null));

@@ -1,6 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaSigner = void 0;
+/**
+ * Solana signer implementation wrapping an Anchor Wallet
+ * @category Wallets
+ */
 class SolanaSigner {
     constructor(wallet, keypair) {
         this.type = "AtomiqAbstractSigner";

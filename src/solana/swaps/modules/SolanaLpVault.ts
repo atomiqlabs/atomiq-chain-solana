@@ -8,10 +8,8 @@ import {
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
-import {toBigInt, toBN, tryWithRetries} from "../../../utils/Utils";
-import {SwapProgram} from "../programTypes";
+import {toBigInt, toBN} from "../../../utils/Utils";
 import { IntermediaryReputationType } from "@atomiqlabs/base";
-import { IdlAccounts } from "@coral-xyz/anchor";
 import {SolanaTokens} from "../../chain/modules/SolanaTokens";
 
 export class SolanaLpVault extends SolanaSwapModule {
@@ -27,7 +25,6 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private async Withdraw(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
@@ -55,7 +52,6 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param signer
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private async Deposit(signer: PublicKey, token: PublicKey, amount: bigint): Promise<SolanaAction> {
@@ -87,8 +83,8 @@ export class SolanaLpVault extends SolanaSwapModule {
     public async getIntermediaryData(address: PublicKey, token: PublicKey): Promise<{
         balance: bigint,
         reputation: IntermediaryReputationType
-    }> {
-        const data: IdlAccounts<SwapProgram>["userAccount"] = await this.swapProgram.account.userAccount.fetchNullable(
+    } | null> {
+        const data = await this.swapProgram.account.userAccount.fetchNullable(
             this.program.SwapUserVault(address, token)
         );
 
@@ -119,9 +115,9 @@ export class SolanaLpVault extends SolanaSwapModule {
      * @param address
      * @param token
      */
-    public async getIntermediaryReputation(address: PublicKey, token: PublicKey): Promise<IntermediaryReputationType> {
+    public async getIntermediaryReputation(address: PublicKey, token: PublicKey): Promise<IntermediaryReputationType | null> {
         const intermediaryData = await this.getIntermediaryData(address, token);
-        return intermediaryData?.reputation;
+        return intermediaryData?.reputation ?? null;
     }
 
     /**
@@ -132,10 +128,10 @@ export class SolanaLpVault extends SolanaSwapModule {
      */
     public async getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint> {
         const intermediaryData = await this.getIntermediaryData(address, token);
-        const balance: bigint = intermediaryData?.balance;
+        const balance: bigint = intermediaryData?.balance ?? 0n;
 
         this.logger.debug("getIntermediaryBalance(): token LP balance fetched, token: "+token.toString()+
-            " address: "+address+" amount: "+(balance==null ? "null" : balance.toString()));
+            " address: "+address+" amount: "+balance.toString());
 
         return balance;
     }
@@ -185,10 +181,7 @@ export class SolanaLpVault extends SolanaSwapModule {
 
         let wrapping: boolean = false;
         if(token.equals(SolanaTokens.WSOL_ADDRESS)) {
-            const account = await tryWithRetries<Account>(
-                () => this.root.Tokens.getATAOrNull(ata),
-                this.retryPolicy
-            );
+            const account = await this.root.Tokens.getATAOrNull(ata);
             let balance: bigint = account==null ? 0n : account.amount;
             if(balance < amount) {
                 action.add(this.root.Tokens.Wrap(signer, amount - balance, account==null));

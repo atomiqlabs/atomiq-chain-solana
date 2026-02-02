@@ -13,6 +13,10 @@ const Utils_1 = require("../../utils/Utils");
 const SolanaAddresses_1 = require("./modules/SolanaAddresses");
 const SolanaSigner_1 = require("../wallet/SolanaSigner");
 const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
+/**
+ * Main chain interface for interacting with Solana blockchain
+ * @category Chain Interface
+ */
 class SolanaChainInterface {
     constructor(connection, retryPolicy, solanaFeeEstimator = new SolanaFees_1.SolanaFees(connection)) {
         this.chainId = "SOLANA";
@@ -64,11 +68,20 @@ class SolanaChainInterface {
     sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
         return this.Transactions.sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
     }
+    sendSignedAndConfirm(txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
+        return this.Transactions.sendSignedAndConfirm(txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
+    }
     serializeTx(tx) {
-        return this.Transactions.serializeTx(tx);
+        return Promise.resolve(this.Transactions.serializeUnsignedTx(tx));
     }
     deserializeTx(txData) {
-        return this.Transactions.deserializeTx(txData);
+        return Promise.resolve(this.Transactions.deserializeUnsignedTx(txData));
+    }
+    serializeSignedTx(tx) {
+        return Promise.resolve(this.Transactions.serializeSignedTx(tx));
+    }
+    deserializeSignedTx(txData) {
+        return Promise.resolve(this.Transactions.deserializeSignedTransaction(txData));
     }
     getTxIdStatus(txId) {
         return this.Transactions.getTxIdStatus(txId);

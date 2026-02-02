@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { BtcStoredHeader } from "@atomiqlabs/base";
 import { SolanaBtcHeader } from "./SolanaBtcHeader";
 import { Buffer } from "buffer";
@@ -9,6 +10,9 @@ export type SolanaBtcStoredHeaderType = {
     blockheight: number;
     prevBlockTimestamps: number[];
 };
+/**
+ * @category BTC Relay
+ */
 export declare class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
     chainWork: number[];
     header: SolanaBtcHeader;

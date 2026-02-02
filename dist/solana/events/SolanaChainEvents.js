@@ -5,30 +5,16 @@ const fs = require("fs/promises");
 const SolanaChainEventsBrowser_1 = require("./SolanaChainEventsBrowser");
 const BLOCKHEIGHT_FILENAME = "/blockheight.txt";
 const LOG_FETCH_INTERVAL = 5 * 1000;
-const LOG_FETCH_LIMIT = 500;
-const PROCESSED_SIGNATURES_BACKLOG = 100;
 /**
  * Event handler for backend Node.js systems with access to fs, uses HTTP polling in combination with WS to not miss
  *  any events
  */
 class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrowser {
-    constructor(directory, connection, solanaSwapProgram, logFetchInterval, logFetchLimit) {
+    constructor(directory, connection, solanaSwapProgram, logFetchInterval) {
         super(connection, solanaSwapProgram);
-        this.signaturesProcessing = {};
-        this.processedSignatures = [];
-        this.processedSignaturesIndex = 0;
+        this.stopped = true;
         this.directory = directory;
         this.logFetchInterval = logFetchInterval || LOG_FETCH_INTERVAL;
-        this.logFetchLimit = logFetchLimit || LOG_FETCH_LIMIT;
-    }
-    addProcessedSignature(signature) {
-        this.processedSignatures[this.processedSignaturesIndex] = signature;
-        this.processedSignaturesIndex += 1;
-        if (this.processedSignaturesIndex >= PROCESSED_SIGNATURES_BACKLOG)
-            this.processedSignaturesIndex = 0;
-    }
-    isSignatureProcessed(signature) {
-        return this.processedSignatures.includes(signature);
     }
     /**
      * Retrieves last signature & slot from filesystem
@@ -62,167 +48,15 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         return fs.writeFile(this.directory + BLOCKHEIGHT_FILENAME, lastSignature + ";" + slot);
     }
     /**
-     * Parses EventObject from the transaction
-     *
-     * @param transaction
-     * @private
-     * @returns {EventObject} parsed event object
-     */
-    getEventObjectFromTransaction(transaction) {
-        if (transaction.meta.err != null)
-            return null;
-        const instructions = this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
-        const events = this.solanaSwapProgram.Events.parseLogs(transaction.meta.logMessages);
-        return {
-            instructions,
-            events,
-            blockTime: transaction.blockTime,
-            signature: transaction.transaction.signatures[0]
-        };
-    }
-    /**
-     * Fetches transaction from the RPC, parses it to even object & processes it through event handler
-     *
-     * @param signature
-     * @private
-     * @returns {boolean} whether the operation was successful
-     */
-    async fetchTxAndProcessEvent(signature) {
-        try {
-            const transaction = await this.connection.getParsedTransaction(signature, {
-                commitment: "confirmed",
-                maxSupportedTransactionVersion: 1
-            });
-            if (transaction == null)
-                return false;
-            const eventObject = this.getEventObjectFromTransaction(transaction);
-            if (eventObject == null)
-                return true;
-            await this.processEvent(eventObject);
-            return true;
-        }
-        catch (e) {
-            this.logger.error("fetchTxAndProcessEvent(): Error fetching transaction and processing event, signature: " + signature, e);
-            return false;
-        }
-    }
-    /**
-     * Returns websocket event handler for specific event type
-     *
-     * @param name
-     * @protected
-     * @returns event handler to be passed to program's addEventListener function
-     */
-    getWsEventHandler(name) {
-        return (data, slotNumber, signature) => {
-            if (this.signaturesProcessing[signature] != null)
-                return;
-            if (this.isSignatureProcessed(signature))
-                return;
-            this.logger.debug("getWsEventHandler(" + name + "): Process signature: ", signature);
-            this.signaturesProcessing[signature] = this.processEvent({
-                events: [{ name, data: data }],
-                instructions: null,
-                blockTime: Math.floor(Date.now() / 1000),
-                signature
-            }).then(() => true).catch(e => {
-                this.logger.error("getWsEventHandler(" + name + "): Error processing signature: " + signature, e);
-                return false;
-            });
-        };
-    }
-    /**
-     * Gets all the new signatures from the last processed signature
-     *
-     * @param lastProcessedSignature
-     * @private
-     */
-    async getNewSignatures(lastProcessedSignature) {
-        let signatures = [];
-        let fetched = null;
-        while (fetched == null || fetched.length === this.logFetchLimit) {
-            if (signatures.length === 0) {
-                fetched = await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
-                    until: lastProcessedSignature.signature,
-                    limit: this.logFetchLimit
-                }, "confirmed");
-                //Check if newest returned signature (index 0) is older than the latest signature's slot, this is a sanity check
-                if (fetched.length > 0 && fetched[0].slot < lastProcessedSignature.slot) {
-                    this.logger.debug("getNewSignatures(): Sanity check triggered, returned signature slot height is older than latest!");
-                    return;
-                }
-            }
-            else {
-                fetched = await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
-                    before: signatures[signatures.length - 1].signature,
-                    until: lastProcessedSignature.signature,
-                    limit: this.logFetchLimit
-                }, "confirmed");
-            }
-            signatures = signatures.concat(fetched);
-        }
-        return signatures;
-    }
-    /**
-     * Gets single latest known signature
-     *
-     * @private
-     */
-    async getFirstSignature() {
-        return await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
-            limit: 1
-        }, "confirmed");
-    }
-    /**
-     * Processes signatures, fetches transactions & processes event through event handlers
-     *
-     * @param signatures
-     * @private
-     * @returns {Promise<{signature: string, slot: number}>} latest processed transaction signature and slot height
-     */
-    async processSignatures(signatures) {
-        let lastSuccessfulSignature = null;
-        try {
-            for (let i = signatures.length - 1; i >= 0; i--) {
-                const txSignature = signatures[i];
-                //Check if signature is already being processed by the
-                const signaturePromise = this.signaturesProcessing[txSignature.signature];
-                if (signaturePromise != null) {
-                    const result = await signaturePromise;
-                    delete this.signaturesProcessing[txSignature.signature];
-                    if (result) {
-                        lastSuccessfulSignature = txSignature;
-                        this.addProcessedSignature(txSignature.signature);
-                        continue;
-                    }
-                }
-                this.logger.debug("processSignatures(): Process signature: ", txSignature);
-                const processPromise = this.fetchTxAndProcessEvent(txSignature.signature);
-                this.signaturesProcessing[txSignature.signature] = processPromise;
-                const result = await processPromise;
-                if (!result)
-                    throw new Error("Failed to process signature: " + txSignature);
-                lastSuccessfulSignature = txSignature;
-                this.addProcessedSignature(txSignature.signature);
-                delete this.signaturesProcessing[txSignature.signature];
-            }
-        }
-        catch (e) {
-            this.logger.error("processSignatures(): Failed processing signatures: ", e);
-        }
-        return lastSuccessfulSignature;
-    }
-    /**
      * Polls for new events & processes them
      *
      * @private
      */
     async checkEvents() {
         const lastSignature = await this.getLastSignature();
-        let signatures = lastSignature == null ? await this.getFirstSignature() : await this.getNewSignatures(lastSignature);
-        let lastSuccessfulSignature = await this.processSignatures(signatures);
-        if (lastSuccessfulSignature != null) {
-            await this.saveLastSignature(lastSuccessfulSignature.signature, lastSuccessfulSignature.slot);
+        const result = await this.poll(lastSignature ?? undefined);
+        if (result != null) {
+            await this.saveLastSignature(result.signature, result.slot);
         }
     }
     async setupHttpPolling() {
@@ -238,7 +72,9 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         };
         await func();
     }
-    async init() {
+    async init(noAutomaticPoll) {
+        if (noAutomaticPoll)
+            return;
         try {
             await fs.mkdir(this.directory);
         }

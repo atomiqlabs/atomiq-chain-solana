@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Connection, PublicKey, SendOptions, Transaction } from "@solana/web3.js";
 export type FeeBribeData = {
     address: string;
@@ -16,7 +17,7 @@ export declare class SolanaFees {
     private readonly bribeData?;
     private readonly getStaticFee?;
     private readonly logger;
-    private blockFeeCache;
+    private blockFeeCache?;
     constructor(connection: Connection, maxFeeMicroLamports?: number, numSamples?: number, period?: number, useHeliusApi?: "yes" | "no" | "auto", heliusFeeLevel?: "min" | "low" | "medium" | "high" | "veryHigh" | "unsafeMax", getStaticFee?: (feeRate: bigint) => bigint, bribeData?: FeeBribeData);
     /**
      * Returns solana block with transactionDetails="signatures"
@@ -100,7 +101,7 @@ export declare class SolanaFees {
      * @param computeBudget
      * @param feeRate
      */
-    applyFeeRateBegin(tx: Transaction, computeBudget: number, feeRate: string): boolean;
+    applyFeeRateBegin(tx: Transaction, computeBudget: number | null, feeRate: string): void;
     /**
      * Applies fee rate to the end of the transaction (has to be called after feePayer is set for the tx),
      *  specifically adds the bribe SystemProgram.transfer instruction
@@ -109,7 +110,7 @@ export declare class SolanaFees {
      * @param computeBudget
      * @param feeRate
      */
-    applyFeeRateEnd(tx: Transaction, computeBudget: number, feeRate: string): boolean;
+    applyFeeRateEnd(tx: Transaction, computeBudget: number | null, feeRate: string): void;
     /**
      * Checks if the transaction should be submitted over Jito and if yes submits it
      *

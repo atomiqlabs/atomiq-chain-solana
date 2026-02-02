@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaTx } from "../../chain/modules/SolanaTransactions";
@@ -11,7 +12,6 @@ export declare class SwapRefund extends SolanaSwapModule {
      *
      * @param swapData
      * @param refundAuthTimeout optional refund authorization timeout (should be 0 for refunding expired swaps)
-     * @constructor
      * @private
      */
     private Refund;
@@ -22,7 +22,6 @@ export declare class SwapRefund extends SolanaSwapModule {
      * @param timeout
      * @param prefix
      * @param signature
-     * @constructor
      * @private
      */
     private RefundWithSignature;

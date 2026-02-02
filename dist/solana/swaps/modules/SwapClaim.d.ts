@@ -17,7 +17,6 @@ export declare class SwapClaim extends SolanaSwapModule {
      * @param signer
      * @param swapData
      * @param secret
-     * @constructor
      * @private
      */
     private Claim;
@@ -31,7 +30,6 @@ export declare class SwapClaim extends SolanaSwapModule {
      * @param storeDataKey
      * @param merkleProof
      * @param commitedHeader
-     * @constructor
      * @private
      */
     private VerifyAndClaim;
@@ -98,24 +96,23 @@ export declare class SwapClaim extends SolanaSwapModule {
      *
      * @param signer
      * @param swapData swap to claim
-     * @param blockheight blockheight of the bitcoin transaction
      * @param tx bitcoin transaction that satisfies the swap condition
      * @param vout vout of the bitcoin transaction that satisfies the swap condition
      * @param commitedHeader commited header data from btc relay (fetched internally if null)
      * @param synchronizer optional synchronizer to use in case we need to sync up the btc relay ourselves
      * @param initAta whether to initialize claimer's ATA
-     * @param storageAccHolder an object holder filled in with the created data account where tx data is written
      * @param feeRate fee rate to be used for the transactions
      */
     txsClaimWithTxData(signer: PublicKey | SolanaSigner, swapData: SolanaSwapData, tx: {
         blockhash: string;
-        confirmations: number;
         txid: string;
         hex: string;
         height: number;
-    }, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, storageAccHolder?: {
+    }, vout: number, commitedHeader?: SolanaBtcStoredHeader | null, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, feeRate?: string): Promise<{
+        txs: SolanaTx[];
+        claimTxIndex: number;
         storageAcc: PublicKey;
-    }, feeRate?: string): Promise<SolanaTx[] | null>;
+    }>;
     getClaimFeeRate(signer: PublicKey, swapData: SolanaSwapData): Promise<string>;
     /**
      * Get the estimated solana transaction fee of the claim transaction in the worst case scenario in case where the

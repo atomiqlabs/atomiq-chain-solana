@@ -10,6 +10,9 @@ export type SolanaBtcStoredHeaderType = {
     prevBlockTimestamps: number[]
 }
 
+/**
+ * @category BTC Relay
+ */
 export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
 
     chainWork: number[];

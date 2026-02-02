@@ -4,12 +4,11 @@ exports.SolanaDataAccount = exports.StoredDataAccount = void 0;
 const SolanaSwapModule_1 = require("../SolanaSwapModule");
 const web3_js_1 = require("@solana/web3.js");
 const SolanaAction_1 = require("../../chain/SolanaAction");
-const Utils_1 = require("../../../utils/Utils");
 const SolanaSigner_1 = require("../../wallet/SolanaSigner");
 const utils_1 = require("@noble/hashes/utils");
 class StoredDataAccount {
     constructor(accountKeyOrData, owner) {
-        if (accountKeyOrData instanceof web3_js_1.PublicKey) {
+        if (accountKeyOrData instanceof web3_js_1.PublicKey && owner instanceof web3_js_1.PublicKey) {
             this.accountKey = accountKeyOrData;
             this.owner = owner;
         }
@@ -37,7 +36,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
      */
     async InitDataAccount(signer, accountKey, dataLength) {
         const accountSize = 32 + dataLength;
-        const lamportsDeposit = await (0, Utils_1.tryWithRetries)(() => this.connection.getMinimumBalanceForRentExemption(accountSize), this.retryPolicy);
+        const lamportsDeposit = await this.connection.getMinimumBalanceForRentExemption(accountSize);
         return new SolanaAction_1.SolanaAction(signer, this.root, [
             web3_js_1.SystemProgram.createAccount({
                 fromPubkey: signer,
@@ -53,7 +52,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
                 data: accountKey.publicKey
             })
                 .instruction(),
-        ], SolanaDataAccount.CUCosts.DATA_CREATE, null, [accountKey]);
+        ], SolanaDataAccount.CUCosts.DATA_CREATE, undefined, [accountKey]);
     }
     /**
      * Action for closing the specific data account
@@ -160,14 +159,14 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
         const { closePublicKeys, totalValue } = await this.getDataAccountsInfo(signer.getPublicKey());
         if (closePublicKeys.length === 0) {
             this.logger.debug("sweepDataAccounts(): no old data accounts found, no need to close any!");
-            return;
+            return { txIds: [], count: 0, totalValue: 0n };
         }
         this.logger.debug("sweepDataAccounts(): closing old data accounts: ", closePublicKeys);
         let txns = [];
         for (let publicKey of closePublicKeys) {
             await (await this.CloseDataAccount(signer.getPublicKey(), publicKey)).addToTxs(txns);
         }
-        const result = await this.root.Transactions.sendAndConfirm(signer, txns, true, null, true);
+        const result = await this.root.Transactions.sendAndConfirm(signer, txns, true, undefined, true);
         this.logger.info("sweepDataAccounts(): old data accounts closed: " +
             closePublicKeys.map(pk => pk.toBase58()).join());
         for (let publicKey of closePublicKeys) {
@@ -193,7 +192,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
         let fetchedDataAccount = null;
         if (signer instanceof SolanaSigner_1.SolanaSigner && signer.keypair != null) {
             txDataKey = this.SwapTxDataAlt(reversedTxId, signer.keypair);
-            fetchedDataAccount = await (0, Utils_1.tryWithRetries)(() => this.connection.getAccountInfo(txDataKey.publicKey), this.retryPolicy);
+            fetchedDataAccount = await this.connection.getAccountInfo(txDataKey.publicKey);
         }
         else {
             const secret = Buffer.from((0, utils_1.randomBytes)(32));

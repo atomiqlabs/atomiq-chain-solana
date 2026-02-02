@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { ParsedAccountsModeBlockResponse, PublicKey } from "@solana/web3.js";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaSwapModule } from "../SolanaSwapModule";
@@ -38,7 +39,6 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param swapData
      * @param timeout
      * @param feeRate
-     * @constructor
      * @private
      */
     private InitPayIn;
@@ -48,19 +48,10 @@ export declare class SwapInit extends SolanaSwapModule {
      *
      * @param swapData
      * @param timeout
-     * @constructor
      * @private
      */
     private InitNotPayIn;
     private Wrap;
-    /**
-     * Extracts data about SOL to WSOL wrapping from the fee rate, fee rate is used to convey this information from
-     *  the user to the intermediary, such that the intermediary creates valid signature for transaction including
-     *  the SOL to WSOL wrapping instructions
-     *
-     * @param feeRate
-     * @private
-     */
     private extractAtaDataFromFeeRate;
     /**
      * Checks whether a wrap instruction (SOL -> WSOL) should be a part of the signed init message

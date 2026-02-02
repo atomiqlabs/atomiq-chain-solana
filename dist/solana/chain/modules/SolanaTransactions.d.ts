@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Finality, SendOptions, Signer, Transaction } from "@solana/web3.js";
 import { SolanaModule } from "../SolanaModule";
 import { Buffer } from "buffer";
@@ -7,14 +8,15 @@ export type SolanaTx = {
     tx: Transaction;
     signers: Signer[];
 };
+export type SignedSolanaTx = Transaction;
 export declare class SolanaTransactions extends SolanaModule {
-    private cbkBeforeTxSigned;
+    private cbkBeforeTxSigned?;
     /**
      * Callback for sending transaction, returns not null if it was successfully able to send the transaction, and null
      *  if the transaction should be sent through other means)
      * @private
      */
-    private cbkSendTransaction;
+    private cbkSendTransaction?;
     /**
      * Sends raw solana transaction, first through the cbkSendTransaction callback (for e.g. sending the transaction
      *  to a different specific RPC), the through the Fees handler (for e.g. Jito transaction) and last through the
@@ -29,7 +31,7 @@ export declare class SolanaTransactions extends SolanaModule {
      * Waits for the transaction to confirm by periodically checking the transaction status over HTTP, also
      *  re-sends the transaction at regular intervals
      *
-     * @param solanaTx solana tx to wait for confirmation for
+     * @param tx solana tx to wait for confirmation for
      * @param finality wait for this finality
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
@@ -40,7 +42,7 @@ export declare class SolanaTransactions extends SolanaModule {
      *  this therefore also runs an ultimate check on the transaction in case the WS handler rejects, checking if it
      *  really was expired
      *
-     * @param solanaTx solana tx to wait for confirmation for
+     * @param tx solana tx to wait for confirmation for
      * @param finality wait for this finality
      * @param abortSignal signal to abort waiting for tx confirmation
      * @private
@@ -50,7 +52,7 @@ export declare class SolanaTransactions extends SolanaModule {
      * Waits for transaction confirmation using WS subscription and occasional HTTP polling, also re-sends
      *  the transaction at regular interval
      *
-     * @param solanaTx solana transaction to wait for confirmation for & keep re-sending until it confirms
+     * @param tx solana transaction to wait for confirmation for & keep re-sending until it confirms
      * @param abortSignal signal to abort waiting for tx confirmation
      * @param finality wait for specific finality
      * @private
@@ -68,7 +70,7 @@ export declare class SolanaTransactions extends SolanaModule {
     /**
      * Sends out a signed transaction to the RPC
      *
-     * @param solTx solana tx to send
+     * @param tx solana tx to send
      * @param options send options to be passed to the RPC
      * @param onBeforePublish a callback called before every transaction is published
      * @private
@@ -89,18 +91,31 @@ export declare class SolanaTransactions extends SolanaModule {
      * @param onBeforePublish a callback called before every transaction is published
      */
     sendAndConfirm(signer: SolanaSigner, _txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
+    sendSignedAndConfirm(signedTxs: SignedSolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
     /**
      * Serializes the solana transaction, saves the transaction, signers & last valid blockheight
      *
      * @param tx
      */
-    serializeTx(tx: SolanaTx): Promise<string>;
+    serializeUnsignedTx(tx: SolanaTx): string;
+    /**
+     * Serializes the solana transaction
+     *
+     * @param signedTx
+     */
+    serializeSignedTx(signedTx: Transaction): string;
     /**
      * Deserializes saved solana transaction, extracting the transaction, signers & last valid blockheight
      *
      * @param txData
      */
-    deserializeTx(txData: string): Promise<SolanaTx>;
+    deserializeUnsignedTx(txData: string): SolanaTx;
+    /**
+     * Deserializes raw solana transaction
+     *
+     * @param txData
+     */
+    deserializeSignedTransaction(txData: string): Transaction;
     /**
      * Gets the status of the raw solana transaction, this also checks transaction expiry & can therefore report tx
      *  in "pending" status, however pending status doesn't necessarily mean that the transaction was sent (again,

@@ -11,16 +11,7 @@ export declare class SolanaTokens extends SolanaModule {
         TRANSFER: number;
         TRANSFER_SOL: number;
     };
-    /**
-     * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
-     *  public key
-     *
-     * @param signer
-     * @param publicKey public key address of the user for which to initiate the ATA
-     * @param token token identification for which the ATA should be initialized
-     * @param requiredAta optional required ata address to use, if the address doesn't match it returns null
-     * @constructor
-     */
+    InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey): SolanaAction;
     InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null;
     /**
      * Action for wrapping SOL to WSOL for a specific public key
@@ -28,14 +19,12 @@ export declare class SolanaTokens extends SolanaModule {
      * @param publicKey public key of the user for which to wrap the SOL
      * @param amount amount of SOL in lamports (smallest unit) to wrap
      * @param initAta whether we should also initialize the ATA before depositing SOL
-     * @constructor
      */
     Wrap(publicKey: PublicKey, amount: bigint, initAta: boolean): SolanaAction;
     /**
      * Action for unwrapping WSOL to SOL for a specific public key
      *
      * @param publicKey public key of the user for which to unwrap the sol
-     * @constructor
      */
     Unwrap(publicKey: PublicKey): SolanaAction;
     static readonly WSOL_ADDRESS: PublicKey;
@@ -46,7 +35,6 @@ export declare class SolanaTokens extends SolanaModule {
      * @param signer
      * @param recipient
      * @param amount
-     * @constructor
      * @private
      */
     private SolTransfer;
@@ -57,7 +45,6 @@ export declare class SolanaTokens extends SolanaModule {
      * @param recipient
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private Transfer;

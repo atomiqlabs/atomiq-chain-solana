@@ -5,7 +5,6 @@ const SolanaModule_1 = require("../SolanaModule");
 const web3_js_1 = require("@solana/web3.js");
 const spl_token_1 = require("@solana/spl-token");
 const SolanaAction_1 = require("../SolanaAction");
-const Utils_1 = require("../../../utils/Utils");
 class SolanaTokens extends SolanaModule_1.SolanaModule {
     /**
      * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
@@ -15,7 +14,6 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param publicKey public key address of the user for which to initiate the ATA
      * @param token token identification for which the ATA should be initialized
      * @param requiredAta optional required ata address to use, if the address doesn't match it returns null
-     * @constructor
      */
     InitAta(signer, publicKey, token, requiredAta) {
         const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(token, publicKey, true);
@@ -29,7 +27,6 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param publicKey public key of the user for which to wrap the SOL
      * @param amount amount of SOL in lamports (smallest unit) to wrap
      * @param initAta whether we should also initialize the ATA before depositing SOL
-     * @constructor
      */
     Wrap(publicKey, amount, initAta) {
         const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, publicKey, true);
@@ -48,7 +45,6 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * Action for unwrapping WSOL to SOL for a specific public key
      *
      * @param publicKey public key of the user for which to unwrap the sol
-     * @constructor
      */
     Unwrap(publicKey) {
         const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(SolanaTokens.WSOL_ADDRESS, publicKey, true);
@@ -60,7 +56,6 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param signer
      * @param recipient
      * @param amount
-     * @constructor
      * @private
      */
     SolTransfer(signer, recipient, amount) {
@@ -77,7 +72,6 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param recipient
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     Transfer(signer, recipient, token, amount) {
@@ -168,7 +162,7 @@ class SolanaTokens extends SolanaModule_1.SolanaModule {
      * @param ata
      */
     async ataExists(ata) {
-        const account = await (0, Utils_1.tryWithRetries)(() => this.getATAOrNull(ata), this.retryPolicy);
+        const account = await this.getATAOrNull(ata);
         return account != null;
     }
     /**

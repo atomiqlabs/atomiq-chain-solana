@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaSwapData = void 0;
+exports.SolanaSwapData = exports.isSerializedData = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const BN = require("bn.js");
 const base_1 = require("@atomiqlabs/base");
@@ -10,47 +10,53 @@ const spl_token_1 = require("@solana/spl-token");
 const Utils_1 = require("../../utils/Utils");
 const SolanaTokens_1 = require("../chain/modules/SolanaTokens");
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
+function isSerializedData(obj) {
+    return obj.type === "sol";
+}
+exports.isSerializedData = isSerializedData;
+/**
+ * @category Swaps
+ */
 class SolanaSwapData extends base_1.SwapData {
-    constructor(offererOrData, claimer, token, amount, paymentHash, sequence, expiry, nonce, confirmations, payOut, kind, payIn, offererAta, claimerAta, securityDeposit, claimerBounty, txoHash) {
+    constructor(data) {
         super();
-        if (claimer != null || token != null || amount != null || paymentHash != null || expiry != null ||
-            nonce != null || confirmations != null || payOut != null || kind != null || payIn != null || claimerAta != null) {
-            this.offerer = offererOrData;
-            this.claimer = claimer;
-            this.token = token;
-            this.amount = amount;
-            this.paymentHash = paymentHash;
-            this.sequence = sequence;
-            this.expiry = expiry;
-            this.nonce = nonce;
-            this.confirmations = confirmations;
-            this.payOut = payOut;
-            this.kind = kind;
-            this.payIn = payIn;
-            this.claimerAta = claimerAta;
-            this.offererAta = offererAta;
-            this.securityDeposit = securityDeposit;
-            this.claimerBounty = claimerBounty;
-            this.txoHash = txoHash;
+        if (!isSerializedData(data)) {
+            this.offerer = data.offerer;
+            this.claimer = data.claimer;
+            this.token = data.token;
+            this.amount = data.amount;
+            this.paymentHash = data.paymentHash;
+            this.sequence = data.sequence;
+            this.expiry = data.expiry;
+            this.nonce = data.nonce;
+            this.confirmations = data.confirmations;
+            this.payOut = data.payOut;
+            this.kind = data.kind;
+            this.payIn = data.payIn;
+            this.claimerAta = data.claimerAta;
+            this.offererAta = data.offererAta;
+            this.securityDeposit = data.securityDeposit;
+            this.claimerBounty = data.claimerBounty;
+            this.txoHash = data.txoHash;
         }
         else {
-            this.offerer = offererOrData.offerer == null ? null : new web3_js_1.PublicKey(offererOrData.offerer);
-            this.claimer = offererOrData.claimer == null ? null : new web3_js_1.PublicKey(offererOrData.claimer);
-            this.token = offererOrData.token == null ? null : new web3_js_1.PublicKey(offererOrData.token);
-            this.amount = offererOrData.amount == null ? null : new BN(offererOrData.amount);
-            this.paymentHash = offererOrData.paymentHash;
-            this.sequence = offererOrData.sequence == null ? null : new BN(offererOrData.sequence);
-            this.expiry = offererOrData.expiry == null ? null : new BN(offererOrData.expiry);
-            this.nonce = offererOrData.nonce == null ? null : new BN(offererOrData.nonce);
-            this.confirmations = offererOrData.confirmations;
-            this.payOut = offererOrData.payOut;
-            this.kind = offererOrData.kind;
-            this.payIn = offererOrData.payIn;
-            this.claimerAta = offererOrData.claimerAta == null ? null : new web3_js_1.PublicKey(offererOrData.claimerAta);
-            this.offererAta = offererOrData.offererAta == null ? null : new web3_js_1.PublicKey(offererOrData.offererAta);
-            this.securityDeposit = offererOrData.securityDeposit == null ? null : new BN(offererOrData.securityDeposit);
-            this.claimerBounty = offererOrData.claimerBounty == null ? null : new BN(offererOrData.claimerBounty);
-            this.txoHash = offererOrData.txoHash;
+            this.offerer = new web3_js_1.PublicKey(data.offerer);
+            this.claimer = new web3_js_1.PublicKey(data.claimer);
+            this.token = new web3_js_1.PublicKey(data.token);
+            this.amount = new BN(data.amount);
+            this.paymentHash = data.paymentHash;
+            this.sequence = new BN(data.sequence);
+            this.expiry = new BN(data.expiry);
+            this.nonce = new BN(data.nonce);
+            this.confirmations = data.confirmations;
+            this.payOut = data.payOut;
+            this.kind = data.kind;
+            this.payIn = data.payIn;
+            this.claimerAta = data.claimerAta == null ? undefined : new web3_js_1.PublicKey(data.claimerAta);
+            this.offererAta = data.offererAta == null ? undefined : new web3_js_1.PublicKey(data.offererAta);
+            this.securityDeposit = new BN(data.securityDeposit);
+            this.claimerBounty = new BN(data.claimerBounty);
+            this.txoHash = data.txoHash;
         }
     }
     getOfferer() {
@@ -73,22 +79,22 @@ class SolanaSwapData extends base_1.SwapData {
     serialize() {
         return {
             type: "sol",
-            offerer: this.offerer == null ? null : this.offerer.toBase58(),
-            claimer: this.claimer == null ? null : this.claimer.toBase58(),
-            token: this.token == null ? null : this.token.toBase58(),
-            amount: this.amount == null ? null : this.amount.toString(10),
+            offerer: this.offerer?.toBase58(),
+            claimer: this.claimer?.toBase58(),
+            token: this.token?.toBase58(),
+            amount: this.amount?.toString(10),
             paymentHash: this.paymentHash,
-            sequence: this.sequence == null ? null : this.sequence.toString(10),
-            expiry: this.expiry == null ? null : this.expiry.toString(10),
-            nonce: this.nonce == null ? null : this.nonce.toString(10),
+            sequence: this.sequence?.toString(10),
+            expiry: this.expiry?.toString(10),
+            nonce: this.nonce?.toString(10),
             confirmations: this.confirmations,
             payOut: this.payOut,
             kind: this.kind,
             payIn: this.payIn,
-            offererAta: this.offererAta == null ? null : this.offererAta.toBase58(),
-            claimerAta: this.claimerAta == null ? null : this.claimerAta.toBase58(),
-            securityDeposit: this.securityDeposit == null ? null : this.securityDeposit.toString(10),
-            claimerBounty: this.claimerBounty == null ? null : this.claimerBounty.toString(10),
+            offererAta: this.offererAta?.toBase58(),
+            claimerAta: this.claimerAta?.toBase58(),
+            securityDeposit: this.securityDeposit?.toString(10),
+            claimerBounty: this.claimerBounty?.toString(10),
             txoHash: this.txoHash
         };
     }
@@ -106,7 +112,7 @@ class SolanaSwapData extends base_1.SwapData {
     }
     getExpiry() {
         if (this.expiry.lt(EXPIRY_BLOCKHEIGHT_THRESHOLD))
-            return null;
+            throw new Error("Expiry expressed as bitcoin blockheight!");
         return (0, Utils_1.toBigInt)(this.expiry);
     }
     getConfirmationsHint() {
@@ -121,6 +127,9 @@ class SolanaSwapData extends base_1.SwapData {
     isPayOut() {
         return this.payOut;
     }
+    isTrackingReputation() {
+        return !this.payOut;
+    }
     getClaimHash() {
         return (0, Utils_1.toClaimHash)(this.paymentHash, (0, Utils_1.toBigInt)(this.nonce), this.confirmations);
     }
@@ -133,7 +142,7 @@ class SolanaSwapData extends base_1.SwapData {
     getTxoHashHint() {
         if (this.txoHash === "0000000000000000000000000000000000000000000000000000000000000000")
             return null; //Txo hash opt-out flag
-        return this.txoHash;
+        return this.txoHash ?? null;
     }
     getHTLCHashHint() {
         if (this.getType() === base_1.ChainSwapType.HTLC)
@@ -141,7 +150,7 @@ class SolanaSwapData extends base_1.SwapData {
         return null;
     }
     getExtraData() {
-        return this.txoHash;
+        return this.txoHash ?? null;
     }
     setExtraData(txoHash) {
         this.txoHash = txoHash;
@@ -236,11 +245,46 @@ class SolanaSwapData extends base_1.SwapData {
             securityDeposit = initIx.data.securityDeposit;
             claimerBounty = initIx.data.claimerBounty;
         }
-        return new SolanaSwapData(initIx.accounts.offerer, initIx.accounts.claimer, initIx.accounts.mint, initIx.data.swapData.amount, paymentHash.toString("hex"), initIx.data.swapData.sequence, initIx.data.swapData.expiry, initIx.data.swapData.nonce, initIx.data.swapData.confirmations, initIx.data.swapData.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind), payIn, initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default, initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default, securityDeposit, claimerBounty, txoHash);
+        return new SolanaSwapData({
+            offerer: initIx.accounts.offerer,
+            claimer: initIx.accounts.claimer,
+            token: initIx.accounts.mint,
+            amount: initIx.data.swapData.amount,
+            paymentHash: paymentHash.toString("hex"),
+            sequence: initIx.data.swapData.sequence,
+            expiry: initIx.data.swapData.expiry,
+            nonce: initIx.data.swapData.nonce,
+            confirmations: initIx.data.swapData.confirmations,
+            payOut: initIx.data.swapData.payOut,
+            kind: SwapTypeEnum_1.SwapTypeEnum.toNumber(initIx.data.swapData.kind),
+            payIn,
+            offererAta: initIx.name === "offererInitializePayIn" ? initIx.accounts.offererAta : web3_js_1.PublicKey.default,
+            claimerAta: initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default,
+            securityDeposit,
+            claimerBounty,
+            txoHash
+        });
     }
     static fromEscrowState(account) {
         const data = account.data;
-        return new SolanaSwapData(account.offerer, account.claimer, account.mint, data.amount, buffer_1.Buffer.from(data.hash).toString("hex"), data.sequence, data.expiry, data.nonce, data.confirmations, data.payOut, SwapTypeEnum_1.SwapTypeEnum.toNumber(data.kind), data.payIn, account.offererAta, account.claimerAta, account.securityDeposit, account.claimerBounty, null);
+        return new SolanaSwapData({
+            offerer: account.offerer,
+            claimer: account.claimer,
+            token: account.mint,
+            amount: data.amount,
+            paymentHash: buffer_1.Buffer.from(data.hash).toString("hex"),
+            sequence: data.sequence,
+            expiry: data.expiry,
+            nonce: data.nonce,
+            confirmations: data.confirmations,
+            payOut: data.payOut,
+            kind: SwapTypeEnum_1.SwapTypeEnum.toNumber(data.kind),
+            payIn: data.payIn,
+            offererAta: account.offererAta,
+            claimerAta: account.claimerAta,
+            securityDeposit: account.securityDeposit,
+            claimerBounty: account.claimerBounty
+        });
     }
     static typeToKind(type) {
         switch (type) {
@@ -253,7 +297,6 @@ class SolanaSwapData extends base_1.SwapData {
             case base_1.ChainSwapType.CHAIN_TXID:
                 return 3;
         }
-        return null;
     }
     static kindToType(value) {
         switch (value) {
@@ -266,14 +309,14 @@ class SolanaSwapData extends base_1.SwapData {
             case 3:
                 return base_1.ChainSwapType.CHAIN_TXID;
         }
-        return null;
+        throw new Error("Unknown swap kind type!");
     }
     isClaimer(address) {
         const _address = new web3_js_1.PublicKey(address);
         if (this.isPayOut()) {
             //Also check that swapData's ATA is correct
             const ourAta = (0, spl_token_1.getAssociatedTokenAddressSync)(this.token, _address);
-            if (!this.claimerAta.equals(ourAta))
+            if (this.claimerAta == null || !this.claimerAta.equals(ourAta))
                 return false;
         }
         return this.claimer.equals(new web3_js_1.PublicKey(address));

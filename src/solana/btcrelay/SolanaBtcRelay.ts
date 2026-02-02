@@ -33,6 +33,9 @@ function serializeBlockHeader(e: BtcBlock): SolanaBtcHeader {
     });
 };
 
+/**
+ * @category BTC Relay
+ */
 export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> implements BtcRelay<SolanaBtcStoredHeader, {tx: Transaction, signers: Signer[]}, B, SolanaSigner> {
 
     /**
@@ -42,7 +45,6 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param header
      * @param epochStart
      * @param pastBlocksTimestamps
-     * @constructor
      * @private
      */
     private async Initialize(signer: PublicKey, header: B, epochStart: number, pastBlocksTimestamps: number[]): Promise<SolanaAction> {
@@ -101,9 +103,9 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                     mainState: this.BtcRelayMainState
                 })
                 .instruction(),
-            null,
-            null,
-            null,
+            undefined,
+            undefined,
+            undefined,
             true
         );
     }
@@ -153,7 +155,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      */
     private getBlockCommitmentsSet(mainState: any): Set<string> {
         const storedCommitments = new Set<string>();
-        mainState.blockCommitments.forEach(e => {
+        mainState.blockCommitments.forEach((e: any) => {
             storedCommitments.add(Buffer.from(e).toString("hex"));
         });
         return storedCommitments;
@@ -181,7 +183,6 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param signer
      * @param headers headers to sync to the btc relay
      * @param storedHeader current latest stored block header for a given fork
-     * @param tipWork work of the current tip in a given fork
      * @param forkId forkId to submit to, forkId=0 means main chain
      * @param feeRate feeRate for the transaction
      * @param createTx transaction generator function
@@ -191,7 +192,6 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         signer: PublicKey,
         headers: BtcBlock[],
         storedHeader: SolanaBtcStoredHeader,
-        tipWork: Buffer,
         forkId: number,
         feeRate: string,
         createTx: (blockHeaders: SolanaBtcHeader[]) => MethodsBuilder<any, any>
@@ -214,10 +214,6 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
 
         const computedCommitedHeaders = this.computeCommitedHeaders(storedHeader, blockHeaderObj);
         const lastStoredHeader = computedCommitedHeaders[computedCommitedHeaders.length-1];
-        if(forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(lastStoredHeader.chainWork), tipWork)) {
-            //Fork's work is higher than main chain's work, this fork will become a main chain
-            forkId = 0;
-        }
 
         return {
             forkId: forkId,
@@ -231,9 +227,9 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Returns data about current main chain tip stored in the btc relay
+     * @inheritDoc
      */
-    public async getTipData(): Promise<{ commitHash: string; blockhash: string, chainWork: Buffer, blockheight: number }> {
+    public async getTipData(): Promise<{ commitHash: string; blockhash: string, chainWork: Buffer, blockheight: number } | null> {
         const data: any = await this.program.account.mainState.fetchNullable(this.BtcRelayMainState);
         if(data==null) return null;
 
@@ -246,11 +242,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Retrieves blockheader with a specific blockhash, returns null if requiredBlockheight is provided and
-     *  btc relay contract is not synced up to the desired blockheight
-     *
-     * @param blockData
-     * @param requiredBlockheight
+     * @inheritDoc
      */
     public async retrieveLogAndBlockheight(blockData: {blockhash: string}, requiredBlockheight?: number): Promise<{
         header: SolanaBtcStoredHeader,
@@ -285,12 +277,9 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Retrieves blockheader data by blockheader's commit hash,
-     *
-     * @param commitmentHashStr
-     * @param blockData
+     * @inheritDoc
      */
-    public async retrieveLogByCommitHash(commitmentHashStr: string, blockData: {blockhash: string}): Promise<SolanaBtcStoredHeader> {
+    public async retrieveLogByCommitHash(commitmentHashStr: string, blockData: {blockhash: string}): Promise<SolanaBtcStoredHeader | null> {
         const blockHashBuffer = Buffer.from(blockData.blockhash, "hex").reverse();
         const topicKey = this.BtcRelayHeader(blockHashBuffer);
 
@@ -309,12 +298,12 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Retrieves latest known stored blockheader & blockheader from bitcoin RPC that is in the main chain
+     * @inheritDoc
      */
     public async retrieveLatestKnownBlockLog(): Promise<{
         resultStoredHeader: SolanaBtcStoredHeader,
         resultBitcoinHeader: B
-    }> {
+    } | null> {
         const mainState: any = await this.program.account.mainState.fetch(this.BtcRelayMainState);
         const storedCommitments = this.getBlockCommitmentsSet(mainState);
 
@@ -325,14 +314,18 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                 const isInMainChain = await this.bitcoinRpc.isInMainChain(blockHashHex).catch(() => false);
                 const commitHash = Buffer.from(eventData.commitHash).toString("hex");
                 //Check if this fork is part of main chain
-                if(isInMainChain && storedCommitments.has(commitHash))
+                if(isInMainChain && storedCommitments.has(commitHash)) {
+                    const blockHeader = await this.bitcoinRpc.getBlockHeader(blockHashHex);
+                    if(blockHeader==null) return null;
                     return {
                         resultStoredHeader: new SolanaBtcStoredHeader(eventData.header),
-                        resultBitcoinHeader: await this.bitcoinRpc.getBlockHeader(blockHashHex),
+                        resultBitcoinHeader: blockHeader,
                         commitHash: commitHash
                     };
+                }
             }
-        }, null, 10);
+        }, undefined, 10);
+
         if(data!=null) this.logger.debug("retrieveLatestKnownBlockLog(): block found," +
             " commit hash: "+data.commitHash+" blockhash: "+data.resultBitcoinHeader.getHash()+
             " height: "+data.resultStoredHeader.blockheight);
@@ -341,13 +334,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Saves initial block header when the btc relay is in uninitialized state
-     *
-     * @param signer
-     * @param header a bitcoin blockheader to submit
-     * @param epochStart timestamp of the start of the epoch (block timestamp at blockheight-(blockheight%2016))
-     * @param pastBlocksTimestamps timestamp of the past 10 blocks
-     * @param feeRate fee rate to use for the transaction
+     * @inheritDoc
      */
     async saveInitialHeader(
         signer: string,
@@ -367,17 +354,14 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Saves blockheaders as a bitcoin main chain to the btc relay
-     *
-     * @param signer
-     * @param mainHeaders
-     * @param storedHeader
-     * @param feeRate
+     * @inheritDoc
      */
-    public saveMainHeaders(signer: string, mainHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, feeRate?: string) {
+    public async saveMainHeaders(signer: string, mainHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, feeRate?: string) {
+        feeRate ??= await this.getMainFeeRate(signer);
+
         this.logger.debug("saveMainHeaders(): submitting main blockheaders, count: "+mainHeaders.length);
         const _signer = new PublicKey(signer);
-        return this._saveHeaders(_signer, mainHeaders, storedHeader, null, 0, feeRate,
+        return await this._saveHeaders(_signer, mainHeaders, storedHeader, 0, feeRate,
             (blockHeaders) => this.program.methods
                 .submitBlockHeaders(
                     blockHeaders,
@@ -391,23 +375,18 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Creates a new long fork and submits the headers to it
-     *
-     * @param signer
-     * @param forkHeaders
-     * @param storedHeader
-     * @param tipWork
-     * @param feeRate
+     * @inheritDoc
      */
     public async saveNewForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, tipWork: Buffer, feeRate?: string) {
         const mainState: any = await this.program.account.mainState.fetch(this.BtcRelayMainState);
         let forkId: BN = mainState.forkCounter;
+        feeRate ??= await this.getForkFeeRate(signer, forkId.toNumber());
 
         const _signer = new PublicKey(signer);
 
         this.logger.debug("saveNewForkHeaders(): submitting new fork & blockheaders," +
             " count: "+forkHeaders.length+" forkId: "+forkId.toString(10));
-        return await this._saveHeaders(_signer, forkHeaders, storedHeader, tipWork, forkId.toNumber(), feeRate,
+        const result = await this._saveHeaders(_signer, forkHeaders, storedHeader, forkId.toNumber(), feeRate,
             (blockHeaders) => this.program.methods
                 .submitForkHeaders(
                     blockHeaders,
@@ -422,25 +401,27 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                     systemProgram: SystemProgram.programId,
                 })
         );
+
+        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+            //Fork's work is higher than main chain's work, this fork will become a main chain
+            result.forkId = 0;
+        }
+
+        return result;
     }
 
     /**
-     * Continues submitting blockheaders to a given fork
-     *
-     * @param signer
-     * @param forkHeaders
-     * @param storedHeader
-     * @param forkId
-     * @param tipWork
-     * @param feeRate
+     * @inheritDoc
      */
-    public saveForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, forkId: number, tipWork: Buffer, feeRate?: string) {
+    public async saveForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, forkId: number, tipWork: Buffer, feeRate?: string) {
+        feeRate ??= await this.getForkFeeRate(signer, forkId);
+
         this.logger.debug("saveForkHeaders(): submitting blockheaders to existing fork," +
             " count: "+forkHeaders.length+" forkId: "+forkId.toString(10));
 
         const _signer = new PublicKey(signer);
 
-        return this._saveHeaders(_signer, forkHeaders, storedHeader, tipWork, forkId, feeRate,
+        const result = await this._saveHeaders(_signer, forkHeaders, storedHeader, forkId, feeRate,
             (blockHeaders) => this.program.methods
                 .submitForkHeaders(
                     blockHeaders,
@@ -454,25 +435,28 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                     forkState: this.BtcRelayFork(forkId, _signer),
                     systemProgram: SystemProgram.programId,
                 })
-        )
+        );
+
+        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+            //Fork's work is higher than main chain's work, this fork will become a main chain
+            result.forkId = 0;
+        }
+
+        return result;
     }
 
     /**
-     * Submits short fork with given blockheaders
-     *
-     * @param signer
-     * @param forkHeaders
-     * @param storedHeader
-     * @param tipWork
-     * @param feeRate
+     * @inheritDoc
      */
-    public saveShortForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, tipWork: Buffer, feeRate?: string) {
+    public async saveShortForkHeaders(signer: string, forkHeaders: BtcBlock[], storedHeader: SolanaBtcStoredHeader, tipWork: Buffer, feeRate?: string) {
+        feeRate ??= await this.getMainFeeRate(signer);
+
         this.logger.debug("saveShortForkHeaders(): submitting short fork blockheaders," +
             " count: "+forkHeaders.length);
 
         const _signer = new PublicKey(signer);
 
-        return this._saveHeaders(_signer, forkHeaders, storedHeader, tipWork, -1, feeRate,
+        const result = await this._saveHeaders(_signer, forkHeaders, storedHeader, -1, feeRate,
             (blockHeaders) => this.program.methods
                 .submitShortForkHeaders(
                     blockHeaders,
@@ -483,14 +467,17 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                     mainState: this.BtcRelayMainState
                 })
         );
+
+        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+            //Fork's work is higher than main chain's work, this fork will become a main chain
+            result.forkId = 0;
+        }
+
+        return result;
     }
 
     /**
-     * Sweeps fork data PDAs back to self
-     *
-     * @param signer
-     * @param lastSweepId lastCheckedId returned from the previous sweepForkData() call
-     * @returns {number} lastCheckedId that should be passed to the next call of sweepForkData()
+     * @inheritDoc
      */
     public async sweepForkData(signer: SolanaSigner, lastSweepId?: number): Promise<number | null> {
         const mainState: any = await this.program.account.mainState.fetch(this.BtcRelayMainState);
@@ -528,17 +515,15 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
             this.logger.info("sweepForkData(): forks swept, signatures: "+signatures.join());
         }
 
-        return lastCheckedId;
+        return lastCheckedId ?? null;
     }
 
     /**
-     * Estimate required synchronization fee (worst case) to synchronize btc relay to the required blockheight
-     *
-     * @param requiredBlockheight
-     * @param feeRate
+     * @inheritDoc
      */
     public async estimateSynchronizeFee(requiredBlockheight: number, feeRate?: string): Promise<bigint> {
         const tipData = await this.getTipData();
+        if(tipData==null) throw new Error("Cannot get relay tip data, relay not initialized?");
         const currBlockheight = tipData.blockheight;
 
         const blockheightDelta = requiredBlockheight-currBlockheight;
@@ -553,9 +538,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Returns fee required (in SOL) to synchronize a single block to btc relay
-     *
-     * @param feeRate
+     * @inheritDoc
      */
     public async getFeePerBlock(feeRate?: string): Promise<bigint> {
         // feeRate = feeRate || await this.getMainFeeRate(null);
@@ -564,7 +547,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Gets fee rate required for submitting blockheaders to the main chain
+     * @inheritDoc
      */
     public getMainFeeRate(signer: string | null): Promise<string> {
         const _signer = signer==null ? null : new PublicKey(signer);
@@ -575,7 +558,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     }
 
     /**
-     * Gets fee rate required for submitting blockheaders to the specific fork
+     * @inheritDoc
      */
     public getForkFeeRate(signer: string, forkId: number): Promise<string> {
         const _signer = new PublicKey(signer);

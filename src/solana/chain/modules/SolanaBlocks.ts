@@ -2,9 +2,11 @@ import {SolanaModule} from "../SolanaModule";
 import {Commitment, ParsedAccountsModeBlockResponse} from "@solana/web3.js";
 
 
+export type BlockChecked = ParsedAccountsModeBlockResponse & {blockTime: number, blockHeight: number};
+
 export class SolanaBlocks extends SolanaModule {
 
-    private blockCache: Map<number, Promise<ParsedAccountsModeBlockResponse>> = new Map<number, Promise<ParsedAccountsModeBlockResponse>>();
+    private blockCache: Map<number, Promise<BlockChecked>> = new Map<number, Promise<BlockChecked>>();
 
     /**
      * Initiates a fetch of the block at specified slot & saves the fetch promise into a block cache
@@ -12,11 +14,14 @@ export class SolanaBlocks extends SolanaModule {
      * @param slot
      * @private
      */
-    private fetchAndSaveParsedBlock(slot: number): Promise<ParsedAccountsModeBlockResponse> {
+    private fetchAndSaveParsedBlock(slot: number): Promise<BlockChecked> {
         const blockCacheData = this.connection.getParsedBlock(slot, {
             transactionDetails: "none",
             commitment: "confirmed",
             rewards: false
+        }).then(val => {
+            if(val.blockHeight==null || val.blockTime==null) throw new Error(`Cannot get block for slot ${slot}: blockHeight or blockTime empty!`);
+            return val as BlockChecked;
         });
         this.blockCache.set(slot, blockCacheData);
         blockCacheData.catch(e => {
@@ -35,7 +40,7 @@ export class SolanaBlocks extends SolanaModule {
      * @param commitment
      */
     public async findLatestParsedBlock(commitment: Commitment): Promise<{
-        block: ParsedAccountsModeBlockResponse,
+        block: BlockChecked,
         slot: number
     }> {
         let slot = await this.root.Slots.getSlot(commitment);
@@ -68,7 +73,7 @@ export class SolanaBlocks extends SolanaModule {
      *
      * @param slot
      */
-    public getParsedBlock(slot: number): Promise<ParsedAccountsModeBlockResponse> {
+    public getParsedBlock(slot: number): Promise<BlockChecked> {
         let blockCacheData = this.blockCache.get(slot);
         if(blockCacheData==null) {
             blockCacheData = this.fetchAndSaveParsedBlock(slot);

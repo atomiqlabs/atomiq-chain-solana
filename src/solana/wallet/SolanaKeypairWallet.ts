@@ -1,6 +1,10 @@
 import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
 import {Keypair, PublicKey, Transaction, VersionedTransaction} from "@solana/web3.js";
 
+/**
+ * Keypair-based wallet implementation for Solana
+ * @category Wallets
+ */
 export class SolanaKeypairWallet implements Wallet {
 
     readonly payer: Keypair;

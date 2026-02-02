@@ -1,12 +1,15 @@
 import { PublicKey, Transaction } from "@solana/web3.js";
 import * as BN from "bn.js";
+export type Serialized<T> = {
+    [K in keyof T as T[K] extends Function ? never : K]: T[K] extends infer U ? U extends PublicKey | BN ? string : U extends object ? Serialized<U> : U : never;
+};
 export declare function timeoutPromise(timeoutMillis: number, abortSignal?: AbortSignal): Promise<void>;
 export declare function onceAsync<T>(executor: () => Promise<T>): () => Promise<T>;
 export declare function getLogger(prefix: string): {
-    debug: (msg: any, ...args: any[]) => void;
-    info: (msg: any, ...args: any[]) => void;
-    warn: (msg: any, ...args: any[]) => void;
-    error: (msg: any, ...args: any[]) => void;
+    debug: (msg: string, ...args: any[]) => false | void;
+    info: (msg: string, ...args: any[]) => false | void;
+    warn: (msg: string, ...args: any[]) => false | void;
+    error: (msg: string, ...args: any[]) => false | void;
 };
 export declare function tryWithRetries<T>(func: () => Promise<T>, retryPolicy?: {
     maxRetries?: number;
@@ -50,4 +53,6 @@ export declare function fromClaimHash(claimHash: string): {
 };
 export declare function toEscrowHash(paymentHash: string, sequence: BN): string;
 export declare function toBN(value: bigint): BN;
+export declare function toBN(value: null): null;
 export declare function toBigInt(value: BN): bigint;
+export declare function toBigInt(value: null): null;

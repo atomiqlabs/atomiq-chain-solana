@@ -6,7 +6,7 @@ import {
     getLogger,
     onceAsync, toEscrowHash, tryWithRetries
 } from "../../utils/Utils";
-import {Connection, ParsedTransactionWithMeta} from "@solana/web3.js";
+import {ConfirmedSignatureInfo, Connection, ParsedTransactionWithMeta} from "@solana/web3.js";
 import {SwapTypeEnum} from "../swaps/SwapTypeEnum";
 import {
     InstructionWithAccounts,
@@ -17,9 +17,17 @@ import {Buffer} from "buffer";
 
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[],
-    instructions: InstructionWithAccounts<SwapProgram>[],
+    instructions?: (InstructionWithAccounts<SwapProgram> | null)[],
     blockTime: number,
     signature: string
+};
+
+const LOG_FETCH_LIMIT = 500;
+const PROCESSED_SIGNATURES_BACKLOG = 100;
+
+export type SolanaEventListenerState = {
+    signature: string,
+    slot: number
 };
 
 /**
@@ -27,7 +35,7 @@ export type EventObject = {
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
  *  rely purely on events
  */
-export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
+export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
 
     protected readonly listeners: EventListener<SolanaSwapData>[] = [];
     protected readonly connection: Connection;
@@ -35,18 +43,89 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
     protected eventListeners: number[] = [];
     protected readonly logger = getLogger("SolanaChainEventsBrowser: ");
 
-    constructor(connection: Connection, solanaSwapContract: SolanaSwapProgram) {
+    private readonly logFetchLimit: number;
+    private signaturesProcessing: {
+        [signature: string]: Promise<boolean>
+    } = {};
+    private processedSignatures: string[] = [];
+    private processedSignaturesIndex: number = 0;
+
+    constructor(
+        connection: Connection,
+        solanaSwapContract: SolanaSwapProgram,
+        logFetchLimit?: number
+    ) {
         this.connection = connection;
         this.solanaSwapProgram = solanaSwapContract;
+        this.logFetchLimit = logFetchLimit ?? LOG_FETCH_LIMIT;
+    }
+
+    private addProcessedSignature(signature: string) {
+        this.processedSignatures[this.processedSignaturesIndex] = signature;
+        this.processedSignaturesIndex += 1;
+        if(this.processedSignaturesIndex >= PROCESSED_SIGNATURES_BACKLOG) this.processedSignaturesIndex = 0;
+    }
+
+    private isSignatureProcessed(signature: string): boolean {
+        return this.processedSignatures.includes(signature);
+    }
+
+    /**
+     * Parses EventObject from the transaction
+     *
+     * @param transaction
+     * @private
+     * @returns {EventObject} parsed event object
+     */
+    private getEventObjectFromTransaction(transaction: ParsedTransactionWithMeta): EventObject | null {
+        const signature = transaction.transaction.signatures[0];
+        if(transaction.meta==null) throw new Error(`Transaction 'meta' not found for Solana tx: ${signature}`);
+        if(transaction.meta.err!=null || transaction.meta.logMessages==null) return null;
+
+        const instructions = this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
+        const events = this.solanaSwapProgram.Events.parseLogs(transaction.meta.logMessages);
+
+        return {
+            instructions,
+            events,
+            blockTime: transaction.blockTime!,
+            signature: signature
+        };
+    }
+
+    /**
+     * Fetches transaction from the RPC, parses it to even object & processes it through event handler
+     *
+     * @param signature
+     * @private
+     * @returns {boolean} whether the operation was successful
+     */
+    private async fetchTxAndProcessEvent(signature: string): Promise<boolean> {
+        try {
+            const transaction = await this.connection.getParsedTransaction(signature, {
+                commitment: "confirmed",
+                maxSupportedTransactionVersion: 1
+            });
+            if(transaction==null) return false;
+
+            const eventObject = this.getEventObjectFromTransaction(transaction);
+            if(eventObject==null) return true;
+
+            await this.processEvent(eventObject);
+            return true;
+        } catch (e) {
+            this.logger.error("fetchTxAndProcessEvent(): Error fetching transaction and processing event, signature: "+signature, e);
+            return false;
+        }
     }
 
     /**
      * Fetches and parses transaction instructions
      *
      * @private
-     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     * @returns {Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null>} array of parsed instructions
      */
-    private async getTransactionInstructions(signature: string): Promise<InstructionWithAccounts<SwapProgram>[]> {
+    private async getTransactionInstructions(signature: string): Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null> {
         const transaction = await tryWithRetries<ParsedTransactionWithMeta>(async () => {
             const res = await this.connection.getParsedTransaction(signature, {
                 commitment: "confirmed",
@@ -55,7 +134,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
             if(res==null) throw new Error("Transaction not found!");
             return res;
         });
-        if(transaction==null) return null;
+        if(transaction.meta==null) throw new Error("Transaction 'meta' not found!");
         if(transaction.meta.err!=null) return null;
         return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
     }
@@ -68,10 +147,13 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
      * @private
      * @returns {() => Promise<SolanaSwapData>} getter to be passed to InitializeEvent constructor
      */
-    private getSwapDataGetter(eventObject: EventObject, txoHash: string): () => Promise<SolanaSwapData> {
+    private getSwapDataGetter(eventObject: EventObject, txoHash: string): () => Promise<SolanaSwapData | null> {
         return async () => {
-            if(eventObject.instructions==null) eventObject.instructions = await this.getTransactionInstructions(eventObject.signature);
-            if(eventObject.instructions==null) return null;
+            if(eventObject.instructions==null) {
+                const ixs = await this.getTransactionInstructions(eventObject.signature);
+                if(ixs==null) return null;
+                eventObject.instructions = ixs;
+            }
 
             const initIx = eventObject.instructions.find(
                 ix => ix!=null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize")
@@ -91,7 +173,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
         return new InitializeEvent<SolanaSwapData>(
             escrowHash,
             SwapTypeEnum.toChainSwapType(data.kind),
-            onceAsync<SolanaSwapData>(this.getSwapDataGetter(eventObject, txoHash))
+            onceAsync<SolanaSwapData | null>(this.getSwapDataGetter(eventObject, txoHash))
         );
     }
 
@@ -156,15 +238,17 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
         name: E
     ): (data: IdlEvents<SwapProgram>[E], slotNumber: number, signature: string) => void {
         return (data: IdlEvents<SwapProgram>[E], slotNumber: number, signature: string) => {
-            this.logger.debug("wsEventHandler: Process signature: ", signature);
+            if(this.signaturesProcessing[signature]!=null) return;
+            if(this.isSignatureProcessed(signature)) return;
 
-            this.processEvent({
+            this.logger.debug("getWsEventHandler("+name+"): Process signature: ", signature);
+
+            this.signaturesProcessing[signature] = this.processEvent({
                 events: [{name, data: data as any}],
-                instructions: null, //Instructions will be fetched on-demand if required
                 blockTime: Math.floor(Date.now()/1000),
                 signature
             }).then(() => true).catch(e => {
-                this.logger.error("wsEventHandler: Error when processing signature: "+signature, e);
+                this.logger.error("getWsEventHandler("+name+"): Error processing signature: "+signature, e);
                 return false;
             });
         };
@@ -182,11 +266,121 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
         this.eventListeners.push(program.addEventListener<"RefundEvent">("RefundEvent", this.getWsEventHandler("RefundEvent")));
     }
 
-    init(): Promise<void> {
+    /**
+     * Gets all the new signatures from the last processed signature
+     *
+     * @param lastProcessedSignature
+     * @private
+     */
+    private async getNewSignatures(lastProcessedSignature: {signature: string, slot: number}): Promise<ConfirmedSignatureInfo[] | null> {
+        let signatures: ConfirmedSignatureInfo[] = [];
+
+        let fetched = null;
+        while(fetched==null || fetched.length===this.logFetchLimit) {
+            if(signatures.length===0) {
+                fetched = await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
+                    until: lastProcessedSignature.signature,
+                    limit: this.logFetchLimit
+                }, "confirmed");
+                //Check if newest returned signature (index 0) is older than the latest signature's slot, this is a sanity check
+                if(fetched.length>0 && fetched[0].slot<lastProcessedSignature.slot) {
+                    this.logger.debug("getNewSignatures(): Sanity check triggered, returned signature slot height is older than latest!");
+                    return null;
+                }
+            } else {
+                fetched = await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
+                    before: signatures[signatures.length-1].signature,
+                    until: lastProcessedSignature.signature,
+                    limit: this.logFetchLimit
+                }, "confirmed");
+            }
+
+            signatures = signatures.concat(fetched);
+        }
+
+        return signatures;
+    }
+
+    /**
+     * Gets single latest known signature
+     *
+     * @private
+     */
+    private async getFirstSignature(): Promise<ConfirmedSignatureInfo[]> {
+        return await this.connection.getSignaturesForAddress(this.solanaSwapProgram.program.programId, {
+            limit: 1
+        }, "confirmed");
+    }
+
+    /**
+     * Processes signatures, fetches transactions & processes event through event handlers
+     *
+     * @param signatures
+     * @private
+     * @returns {Promise<{signature: string, slot: number}>} latest processed transaction signature and slot height
+     */
+    private async processSignatures(signatures: ConfirmedSignatureInfo[]): Promise<{signature: string, slot: number} | null> {
+        let lastSuccessfulSignature: {signature: string, slot: number} | null = null;
+
+        try {
+            for(let i=signatures.length-1;i>=0;i--) {
+                const txSignature = signatures[i];
+
+                //Check if signature is already being processed by the
+                const signaturePromise = this.signaturesProcessing[txSignature.signature];
+                if(signaturePromise!=null) {
+                    const result = await signaturePromise;
+                    delete this.signaturesProcessing[txSignature.signature];
+                    if(result) {
+                        lastSuccessfulSignature = txSignature;
+                        this.addProcessedSignature(txSignature.signature);
+                        continue;
+                    }
+                }
+
+                this.logger.debug("processSignatures(): Process signature: ", txSignature);
+
+                const processPromise: Promise<boolean> = this.fetchTxAndProcessEvent(txSignature.signature);
+                this.signaturesProcessing[txSignature.signature] = processPromise;
+
+                const result = await processPromise;
+                if(!result) throw new Error("Failed to process signature: "+txSignature);
+                lastSuccessfulSignature = txSignature;
+                this.addProcessedSignature(txSignature.signature);
+                delete this.signaturesProcessing[txSignature.signature];
+            }
+        } catch (e) {
+            this.logger.error("processSignatures(): Failed processing signatures: ", e);
+        }
+        return lastSuccessfulSignature;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    async poll(lastSignature?: SolanaEventListenerState): Promise<SolanaEventListenerState | null> {
+        let signatures = lastSignature==null
+            ? await this.getFirstSignature()
+            : await this.getNewSignatures(lastSignature);
+        if(signatures==null) return lastSignature ?? null;
+
+        let lastSuccessfulSignature = await this.processSignatures(signatures);
+
+        return lastSuccessfulSignature ?? lastSignature ?? null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    init(noAutomaticPoll?: boolean): Promise<void> {
+        if(noAutomaticPoll) return Promise.resolve();
         this.setupWebsocket();
         return Promise.resolve();
     }
 
+    /**
+     * @inheritDoc
+     */
     async stop(): Promise<void> {
         for(let num of this.eventListeners) {
             await this.solanaSwapProgram.program.removeEventListener(num);
@@ -194,10 +388,16 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
         this.eventListeners = [];
     }
 
+    /**
+     * @inheritDoc
+     */
     registerListener(cbk: EventListener<SolanaSwapData>): void {
         this.listeners.push(cbk);
     }
 
+    /**
+     * @inheritDoc
+     */
     unregisterListener(cbk: EventListener<SolanaSwapData>): boolean {
         const index = this.listeners.indexOf(cbk);
         if(index>=0) {

@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { SolanaModule } from "../SolanaModule";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../../wallet/SolanaSigner";

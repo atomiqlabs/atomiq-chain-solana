@@ -4,7 +4,6 @@ import {IStorageManager, StorageObject} from "@atomiqlabs/base";
 import {SolanaSwapProgram} from "../SolanaSwapProgram";
 import {SolanaAction} from "../../chain/SolanaAction";
 import {SolanaTx} from "../../chain/modules/SolanaTransactions";
-import {tryWithRetries} from "../../../utils/Utils";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {randomBytes} from "@noble/hashes/utils";
 import {SolanaChainInterface} from "../../chain/SolanaChainInterface";
@@ -18,7 +17,7 @@ export class StoredDataAccount implements StorageObject {
     constructor(data: any);
 
     constructor(accountKeyOrData: PublicKey | any, owner?: PublicKey) {
-        if(accountKeyOrData instanceof PublicKey) {
+        if(accountKeyOrData instanceof PublicKey && owner instanceof PublicKey) {
             this.accountKey = accountKeyOrData;
             this.owner = owner;
         } else {
@@ -66,10 +65,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
         dataLength: number
     ): Promise<SolanaAction> {
         const accountSize = 32+dataLength;
-        const lamportsDeposit = await tryWithRetries(
-            () => this.connection.getMinimumBalanceForRentExemption(accountSize),
-            this.retryPolicy
-        );
+        const lamportsDeposit = await this.connection.getMinimumBalanceForRentExemption(accountSize);
 
         return new SolanaAction(signer, this.root, [
             SystemProgram.createAccount({
@@ -86,7 +82,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
                     data: accountKey.publicKey
                 })
                 .instruction(),
-        ], SolanaDataAccount.CUCosts.DATA_CREATE, null, [accountKey]);
+        ], SolanaDataAccount.CUCosts.DATA_CREATE, undefined, [accountKey]);
     }
 
     /**
@@ -192,7 +188,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
             if(!owner.equals(signer)) continue;
 
             try {
-                const fetchedDataAccount: AccountInfo<Buffer> = await this.connection.getAccountInfo(accountKey);
+                const fetchedDataAccount = await this.connection.getAccountInfo(accountKey);
                 if(fetchedDataAccount==null) {
                     await this.removeDataAccount(accountKey);
                     continue;
@@ -217,7 +213,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
 
         if(closePublicKeys.length===0) {
             this.logger.debug("sweepDataAccounts(): no old data accounts found, no need to close any!");
-            return;
+            return { txIds: [], count: 0, totalValue: 0n };
         }
 
         this.logger.debug("sweepDataAccounts(): closing old data accounts: ", closePublicKeys);
@@ -227,7 +223,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
             await (await this.CloseDataAccount(signer.getPublicKey(), publicKey)).addToTxs(txns);
         }
 
-        const result = await this.root.Transactions.sendAndConfirm(signer, txns, true, null, true);
+        const result = await this.root.Transactions.sendAndConfirm(signer, txns, true, undefined, true);
 
         this.logger.info("sweepDataAccounts(): old data accounts closed: "+
             closePublicKeys.map(pk => pk.toBase58()).join());
@@ -260,13 +256,10 @@ export class SolanaDataAccount extends SolanaSwapModule {
         feeRate: string
     ): Promise<PublicKey> {
         let txDataKey: Signer;
-        let fetchedDataAccount: AccountInfo<Buffer> = null;
+        let fetchedDataAccount: AccountInfo<Buffer> | null = null;
         if(signer instanceof SolanaSigner && signer.keypair!=null) {
             txDataKey = this.SwapTxDataAlt(reversedTxId, signer.keypair);
-            fetchedDataAccount = await tryWithRetries<AccountInfo<Buffer>>(
-                () => this.connection.getAccountInfo(txDataKey.publicKey),
-                this.retryPolicy
-            );
+            fetchedDataAccount = await this.connection.getAccountInfo(txDataKey.publicKey);
         } else {
             const secret = Buffer.from(randomBytes(32));
             txDataKey = this.SwapTxDataAltBuffer(reversedTxId, secret);

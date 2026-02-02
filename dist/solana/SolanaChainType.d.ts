@@ -1,5 +1,5 @@
 import { ChainType } from "@atomiqlabs/base";
-import { SolanaTx } from "./chain/modules/SolanaTransactions";
+import { SignedSolanaTx, SolanaTx } from "./chain/modules/SolanaTransactions";
 import { SolanaPreFetchData, SolanaPreFetchVerification } from "./swaps/modules/SwapInit";
 import { SolanaSigner } from "./wallet/SolanaSigner";
 import { SolanaSwapProgram } from "./swaps/SolanaSwapProgram";
@@ -8,4 +8,8 @@ import { SolanaChainEventsBrowser } from "./events/SolanaChainEventsBrowser";
 import { SolanaBtcRelay } from "./btcrelay/SolanaBtcRelay";
 import { SolanaChainInterface } from "./chain/SolanaChainInterface";
 import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
-export type SolanaChainType = ChainType<"SOLANA", SolanaPreFetchData, SolanaPreFetchVerification, SolanaTx, SolanaSigner, Wallet, SolanaSwapData, SolanaSwapProgram, SolanaChainInterface, SolanaChainEventsBrowser, SolanaBtcRelay<any>, never, never, never>;
+/**
+ * Type definition for the Solana chain implementation
+ * @category Chain Interface
+ */
+export type SolanaChainType = ChainType<"SOLANA", SolanaPreFetchData, SolanaPreFetchVerification, SolanaTx, SignedSolanaTx, SolanaSigner, Wallet, SolanaSwapData, SolanaSwapProgram, SolanaChainInterface, SolanaChainEventsBrowser, SolanaBtcRelay<any>, never, never, never>;

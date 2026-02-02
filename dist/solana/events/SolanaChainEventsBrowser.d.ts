@@ -7,32 +7,58 @@ import { InstructionWithAccounts, ProgramEvent } from "../program/modules/Solana
 import { SwapProgram } from "../swaps/programTypes";
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[];
-    instructions: InstructionWithAccounts<SwapProgram>[];
+    instructions?: (InstructionWithAccounts<SwapProgram> | null)[];
     blockTime: number;
     signature: string;
+};
+export type SolanaEventListenerState = {
+    signature: string;
+    slot: number;
 };
 /**
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
  *  rely purely on events
  */
-export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData> {
+export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
     protected readonly listeners: EventListener<SolanaSwapData>[];
     protected readonly connection: Connection;
     protected readonly solanaSwapProgram: SolanaSwapProgram;
     protected eventListeners: number[];
     protected readonly logger: {
-        debug: (msg: any, ...args: any[]) => void;
-        info: (msg: any, ...args: any[]) => void;
-        warn: (msg: any, ...args: any[]) => void;
-        error: (msg: any, ...args: any[]) => void;
+        debug: (msg: string, ...args: any[]) => false | void;
+        info: (msg: string, ...args: any[]) => false | void;
+        warn: (msg: string, ...args: any[]) => false | void;
+        error: (msg: string, ...args: any[]) => false | void;
     };
-    constructor(connection: Connection, solanaSwapContract: SolanaSwapProgram);
+    private readonly logFetchLimit;
+    private signaturesProcessing;
+    private processedSignatures;
+    private processedSignaturesIndex;
+    constructor(connection: Connection, solanaSwapContract: SolanaSwapProgram, logFetchLimit?: number);
+    private addProcessedSignature;
+    private isSignatureProcessed;
+    /**
+     * Parses EventObject from the transaction
+     *
+     * @param transaction
+     * @private
+     * @returns {EventObject} parsed event object
+     */
+    private getEventObjectFromTransaction;
+    /**
+     * Fetches transaction from the RPC, parses it to even object & processes it through event handler
+     *
+     * @param signature
+     * @private
+     * @returns {boolean} whether the operation was successful
+     */
+    private fetchTxAndProcessEvent;
     /**
      * Fetches and parses transaction instructions
      *
      * @private
-     * @returns {Promise<InstructionWithAccounts<SwapProgram>[]>} array of parsed instructions
+     * @returns {Promise<(InstructionWithAccounts<SwapProgram> | null)[] | null>} array of parsed instructions
      */
     private getTransactionInstructions;
     /**
@@ -68,7 +94,34 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
      * @protected
      */
     protected setupWebsocket(): void;
-    init(): Promise<void>;
+    /**
+     * Gets all the new signatures from the last processed signature
+     *
+     * @param lastProcessedSignature
+     * @private
+     */
+    private getNewSignatures;
+    /**
+     * Gets single latest known signature
+     *
+     * @private
+     */
+    private getFirstSignature;
+    /**
+     * Processes signatures, fetches transactions & processes event through event handlers
+     *
+     * @param signatures
+     * @private
+     * @returns {Promise<{signature: string, slot: number}>} latest processed transaction signature and slot height
+     */
+    private processSignatures;
+    /**
+     * Polls for new events & processes them
+     *
+     * @private
+     */
+    poll(lastSignature?: SolanaEventListenerState): Promise<SolanaEventListenerState | null>;
+    init(noAutomaticPoll?: boolean): Promise<void>;
     stop(): Promise<void>;
     registerListener(cbk: EventListener<SolanaSwapData>): void;
     unregisterListener(cbk: EventListener<SolanaSwapData>): boolean;

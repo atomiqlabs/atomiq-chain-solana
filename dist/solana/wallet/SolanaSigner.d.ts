@@ -1,6 +1,10 @@
 import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
 import { AbstractSigner } from "@atomiqlabs/base";
 import { PublicKey, Signer } from "@solana/web3.js";
+/**
+ * Solana signer implementation wrapping an Anchor Wallet
+ * @category Wallets
+ */
 export declare class SolanaSigner implements AbstractSigner {
     type: "AtomiqAbstractSigner";
     wallet: Wallet;

@@ -14,7 +14,7 @@ import {
     TOKEN_PROGRAM_ID
 } from "@solana/spl-token";
 import {SolanaAction} from "../../chain/SolanaAction";
-import {toBN, tryWithRetries} from "../../../utils/Utils";
+import {toBN} from "../../../utils/Utils";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {SolanaTokens} from "../../chain/modules/SolanaTokens";
@@ -32,7 +32,6 @@ export class SwapRefund extends SolanaSwapModule {
      *
      * @param swapData
      * @param refundAuthTimeout optional refund authorization timeout (should be 0 for refunding expired swaps)
-     * @constructor
      * @private
      */
     private async Refund(swapData: SolanaSwapData, refundAuthTimeout?: bigint): Promise<SolanaAction> {
@@ -82,7 +81,6 @@ export class SwapRefund extends SolanaSwapModule {
      * @param timeout
      * @param prefix
      * @param signature
-     * @constructor
      * @private
      */
     private async RefundWithSignature(
@@ -98,8 +96,8 @@ export class SwapRefund extends SolanaSwapModule {
                 signature: signature
             }),
             0,
-            null,
-            null,
+            undefined,
+            undefined,
             true
         );
         action.addAction(await this.Refund(swapData, BigInt(timeout)));
@@ -193,11 +191,19 @@ export class SwapRefund extends SolanaSwapModule {
         initAta?: boolean,
         feeRate?: string
     ): Promise<SolanaTx[]> {
-        if(check && !await tryWithRetries(() => this.program.isRequestRefundable(swapData.offerer.toString(), swapData), this.retryPolicy)) {
+
+        if(check && !await this.program.isRequestRefundable(swapData.offerer.toString(), swapData)) {
             throw new SwapDataVerificationError("Not refundable yet!");
         }
-        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
-        if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
+
+        let shouldInitAta = false;
+        if(swapData.isPayIn()) {
+            if(swapData.offererAta==null) throw new Error("Swap data offererAta is null for payIn swap!");
+            if(!await this.root.Tokens.ataExists(swapData.offererAta)) {
+                if(!initAta) throw new SwapDataVerificationError("ATA not initialized");
+                shouldInitAta = true;
+            }
+        }
 
         if(feeRate==null) feeRate = await this.program.getRefundFeeRate(swapData)
 
@@ -237,16 +243,19 @@ export class SwapRefund extends SolanaSwapModule {
         initAta?: boolean,
         feeRate?: string
     ): Promise<SolanaTx[]> {
-        if(check && !await tryWithRetries(() => this.program.isCommited(swapData), this.retryPolicy)) {
+        if(check && !await this.program.isCommited(swapData)) {
             throw new SwapDataVerificationError("Not correctly committed");
         }
-        await tryWithRetries(
-            () => this.isSignatureValid(swapData, timeout, prefix, signature),
-            this.retryPolicy,
-            (e) => e instanceof SignatureVerificationError
-        );
-        const shouldInitAta = swapData.isPayIn() && !await this.root.Tokens.ataExists(swapData.offererAta);
-        if(shouldInitAta && !initAta) throw new SwapDataVerificationError("ATA not initialized");
+        await this.isSignatureValid(swapData, timeout, prefix, signature);
+
+        let shouldInitAta = false;
+        if(swapData.isPayIn()) {
+            if(swapData.offererAta==null) throw new Error("Swap data offererAta is null for payIn swap!");
+            if(!await this.root.Tokens.ataExists(swapData.offererAta)) {
+                if(!initAta) throw new SwapDataVerificationError("ATA not initialized");
+                shouldInitAta = true;
+            }
+        }
 
         if(feeRate==null) feeRate = await this.program.getRefundFeeRate(swapData);
 
@@ -269,12 +278,15 @@ export class SwapRefund extends SolanaSwapModule {
         // doesn't fuck up the instructions order!
         const tx = await action.tx(feeRate);
         const signer = Keypair.generate();
-        tx.tx.instructions.find(val => val.programId.equals(this.program.program.programId)).keys.push({
-            pubkey: signer.publicKey,
-            isSigner: true,
-            isWritable: false
-        });
-        (tx.signers ??= []).push(signer);
+        const ix = tx.tx.instructions.find(val => val.programId.equals(this.program.program.programId));
+        if(ix!=null){
+            ix.keys.push({
+                pubkey: signer.publicKey,
+                isSigner: true,
+                isWritable: false
+            });
+            (tx.signers ??= []).push(signer);
+        }
 
         return [tx];
     }

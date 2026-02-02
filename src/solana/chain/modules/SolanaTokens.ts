@@ -8,7 +8,6 @@ import {
 } from "@solana/spl-token";
 import {SolanaTx} from "./SolanaTransactions";
 import {SolanaAction} from "../SolanaAction";
-import {tryWithRetries} from "../../../utils/Utils";
 
 export class SolanaTokens extends SolanaModule {
 
@@ -20,6 +19,8 @@ export class SolanaTokens extends SolanaModule {
         TRANSFER_SOL: 5000
     };
 
+    public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey): SolanaAction;
+    public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null;
     /**
      * Creates an ATA for a specific public key & token, the ATA creation is paid for by the underlying provider's
      *  public key
@@ -28,7 +29,6 @@ export class SolanaTokens extends SolanaModule {
      * @param publicKey public key address of the user for which to initiate the ATA
      * @param token token identification for which the ATA should be initialized
      * @param requiredAta optional required ata address to use, if the address doesn't match it returns null
-     * @constructor
      */
     public InitAta(signer: PublicKey, publicKey: PublicKey, token: PublicKey, requiredAta?: PublicKey): SolanaAction | null {
         const ata = getAssociatedTokenAddressSync(token, publicKey, true);
@@ -52,7 +52,6 @@ export class SolanaTokens extends SolanaModule {
      * @param publicKey public key of the user for which to wrap the SOL
      * @param amount amount of SOL in lamports (smallest unit) to wrap
      * @param initAta whether we should also initialize the ATA before depositing SOL
-     * @constructor
      */
     public Wrap(publicKey: PublicKey, amount: bigint, initAta: boolean): SolanaAction {
         const ata = getAssociatedTokenAddressSync(SolanaTokens.WSOL_ADDRESS, publicKey, true);
@@ -77,7 +76,6 @@ export class SolanaTokens extends SolanaModule {
      * Action for unwrapping WSOL to SOL for a specific public key
      *
      * @param publicKey public key of the user for which to unwrap the sol
-     * @constructor
      */
     public Unwrap(publicKey: PublicKey): SolanaAction {
         const ata = getAssociatedTokenAddressSync(SolanaTokens.WSOL_ADDRESS, publicKey, true);
@@ -98,7 +96,6 @@ export class SolanaTokens extends SolanaModule {
      * @param signer
      * @param recipient
      * @param amount
-     * @constructor
      * @private
      */
     private SolTransfer(signer: PublicKey, recipient: PublicKey, amount: bigint): SolanaAction {
@@ -119,7 +116,6 @@ export class SolanaTokens extends SolanaModule {
      * @param recipient
      * @param token
      * @param amount
-     * @constructor
      * @private
      */
     private Transfer(signer: PublicKey, recipient: PublicKey, token: PublicKey, amount: bigint): SolanaAction {
@@ -183,7 +179,7 @@ export class SolanaTokens extends SolanaModule {
         const initAta = !await this.ataExists(dstAta);
         const action = new SolanaAction(signer, this.root);
         if(initAta) {
-            action.add(this.InitAta(signer, recipient, token));
+            action.add(this.InitAta(signer, recipient, token)!);
         }
         action.add(this.Transfer(signer, recipient, token, amount));
 
@@ -227,10 +223,7 @@ export class SolanaTokens extends SolanaModule {
      * @param ata
      */
     public async ataExists(ata: PublicKey) {
-        const account = await tryWithRetries<Account>(
-            () => this.getATAOrNull(ata),
-            this.retryPolicy
-        );
+        const account = await this.getATAOrNull(ata);
         return account!=null;
     }
 
@@ -249,7 +242,7 @@ export class SolanaTokens extends SolanaModule {
      */
     public async getTokenBalance(publicKey: PublicKey, token: PublicKey): Promise<{balance: bigint, ataExists: boolean}> {
         const ata: PublicKey = getAssociatedTokenAddressSync(token, publicKey, true);
-        const [ataAccount, balance] = await Promise.all<[Promise<Account>, Promise<number>]>([
+        const [ataAccount, balance] = await Promise.all<[Promise<Account | null>, Promise<number | null>]>([
             this.getATAOrNull(ata),
             (token!=null && token.equals(SolanaTokens.WSOL_ADDRESS)) ? this.connection.getBalance(publicKey) : Promise.resolve(null)
         ]);
@@ -257,7 +250,7 @@ export class SolanaTokens extends SolanaModule {
         let ataExists: boolean = ataAccount!=null;
         let sum: bigint = 0n;
         if(ataExists) {
-            sum += ataAccount.amount;
+            sum += ataAccount!.amount;
         }
 
         if(balance!=null) {

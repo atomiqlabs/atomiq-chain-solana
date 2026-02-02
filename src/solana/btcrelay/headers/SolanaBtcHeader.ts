@@ -8,9 +8,12 @@ type SolanaBtcHeaderType = {
     timestamp: number,
     nbits: number,
     nonce: number,
-    hash?: Buffer
+    hash: Buffer
 }
 
+/**
+ * @category BTC Relay
+ */
 export class SolanaBtcHeader implements BtcHeader {
 
     version: number;
@@ -19,7 +22,7 @@ export class SolanaBtcHeader implements BtcHeader {
     timestamp: number;
     nbits: number;
     nonce: number;
-    hash?: Buffer;
+    hash: Buffer;
 
     constructor(obj: SolanaBtcHeaderType) {
         this.version = obj.version;

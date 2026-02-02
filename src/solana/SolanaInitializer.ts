@@ -20,6 +20,10 @@ import {SolanaSwapData} from "./swaps/SolanaSwapData";
 
 const chainId = "SOLANA" as const;
 
+/**
+ * Token assets available on Solana
+ * @category Chain Interface
+ */
 export type SolanaAssetsType = BaseTokenType<"WBTC" | "USDC" | "USDT" | "SOL" | "BONK">;
 const SolanaAssets: SolanaAssetsType = {
     WBTC: {
@@ -44,6 +48,10 @@ const SolanaAssets: SolanaAssetsType = {
     }
 } as const;
 
+/**
+ * Configuration options for initializing Solana chain
+ * @category Chain Interface
+ */
 export type SolanaSwapperOptions = {
     rpcUrl: string | Connection,
     dataAccountStorage?: IStorageManager<StoredDataAccount>,
@@ -55,6 +63,10 @@ export type SolanaSwapperOptions = {
     fees?: SolanaFees
 };
 
+/**
+ * Initialize Solana chain integration
+ * @category Chain Interface
+ */
 export function initializeSolana(
     options: SolanaSwapperOptions,
     bitcoinRpc: BitcoinRpc<any>,
@@ -65,17 +77,20 @@ export function initializeSolana(
         new Connection(options.rpcUrl) :
         options.rpcUrl;
 
+    const solanaChainData = SolanaChains[network];
+    if(solanaChainData==null) throw new Error(`Unsupported bitcoin network for Solana: ${BitcoinNetwork[network]}`);
+
     const Fees = options.fees ?? new SolanaFees(connection, 200000, 4, 100);
 
     const chainInterface = new SolanaChainInterface(connection, options.retryPolicy ?? {transactionResendInterval: 1000}, Fees);
 
-    const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? SolanaChains[network].addresses.btcRelayContract);
+    const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? solanaChainData.addresses.btcRelayContract);
 
     const swapContract = new SolanaSwapProgram(
         chainInterface,
         btcRelay,
         options.dataAccountStorage || storageCtor("solAccounts"),
-        options.swapContract ?? SolanaChains[network].addresses.swapContract
+        options.swapContract ?? solanaChainData.addresses.swapContract
     );
     const chainEvents = new SolanaChainEventsBrowser(connection, swapContract);
 
@@ -87,16 +102,25 @@ export function initializeSolana(
         swapDataConstructor: SolanaSwapData,
         chainInterface,
         spvVaultContract: null as never,
-        spvVaultDataConstructor: null,
-        spvVaultWithdrawalDataConstructor: null
+        spvVaultDataConstructor: null as never,
+        spvVaultWithdrawalDataConstructor: null as never
     };
 }
 
+/**
+ * Type definition for the Solana chain initializer
+ * @category Chain Interface
+ */
 export type SolanaInitializerType = ChainInitializer<SolanaSwapperOptions, SolanaChainType, SolanaAssetsType>;
+
+/**
+ * Solana chain initializer instance
+ * @category Chain Interface
+ */
 export const SolanaInitializer: SolanaInitializerType = {
     chainId,
-    chainType: null as SolanaChainType,
+    chainType: null as unknown as SolanaChainType,
     initializer: initializeSolana,
     tokens: SolanaAssets,
-    options: null as SolanaSwapperOptions
+    options: null as unknown as SolanaSwapperOptions
 } as const;

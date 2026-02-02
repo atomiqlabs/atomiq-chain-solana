@@ -32,10 +32,10 @@ export class SolanaFees {
 
     private readonly logger = getLogger("SolanaFees: ");
 
-    private blockFeeCache: {
+    private blockFeeCache?: {
         timestamp: number,
         feeRate: Promise<bigint>
-    } = null;
+    };
 
     constructor(
         connection: Connection,
@@ -63,7 +63,7 @@ export class SolanaFees {
      * @param slot
      * @private
      */
-    private async getBlockWithSignature(slot: number): Promise<ParsedNoneModeBlockResponse & {signatures: string[]}> {
+    private async getBlockWithSignature(slot: number): Promise<ParsedNoneModeBlockResponse & {signatures: string[]} | null> {
         const response = await (this.connection as any)._rpcRequest("getBlock", [
             slot,
             {
@@ -106,7 +106,7 @@ export class SolanaFees {
                     "includeAllPriorityFeeLevels": true
                 }
             }
-        ]).catch(e => {
+        ]).catch((e: any) => {
             //Catching not supported errors
             if(e.message!=null && (e.message.includes("-32601") || e.message.includes("-32600"))) {
                 return {
@@ -189,9 +189,10 @@ export class SolanaFees {
      */
     private async getBlockMeanFeeRate(slot: number): Promise<bigint | null> {
         const block = await this.getBlockWithSignature(slot);
-        if(block==null) return null;
+        if(block==null || block.rewards==null) return null;
 
         const blockComission = block.rewards.find(e => e.rewardType==="Fee");
+        if(blockComission==null) return null;
         const totalBlockFees: bigint = BigInt(blockComission.lamports) * 2n;
 
         //Subtract per-signature fees to get pure compute fees
@@ -227,7 +228,7 @@ export class SolanaFees {
         const promises: Promise<bigint>[] = [];
         for(let i=0;i<this.numSamples;i++) {
             promises.push((async () => {
-                let feeRate: bigint = null;
+                let feeRate: bigint | null = null;
                 while(feeRate==null) {
                     if(slots.length===0) throw new Error("Ran out of slots to check!");
                     const index = Math.floor(Math.random()*slots.length);
@@ -240,11 +241,14 @@ export class SolanaFees {
         }
 
         const meanFees = await Promise.all(promises);
+        const min = meanFees.reduce(
+            (prev: bigint | null, current: bigint) => prev==null || prev>current ? current : prev,
+            null
+        );
 
-        let min = null;
-        meanFees.forEach(e => min==null || min > e ? min = e : 0);
+        if(min==null) throw new Error("Cannot estimate fee, meanFees length is 0");
 
-        if(min!=null) this.logger.debug("_getGlobalFeeRate(): slot: "+slot+" global fee minimum: "+min.toString(10));
+        this.logger.debug("_getGlobalFeeRate(): slot: "+slot+" global fee minimum: "+min.toString(10));
 
         return min;
     }
@@ -299,15 +303,14 @@ export class SolanaFees {
      */
     public getGlobalFeeRate(): Promise<bigint> {
         if(this.blockFeeCache==null || Date.now() - this.blockFeeCache.timestamp > MAX_FEE_AGE) {
-            let obj = {
+            let obj: {timestamp: number, feeRate: Promise<bigint>};
+            this.blockFeeCache = obj = {
                 timestamp: Date.now(),
-                feeRate: null
+                feeRate: this._getGlobalFeeRate().catch(e => {
+                    if(this.blockFeeCache===obj) delete this.blockFeeCache;
+                    throw e;
+                })
             };
-            obj.feeRate = this._getGlobalFeeRate().catch(e => {
-                if(this.blockFeeCache===obj) this.blockFeeCache=null;
-                throw e;
-            });
-            this.blockFeeCache = obj;
         }
 
         return this.blockFeeCache.feeRate;
@@ -370,8 +373,8 @@ export class SolanaFees {
      * @param computeBudget
      * @param feeRate
      */
-    public applyFeeRateBegin(tx: Transaction, computeBudget: number, feeRate: string): boolean {
-        if(feeRate==null) return false;
+    public applyFeeRateBegin(tx: Transaction, computeBudget: number | null, feeRate: string) {
+        if(feeRate==null) return;
 
         const hashArr = feeRate.split("#");
         if(hashArr.length>1) {
@@ -408,8 +411,8 @@ export class SolanaFees {
      * @param computeBudget
      * @param feeRate
      */
-    public applyFeeRateEnd(tx: Transaction, computeBudget: number, feeRate: string): boolean {
-        if(feeRate==null) return false;
+    public applyFeeRateEnd(tx: Transaction, computeBudget: number | null, feeRate: string) {
+        if(feeRate==null) return;
 
         const hashArr = feeRate.split("#");
         if(hashArr.length>1) {
@@ -419,10 +422,11 @@ export class SolanaFees {
         //Check if bribe is included
         const arr = feeRate.split(";");
         if(arr.length>2) {
-            const cuBigInt = BigInt(computeBudget || (200000*(SolanaTxUtils.getNonComputeBudgetIxs(tx)+1)));
+            const cuBigInt = BigInt(computeBudget ?? (200000*(SolanaTxUtils.getNonComputeBudgetIxs(tx)+1)));
             const cuPrice = BigInt(arr[0]);
             const staticFee = BigInt(arr[1]);
             const bribeAddress = new PublicKey(arr[2]);
+            if(tx.feePayer==null) throw new Error("Cannot apply tx bribe without feePayer being known!");
             tx.add(SystemProgram.transfer({
                 fromPubkey: tx.feePayer,
                 toPubkey: bribeAddress,
@@ -442,7 +446,7 @@ export class SolanaFees {
     submitTx(tx: Buffer, options?: SendOptions): Promise<string | null> {
         const parsedTx = Transaction.from(tx);
         const jitoFee = this.getJitoTxFee(parsedTx);
-        if(jitoFee==null) return null;
+        if(jitoFee==null) return Promise.resolve(null);
 
         this.logger.info("submitTx(): sending tx over Jito, signature: "+parsedTx.signature+" fee: "+jitoFee.toString(10));
         return this.sendJitoTx(tx, options);

@@ -22,7 +22,7 @@ class SolanaAction {
     addIx(instruction, computeBudget, signers) {
         this.instructions.push(instruction);
         if (this.computeBudget == null) {
-            this.computeBudget = computeBudget;
+            this.computeBudget = computeBudget ?? null;
         }
         else {
             if (computeBudget != null)

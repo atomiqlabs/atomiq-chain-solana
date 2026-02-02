@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { BtcHeader } from "@atomiqlabs/base";
 import { Buffer } from "buffer";
 type SolanaBtcHeaderType = {
@@ -8,8 +9,11 @@ type SolanaBtcHeaderType = {
     timestamp: number;
     nbits: number;
     nonce: number;
-    hash?: Buffer;
+    hash: Buffer;
 };
+/**
+ * @category BTC Relay
+ */
 export declare class SolanaBtcHeader implements BtcHeader {
     version: number;
     reversedPrevBlockhash: number[];
@@ -17,7 +21,7 @@ export declare class SolanaBtcHeader implements BtcHeader {
     timestamp: number;
     nbits: number;
     nonce: number;
-    hash?: Buffer;
+    hash: Buffer;
     constructor(obj: SolanaBtcHeaderType);
     getMerkleRoot(): Buffer;
     getNbits(): number;

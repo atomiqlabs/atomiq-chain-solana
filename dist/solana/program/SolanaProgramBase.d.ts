@@ -1,4 +1,5 @@
 /// <reference types="node" />
+/// <reference types="node" />
 import { Idl, Program } from "@coral-xyz/anchor";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 import { SolanaProgramEvents } from "./modules/SolanaProgramEvents";
@@ -9,10 +10,14 @@ import { Buffer } from "buffer";
  */
 export declare class SolanaProgramBase<T extends Idl> {
     protected readonly logger: {
-        debug: (msg: any, ...args: any[]) => void;
-        info: (msg: any, ...args: any[]) => void;
-        warn: (msg: any, ...args: any[]) => void;
-        error: (msg: any, ...args: any[]) => void;
+        debug: (msg: string, ...args: any[]) => false | void; /**
+         * Derives static PDA address from the seed
+         *
+         * @param seed
+         */
+        info: (msg: string, ...args: any[]) => false | void;
+        warn: (msg: string, ...args: any[]) => false | void;
+        error: (msg: string, ...args: any[]) => false | void;
     };
     program: Program<T>;
     readonly Events: SolanaProgramEvents<T>;
