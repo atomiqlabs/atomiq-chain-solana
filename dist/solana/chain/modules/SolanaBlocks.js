@@ -42,7 +42,10 @@ class SolanaBlocks extends SolanaModule_1.SolanaModule {
         let slot = await this.root.Slots.getSlot(commitment);
         for (let i = 0; i < 10; i++) {
             const block = await this.getParsedBlock(slot).catch(e => {
-                if (e.toString().startsWith("SolanaJSONRPCError: failed to get block: Block not available for slot")) {
+                const errorStr = e.toString();
+                if (errorStr.startsWith("SolanaJSONRPCError: failed to get block:") && (errorStr.includes("Block not available for slot") ||
+                    errorStr.includes("was skipped") ||
+                    errorStr.includes("missing in long-term storage"))) {
                     return null;
                 }
                 throw e;
