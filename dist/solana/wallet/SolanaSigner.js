@@ -14,6 +14,9 @@ class SolanaSigner {
     getPublicKey() {
         return this.wallet.publicKey;
     }
+    /**
+     * @inheritDoc
+     */
     getAddress() {
         return this.wallet.publicKey.toString();
     }

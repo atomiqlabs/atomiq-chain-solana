@@ -53,35 +53,113 @@ export declare class SolanaSwapData extends SwapData {
     constructor(data: {
         type: "sol";
     } & Serialized<SolanaSwapData>);
+    /**
+     * @inheritDoc
+     */
     getOfferer(): string;
+    /**
+     * @inheritDoc
+     */
     setOfferer(newOfferer: string): void;
+    /**
+     * @inheritDoc
+     */
     getClaimer(): string;
+    /**
+     * @inheritDoc
+     */
     setClaimer(newClaimer: string): void;
+    /**
+     * @inheritDoc
+     */
     serialize(): {
         type: "sol";
     } & Serialized<SolanaSwapData>;
+    /**
+     * @inheritDoc
+     */
     getAmount(): bigint;
+    /**
+     * @inheritDoc
+     */
     getToken(): string;
+    /**
+     * @inheritDoc
+     */
     isToken(token: string): boolean;
+    /**
+     * @inheritDoc
+     */
     getType(): ChainSwapType;
+    /**
+     * @inheritDoc
+     */
     getExpiry(): bigint;
+    /**
+     * @inheritDoc
+     */
     getConfirmationsHint(): number;
+    /**
+     * @inheritDoc
+     */
     getNonceHint(): bigint;
+    /**
+     * @inheritDoc
+     */
     isPayIn(): boolean;
+    /**
+     * @inheritDoc
+     */
     isPayOut(): boolean;
+    /**
+     * @inheritDoc
+     */
     isTrackingReputation(): boolean;
+    /**
+     * @inheritDoc
+     */
     getClaimHash(): string;
+    /**
+     * @inheritDoc
+     */
     getEscrowHash(): string;
+    /**
+     * @inheritDoc
+     */
     getSequence(): bigint;
+    /**
+     * @inheritDoc
+     */
     getTxoHashHint(): string | null;
+    /**
+     * @inheritDoc
+     */
     getHTLCHashHint(): string | null;
+    /**
+     * @inheritDoc
+     */
     getExtraData(): string | null;
+    /**
+     * @inheritDoc
+     */
     setExtraData(txoHash: string): void;
+    /**
+     * @inheritDoc
+     */
     getSecurityDeposit(): bigint;
+    /**
+     * @inheritDoc
+     */
     getClaimerBounty(): bigint;
+    /**
+     * @inheritDoc
+     */
     getTotalDeposit(): bigint;
     toSwapDataStruct(): IdlTypes<SwapProgram>["SwapData"];
     correctPDA(account: IdlAccounts<SwapProgram>["escrowState"]): boolean;
+    /**
+     * @inheritDoc
+     */
     equals(other: SolanaSwapData): boolean;
     /**
      * Converts initialize instruction data into {SolanaSwapData}
@@ -95,8 +173,20 @@ export declare class SolanaSwapData extends SwapData {
     static fromEscrowState(account: IdlAccounts<SwapProgram>["escrowState"]): SolanaSwapData;
     static typeToKind(type: ChainSwapType): number;
     static kindToType(value: number): ChainSwapType;
+    /**
+     * @inheritDoc
+     */
     isClaimer(address: string): boolean;
+    /**
+     * @inheritDoc
+     */
     isOfferer(address: string): boolean;
+    /**
+     * @inheritDoc
+     */
     getDepositToken(): string;
+    /**
+     * @inheritDoc
+     */
     isDepositToken(token: string): boolean;
 }

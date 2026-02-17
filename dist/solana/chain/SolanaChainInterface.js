@@ -33,6 +33,9 @@ class SolanaChainInterface {
         this.Signatures = new SolanaSignatures_1.SolanaSignatures(this);
         this.Events = new SolanaEvents_1.SolanaEvents(this);
     }
+    /**
+     * @inheritDoc
+     */
     async getBalance(signer, tokenAddress) {
         const token = new web3_js_1.PublicKey(tokenAddress);
         const publicKey = new web3_js_1.PublicKey(signer);
@@ -46,18 +49,33 @@ class SolanaChainInterface {
         this.logger.debug("getBalance(): token balance, token: " + token.toBase58() + " balance: " + balance.toString(10));
         return balance;
     }
+    /**
+     * @inheritDoc
+     */
     isValidAddress(address) {
         return SolanaAddresses_1.SolanaAddresses.isValidAddress(address);
     }
+    /**
+     * @inheritDoc
+     */
     normalizeAddress(address) {
         return address;
     }
+    /**
+     * @inheritDoc
+     */
     getNativeCurrencyAddress() {
         return this.Tokens.getNativeCurrencyAddress().toString();
     }
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer, token, amount, dstAddress, feeRate) {
         return this.Tokens.txsTransfer(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, new web3_js_1.PublicKey(dstAddress), feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     async transfer(signer, token, amount, dstAddress, txOptions) {
         const txs = await this.Tokens.txsTransfer(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, new web3_js_1.PublicKey(dstAddress), txOptions?.feeRate);
         const [txId] = await this.Transactions.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
@@ -65,30 +83,57 @@ class SolanaChainInterface {
     }
     ////////////////////////////////////////////
     //// Transactions
+    /**
+     * @inheritDoc
+     */
     sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
         return this.Transactions.sendAndConfirm(signer, txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
     }
+    /**
+     * @inheritDoc
+     */
     sendSignedAndConfirm(txs, waitForConfirmation, abortSignal, parallel, onBeforePublish) {
         return this.Transactions.sendSignedAndConfirm(txs, waitForConfirmation, abortSignal, parallel, onBeforePublish);
     }
+    /**
+     * @inheritDoc
+     */
     serializeTx(tx) {
         return Promise.resolve(this.Transactions.serializeUnsignedTx(tx));
     }
+    /**
+     * @inheritDoc
+     */
     deserializeTx(txData) {
         return Promise.resolve(this.Transactions.deserializeUnsignedTx(txData));
     }
+    /**
+     * @inheritDoc
+     */
     serializeSignedTx(tx) {
         return Promise.resolve(this.Transactions.serializeSignedTx(tx));
     }
+    /**
+     * @inheritDoc
+     */
     deserializeSignedTx(txData) {
         return Promise.resolve(this.Transactions.deserializeSignedTransaction(txData));
     }
+    /**
+     * @inheritDoc
+     */
     getTxIdStatus(txId) {
         return this.Transactions.getTxIdStatus(txId);
     }
+    /**
+     * @inheritDoc
+     */
     getTxStatus(tx) {
         return this.Transactions.getTxStatus(tx);
     }
+    /**
+     * @inheritDoc
+     */
     async getFinalizedBlock() {
         const { block } = await this.Blocks.findLatestParsedBlock("finalized");
         return {
@@ -98,13 +143,25 @@ class SolanaChainInterface {
     }
     ///////////////////////////////////
     //// Callbacks & handlers
+    /**
+     * @inheritDoc
+     */
     offBeforeTxReplace(callback) {
         return true;
     }
+    /**
+     * @inheritDoc
+     */
     onBeforeTxReplace(callback) { }
+    /**
+     * @inheritDoc
+     */
     onBeforeTxSigned(callback) {
         this.Transactions.onBeforeTxSigned(callback);
     }
+    /**
+     * @inheritDoc
+     */
     offBeforeTxSigned(callback) {
         return this.Transactions.offBeforeTxSigned(callback);
     }
@@ -114,6 +171,9 @@ class SolanaChainInterface {
     offSendTransaction(callback) {
         return this.Transactions.offSendTransaction(callback);
     }
+    /**
+     * @inheritDoc
+     */
     isValidToken(tokenIdentifier) {
         try {
             new web3_js_1.PublicKey(tokenIdentifier);
@@ -123,14 +183,23 @@ class SolanaChainInterface {
             return false;
         }
     }
+    /**
+     * @inheritDoc
+     */
     randomAddress() {
         return web3_js_1.Keypair.generate().publicKey.toString();
     }
+    /**
+     * @inheritDoc
+     */
     randomSigner() {
         const keypair = web3_js_1.Keypair.generate();
         const wallet = new SolanaKeypairWallet_1.SolanaKeypairWallet(keypair);
         return new SolanaSigner_1.SolanaSigner(wallet, keypair);
     }
+    /**
+     * @inheritDoc
+     */
     wrapSigner(signer) {
         return Promise.resolve(new SolanaSigner_1.SolanaSigner(signer));
     }

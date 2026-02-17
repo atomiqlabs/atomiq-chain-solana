@@ -59,23 +59,38 @@ class SolanaSwapData extends base_1.SwapData {
             this.txoHash = data.txoHash;
         }
     }
+    /**
+     * @inheritDoc
+     */
     getOfferer() {
         return this.offerer.toBase58();
     }
+    /**
+     * @inheritDoc
+     */
     setOfferer(newOfferer) {
         this.offerer = new web3_js_1.PublicKey(newOfferer);
         this.offererAta = (0, spl_token_1.getAssociatedTokenAddressSync)(this.token, this.offerer);
         this.payIn = true;
     }
+    /**
+     * @inheritDoc
+     */
     getClaimer() {
         return this.claimer.toBase58();
     }
+    /**
+     * @inheritDoc
+     */
     setClaimer(newClaimer) {
         this.claimer = new web3_js_1.PublicKey(newClaimer);
         this.payIn = false;
         this.payOut = true;
         this.claimerAta = (0, spl_token_1.getAssociatedTokenAddressSync)(this.token, this.claimer);
     }
+    /**
+     * @inheritDoc
+     */
     serialize() {
         return {
             type: "sol",
@@ -98,69 +113,129 @@ class SolanaSwapData extends base_1.SwapData {
             txoHash: this.txoHash
         };
     }
+    /**
+     * @inheritDoc
+     */
     getAmount() {
         return (0, Utils_1.toBigInt)(this.amount);
     }
+    /**
+     * @inheritDoc
+     */
     getToken() {
         return this.token.toString();
     }
+    /**
+     * @inheritDoc
+     */
     isToken(token) {
         return this.token.equals(new web3_js_1.PublicKey(token));
     }
+    /**
+     * @inheritDoc
+     */
     getType() {
         return SolanaSwapData.kindToType(this.kind);
     }
+    /**
+     * @inheritDoc
+     */
     getExpiry() {
         if (this.expiry.lt(EXPIRY_BLOCKHEIGHT_THRESHOLD))
             throw new Error("Expiry expressed as bitcoin blockheight!");
         return (0, Utils_1.toBigInt)(this.expiry);
     }
+    /**
+     * @inheritDoc
+     */
     getConfirmationsHint() {
         return this.confirmations;
     }
+    /**
+     * @inheritDoc
+     */
     getNonceHint() {
         return (0, Utils_1.toBigInt)(this.nonce);
     }
+    /**
+     * @inheritDoc
+     */
     isPayIn() {
         return this.payIn;
     }
+    /**
+     * @inheritDoc
+     */
     isPayOut() {
         return this.payOut;
     }
+    /**
+     * @inheritDoc
+     */
     isTrackingReputation() {
         return !this.payOut;
     }
+    /**
+     * @inheritDoc
+     */
     getClaimHash() {
         return (0, Utils_1.toClaimHash)(this.paymentHash, (0, Utils_1.toBigInt)(this.nonce), this.confirmations);
     }
+    /**
+     * @inheritDoc
+     */
     getEscrowHash() {
         return (0, Utils_1.toEscrowHash)(this.paymentHash, this.sequence);
     }
+    /**
+     * @inheritDoc
+     */
     getSequence() {
         return (0, Utils_1.toBigInt)(this.sequence);
     }
+    /**
+     * @inheritDoc
+     */
     getTxoHashHint() {
         if (this.txoHash === "0000000000000000000000000000000000000000000000000000000000000000")
             return null; //Txo hash opt-out flag
         return this.txoHash ?? null;
     }
+    /**
+     * @inheritDoc
+     */
     getHTLCHashHint() {
         if (this.getType() === base_1.ChainSwapType.HTLC)
             return this.paymentHash;
         return null;
     }
+    /**
+     * @inheritDoc
+     */
     getExtraData() {
         return this.txoHash ?? null;
     }
+    /**
+     * @inheritDoc
+     */
     setExtraData(txoHash) {
         this.txoHash = txoHash;
     }
+    /**
+     * @inheritDoc
+     */
     getSecurityDeposit() {
         return (0, Utils_1.toBigInt)(this.securityDeposit);
     }
+    /**
+     * @inheritDoc
+     */
     getClaimerBounty() {
         return (0, Utils_1.toBigInt)(this.claimerBounty);
     }
+    /**
+     * @inheritDoc
+     */
     getTotalDeposit() {
         return (0, Utils_1.toBigInt)(this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty);
     }
@@ -195,6 +270,9 @@ class SolanaSwapData extends base_1.SwapData {
             this.claimerBounty.eq(account.claimerBounty) &&
             this.securityDeposit.eq(account.securityDeposit);
     }
+    /**
+     * @inheritDoc
+     */
     equals(other) {
         if (this.claimerAta == null && other.claimerAta != null)
             return false;
@@ -311,6 +389,9 @@ class SolanaSwapData extends base_1.SwapData {
         }
         throw new Error("Unknown swap kind type!");
     }
+    /**
+     * @inheritDoc
+     */
     isClaimer(address) {
         const _address = new web3_js_1.PublicKey(address);
         if (this.isPayOut()) {
@@ -321,12 +402,21 @@ class SolanaSwapData extends base_1.SwapData {
         }
         return this.claimer.equals(new web3_js_1.PublicKey(address));
     }
+    /**
+     * @inheritDoc
+     */
     isOfferer(address) {
         return this.offerer.equals(new web3_js_1.PublicKey(address));
     }
+    /**
+     * @inheritDoc
+     */
     getDepositToken() {
         return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.toString();
     }
+    /**
+     * @inheritDoc
+     */
     isDepositToken(token) {
         return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.equals(new web3_js_1.PublicKey(token));
     }

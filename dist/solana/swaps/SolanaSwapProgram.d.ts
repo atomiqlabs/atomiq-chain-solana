@@ -38,74 +38,100 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     readonly DataAccount: SolanaDataAccount;
     readonly LpVault: SolanaLpVault;
     constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string);
+    /**
+     * @inheritDoc
+     */
     start(): Promise<void>;
+    /**
+     * @inheritDoc
+     */
     getClaimableDeposits(signer: string): Promise<{
         count: number;
         totalValue: bigint;
     }>;
+    /**
+     * @inheritDoc
+     */
     claimDeposits(signer: SolanaSigner): Promise<{
         txIds: string[];
         count: number;
         totalValue: bigint;
     }>;
+    /**
+     * @inheritDoc
+     */
     preFetchForInitSignatureVerification(data: SolanaPreFetchData): Promise<SolanaPreFetchVerification>;
+    /**
+     * @inheritDoc
+     */
     preFetchBlockDataForSignatures(): Promise<SolanaPreFetchData>;
+    /**
+     * @inheritDoc
+     */
     getInitSignature(signer: SolanaSigner, swapData: SolanaSwapData, authorizationTimeout: number, preFetchedBlockData?: SolanaPreFetchData, feeRate?: string): Promise<SignatureData>;
+    /**
+     * @inheritDoc
+     */
     isValidInitAuthorization(signer: string, swapData: SolanaSwapData, sig: SignatureData, feeRate?: string, preFetchedData?: SolanaPreFetchVerification): Promise<Buffer>;
+    /**
+     * @inheritDoc
+     */
     getInitAuthorizationExpiry(swapData: SolanaSwapData, sig: SignatureData, preFetchedData?: SolanaPreFetchVerification): Promise<number>;
+    /**
+     * @inheritDoc
+     */
     isInitAuthorizationExpired(swapData: SolanaSwapData, sig: SignatureData): Promise<boolean>;
+    /**
+     * @inheritDoc
+     */
     getRefundSignature(signer: SolanaSigner, swapData: SolanaSwapData, authorizationTimeout: number): Promise<SignatureData>;
+    /**
+     * @inheritDoc
+     */
     isValidRefundAuthorization(swapData: SolanaSwapData, sig: SignatureData): Promise<Buffer>;
+    /**
+     * @inheritDoc
+     */
     getDataSignature(signer: SolanaSigner, data: Buffer): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     isValidDataSignature(data: Buffer, signature: string, publicKey: string): Promise<boolean>;
     /**
-     * Checks whether the claim is claimable by us, that means not expired, we are claimer & the swap is commited
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     isClaimable(signer: string, data: SolanaSwapData): Promise<boolean>;
     /**
-     * Checks whether a swap is commited, i.e. the swap still exists on-chain and was not claimed nor refunded
-     *
-     * @param swapData
+     * @inheritDoc
      */
     isCommited(swapData: SolanaSwapData): Promise<boolean>;
     /**
-     * Checks whether the swap is expired, takes into consideration possible on-chain time skew, therefore for claimer
-     *  the swap expires a bit sooner than it should've & for the offerer it expires a bit later
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     isExpired(signer: string, data: SolanaSwapData): Promise<boolean>;
     /**
-     * Checks if the swap is refundable by us, checks if we are offerer, if the swap is already expired & if the swap
-     *  is still commited
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     isRequestRefundable(signer: string, data: SolanaSwapData): Promise<boolean>;
     /**
-     * Get the swap payment hash to be used for an on-chain swap, this just uses a sha256 hash of the values
-     *
-     * @param outputScript output script required to claim the swap
-     * @param amount sats sent required to claim the swap
-     * @param confirmations
-     * @param nonce swap nonce uniquely identifying the transaction to prevent replay attacks
+     * @inheritDoc
      */
     getHashForOnchain(outputScript: Buffer, amount: bigint, confirmations: number, nonce?: bigint): Buffer;
+    /**
+     * @inheritDoc
+     */
     getHashForHtlc(swapHash: Buffer): Buffer;
+    /**
+     * @inheritDoc
+     */
     getHashForTxId(txId: string, confirmations: number): Buffer;
     /**
-     * Gets the status of the specific swap, this also checks if we are offerer/claimer & checks for expiry (to see
-     *  if swap is refundable)
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     getCommitStatus(signer: string, data: SolanaSwapData): Promise<SwapCommitState>;
+    /**
+     * @inheritDoc
+     */
     getCommitStatuses(request: {
         signer: string;
         swapData: SolanaSwapData;
@@ -113,18 +139,16 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
         [p: string]: SwapCommitState;
     }>;
     /**
-     * Checks the status of the specific payment hash
-     *
-     * @param claimHash
+     * @inheritDoc
      */
     getClaimHashStatus(claimHash: string): Promise<SwapCommitStateType>;
     /**
-     * Returns the data committed for a specific payment hash, or null if no data is currently commited for
-     *  the specific swap
-     *
-     * @param claimHashHex
+     * @inheritDoc
      */
     getCommitedData(claimHashHex: string): Promise<SolanaSwapData | null>;
+    /**
+     * @inheritDoc
+     */
     getHistoricalSwaps(signer: string, startBlockheight?: number): Promise<{
         swaps: {
             [escrowHash: string]: {
@@ -141,15 +165,33 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
         };
         latestBlockheight?: number;
     }>;
+    /**
+     * @inheritDoc
+     */
     createSwapData(type: ChainSwapType, offerer: string, claimer: string, token: string, amount: bigint, claimHash: string, sequence: bigint, expiry: bigint, payIn: boolean, payOut: boolean, securityDeposit: bigint, claimerBounty: bigint, depositToken?: string): Promise<SolanaSwapData>;
+    /**
+     * @inheritDoc
+     */
     getBalance(signer: string, tokenAddress: string, inContract: boolean): Promise<bigint>;
+    /**
+     * @inheritDoc
+     */
     getIntermediaryData(address: string, token: string): Promise<{
         balance: bigint;
         reputation: IntermediaryReputationType;
     } | null>;
+    /**
+     * @inheritDoc
+     */
     getIntermediaryReputation(address: string, token: string): Promise<IntermediaryReputationType | null>;
     getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint>;
+    /**
+     * @inheritDoc
+     */
     txsClaimWithSecret(signer: string | SolanaSigner, swapData: SolanaSwapData, secret: string, checkExpiry?: boolean, initAta?: boolean, feeRate?: string, skipAtaCheck?: boolean): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     txsClaimWithTxData(signer: string | SolanaSigner, swapData: SolanaSwapData, tx: {
         blockhash: string;
         confirmations: number;
@@ -157,12 +199,33 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
         hex: string;
         height: number;
     }, requiredConfirmations: number, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     txsRefund(signer: string, swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     txsRefundWithAuthorization(signer: string, swapData: SolanaSwapData, sig: SignatureData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     txsInit(sender: string, swapData: SolanaSwapData, sig: SignatureData, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     txsWithdraw(signer: string, token: string, amount: bigint, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     txsDeposit(signer: string, token: string, amount: bigint, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     claimWithSecret(signer: SolanaSigner, swapData: SolanaSwapData, secret: string, checkExpiry?: boolean, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     claimWithTxData(signer: SolanaSigner, swapData: SolanaSwapData, tx: {
         blockhash: string;
         confirmations: number;
@@ -170,33 +233,72 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
         hex: string;
         height: number;
     }, requiredConfirmations: number, vout: number, commitedHeader?: SolanaBtcStoredHeader, synchronizer?: RelaySynchronizer<any, SolanaTx, any>, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     refund(signer: SolanaSigner, swapData: SolanaSwapData, check?: boolean, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     refundWithAuthorization(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, check?: boolean, initAta?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     init(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, skipChecks?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     initAndClaimWithSecret(signer: SolanaSigner, swapData: SolanaSwapData, signature: SignatureData, secret: string, skipChecks?: boolean, txOptions?: TransactionConfirmationOptions): Promise<string[]>;
+    /**
+     * @inheritDoc
+     */
     withdraw(signer: SolanaSigner, token: string, amount: bigint, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     deposit(signer: SolanaSigner, token: string, amount: bigint, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     getInitPayInFeeRate(offerer?: string, claimer?: string, token?: string, claimHash?: string): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     getInitFeeRate(offerer?: string, claimer?: string, token?: string, claimHash?: string): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     getRefundFeeRate(swapData: SolanaSwapData): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     getClaimFeeRate(signer: string, swapData: SolanaSwapData): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     getClaimFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
+    /**
+     * @inheritDoc
+     */
     getRawClaimFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
-     * Get the estimated solana fee of the commit transaction
+     * @inheritDoc
      */
     getCommitFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
-     * Get the estimated solana fee of the commit transaction, without any deposits
+     * @inheritDoc
      */
     getRawCommitFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
-     * Get the estimated solana transaction fee of the refund transaction
+     * @inheritDoc
      */
     getRefundFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
     /**
-     * Get the estimated solana transaction fee of the refund transaction
+     * @inheritDoc
      */
     getRawRefundFee(signer: string, swapData: SolanaSwapData, feeRate?: string): Promise<bigint>;
+    /**
+     * @inheritDoc
+     */
     getExtraData(outputScript: Buffer, amount: bigint, confirmations: number, nonce?: bigint): Buffer;
 }

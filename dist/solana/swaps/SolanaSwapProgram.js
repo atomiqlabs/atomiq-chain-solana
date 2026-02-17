@@ -51,54 +51,90 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         this.DataAccount = new SolanaDataAccount_1.SolanaDataAccount(chainInterface, this, storage);
         this.LpVault = new SolanaLpVault_1.SolanaLpVault(chainInterface, this);
     }
+    /**
+     * @inheritDoc
+     */
     async start() {
         await this.DataAccount.init();
     }
+    /**
+     * @inheritDoc
+     */
     getClaimableDeposits(signer) {
         return this.DataAccount.getDataAccountsInfo(new web3_js_1.PublicKey(signer));
     }
+    /**
+     * @inheritDoc
+     */
     claimDeposits(signer) {
         return this.DataAccount.sweepDataAccounts(signer);
     }
     ////////////////////////////////////////////
     //// Signatures
+    /**
+     * @inheritDoc
+     */
     preFetchForInitSignatureVerification(data) {
         return this.Init.preFetchForInitSignatureVerification(data);
     }
+    /**
+     * @inheritDoc
+     */
     preFetchBlockDataForSignatures() {
         return this.Init.preFetchBlockDataForSignatures();
     }
+    /**
+     * @inheritDoc
+     */
     getInitSignature(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate) {
         return this.Init.signSwapInitialization(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     isValidInitAuthorization(signer, swapData, sig, feeRate, preFetchedData) {
         return this.Init.isSignatureValid(signer, swapData, sig.timeout, sig.prefix, sig.signature, feeRate, preFetchedData);
     }
+    /**
+     * @inheritDoc
+     */
     getInitAuthorizationExpiry(swapData, sig, preFetchedData) {
         return this.Init.getSignatureExpiry(sig.timeout, sig.signature, preFetchedData);
     }
+    /**
+     * @inheritDoc
+     */
     isInitAuthorizationExpired(swapData, sig) {
         return this.Init.isSignatureExpired(sig.signature, sig.timeout);
     }
+    /**
+     * @inheritDoc
+     */
     getRefundSignature(signer, swapData, authorizationTimeout) {
         return this.Refund.signSwapRefund(signer, swapData, authorizationTimeout);
     }
+    /**
+     * @inheritDoc
+     */
     isValidRefundAuthorization(swapData, sig) {
         return this.Refund.isSignatureValid(swapData, sig.timeout, sig.prefix, sig.signature);
     }
+    /**
+     * @inheritDoc
+     */
     getDataSignature(signer, data) {
         return this.Chain.Signatures.getDataSignature(signer, data);
     }
+    /**
+     * @inheritDoc
+     */
     isValidDataSignature(data, signature, publicKey) {
         return this.Chain.Signatures.isValidDataSignature(data, signature, publicKey);
     }
     ////////////////////////////////////////////
     //// Swap data utils
     /**
-     * Checks whether the claim is claimable by us, that means not expired, we are claimer & the swap is commited
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     async isClaimable(signer, data) {
         if (!data.isClaimer(signer))
@@ -108,9 +144,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return await this.isCommited(data);
     }
     /**
-     * Checks whether a swap is commited, i.e. the swap still exists on-chain and was not claimed nor refunded
-     *
-     * @param swapData
+     * @inheritDoc
      */
     async isCommited(swapData) {
         const paymentHash = buffer_1.Buffer.from(swapData.paymentHash, "hex");
@@ -120,11 +154,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return swapData.correctPDA(account);
     }
     /**
-     * Checks whether the swap is expired, takes into consideration possible on-chain time skew, therefore for claimer
-     *  the swap expires a bit sooner than it should've & for the offerer it expires a bit later
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     isExpired(signer, data) {
         let currentTimestamp = new BN(Math.floor(Date.now() / 1000));
@@ -135,11 +165,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return Promise.resolve(data.expiry.lt(currentTimestamp));
     }
     /**
-     * Checks if the swap is refundable by us, checks if we are offerer, if the swap is already expired & if the swap
-     *  is still commited
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     async isRequestRefundable(signer, data) {
         //Swap can only be refunded by the offerer
@@ -150,12 +176,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return await this.isCommited(data);
     }
     /**
-     * Get the swap payment hash to be used for an on-chain swap, this just uses a sha256 hash of the values
-     *
-     * @param outputScript output script required to claim the swap
-     * @param amount sats sent required to claim the swap
-     * @param confirmations
-     * @param nonce swap nonce uniquely identifying the transaction to prevent replay attacks
+     * @inheritDoc
      */
     getHashForOnchain(outputScript, amount, confirmations, nonce) {
         nonce ?? (nonce = 0n);
@@ -166,20 +187,22 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         ]))).toString("hex");
         return buffer_1.Buffer.from((0, Utils_1.toClaimHash)(paymentHash, nonce, confirmations), "hex");
     }
+    /**
+     * @inheritDoc
+     */
     getHashForHtlc(swapHash) {
         return buffer_1.Buffer.from((0, Utils_1.toClaimHash)(swapHash.toString("hex"), 0n, 0), "hex");
     }
+    /**
+     * @inheritDoc
+     */
     getHashForTxId(txId, confirmations) {
         return buffer_1.Buffer.from((0, Utils_1.toClaimHash)(buffer_1.Buffer.from(txId, "hex").reverse().toString("hex"), 0n, confirmations), "hex");
     }
     ////////////////////////////////////////////
     //// Swap data getters
     /**
-     * Gets the status of the specific swap, this also checks if we are offerer/claimer & checks for expiry (to see
-     *  if swap is refundable)
-     *
-     * @param signer
-     * @param data
+     * @inheritDoc
      */
     async getCommitStatus(signer, data) {
         const escrowStateKey = this.SwapEscrowState(buffer_1.Buffer.from(data.paymentHash, "hex"));
@@ -237,6 +260,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             return { type: base_1.SwapCommitStateType.EXPIRED };
         return { type: base_1.SwapCommitStateType.NOT_COMMITED };
     }
+    /**
+     * @inheritDoc
+     */
     async getCommitStatuses(request) {
         const result = {};
         let promises = [];
@@ -253,9 +279,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return result;
     }
     /**
-     * Checks the status of the specific payment hash
-     *
-     * @param claimHash
+     * @inheritDoc
      */
     async getClaimHashStatus(claimHash) {
         const { paymentHash } = (0, Utils_1.fromClaimHash)(claimHash);
@@ -285,10 +309,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         return base_1.SwapCommitStateType.NOT_COMMITED;
     }
     /**
-     * Returns the data committed for a specific payment hash, or null if no data is currently commited for
-     *  the specific swap
-     *
-     * @param claimHashHex
+     * @inheritDoc
      */
     async getCommitedData(claimHashHex) {
         const { paymentHash } = (0, Utils_1.fromClaimHash)(claimHashHex);
@@ -298,6 +319,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             return null;
         return SolanaSwapData_1.SolanaSwapData.fromEscrowState(account);
     }
+    /**
+     * @inheritDoc
+     */
     async getHistoricalSwaps(signer, startBlockheight) {
         let latestBlockheight;
         const events = [];
@@ -388,6 +412,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     ////////////////////////////////////////////
     //// Swap data initializer
+    /**
+     * @inheritDoc
+     */
     createSwapData(type, offerer, claimer, token, amount, claimHash, sequence, expiry, payIn, payOut, securityDeposit, claimerBounty, depositToken) {
         if (depositToken != null) {
             if (!new web3_js_1.PublicKey(depositToken).equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS))
@@ -419,6 +446,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     ////////////////////////////////////////////
     //// Utils
+    /**
+     * @inheritDoc
+     */
     async getBalance(signer, tokenAddress, inContract) {
         if (!inContract) {
             return await this.Chain.getBalance(signer, tokenAddress);
@@ -427,9 +457,15 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const publicKey = new web3_js_1.PublicKey(signer);
         return await this.getIntermediaryBalance(publicKey, token);
     }
+    /**
+     * @inheritDoc
+     */
     getIntermediaryData(address, token) {
         return this.LpVault.getIntermediaryData(new web3_js_1.PublicKey(address), new web3_js_1.PublicKey(token));
     }
+    /**
+     * @inheritDoc
+     */
     getIntermediaryReputation(address, token) {
         return this.LpVault.getIntermediaryReputation(new web3_js_1.PublicKey(address), new web3_js_1.PublicKey(token));
     }
@@ -438,25 +474,40 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     ////////////////////////////////////////////
     //// Transaction initializers
+    /**
+     * @inheritDoc
+     */
     async txsClaimWithSecret(signer, swapData, secret, checkExpiry, initAta, feeRate, skipAtaCheck) {
         return this.Claim.txsClaimWithSecret(typeof (signer) === "string" ? new web3_js_1.PublicKey(signer) : signer.getPublicKey(), swapData, secret, checkExpiry, initAta, feeRate, skipAtaCheck);
     }
+    /**
+     * @inheritDoc
+     */
     async txsClaimWithTxData(signer, swapData, tx, requiredConfirmations, vout, commitedHeader, synchronizer, initAta, feeRate) {
         if (swapData.confirmations !== requiredConfirmations)
             throw new Error("Invalid requiredConfirmations provided!");
         const { txs } = await this.Claim.txsClaimWithTxData(typeof (signer) === "string" ? new web3_js_1.PublicKey(signer) : signer, swapData, tx, vout, commitedHeader, synchronizer, initAta, feeRate);
         return txs;
     }
+    /**
+     * @inheritDoc
+     */
     txsRefund(signer, swapData, check, initAta, feeRate) {
         if (!swapData.isOfferer(signer))
             throw new Error("Only offerer can refund on Solana");
         return this.Refund.txsRefund(swapData, check, initAta, feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     txsRefundWithAuthorization(signer, swapData, sig, check, initAta, feeRate) {
         if (!swapData.isOfferer(signer))
             throw new Error("Only offerer can refund on Solana");
         return this.Refund.txsRefundWithAuthorization(swapData, sig.timeout, sig.prefix, sig.signature, check, initAta, feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     txsInit(sender, swapData, sig, skipChecks, feeRate) {
         if (swapData.isPayIn()) {
             if (!swapData.isOfferer(sender))
@@ -469,19 +520,31 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             return this.Init.txsInit(swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
         }
     }
+    /**
+     * @inheritDoc
+     */
     txsWithdraw(signer, token, amount, feeRate) {
         return this.LpVault.txsWithdraw(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     txsDeposit(signer, token, amount, feeRate) {
         return this.LpVault.txsDeposit(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, feeRate);
     }
     ////////////////////////////////////////////
     //// Executors
+    /**
+     * @inheritDoc
+     */
     async claimWithSecret(signer, swapData, secret, checkExpiry, initAta, txOptions) {
         const result = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, checkExpiry, initAta, txOptions?.feeRate);
         const [signature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signature;
     }
+    /**
+     * @inheritDoc
+     */
     async claimWithTxData(signer, swapData, tx, requiredConfirmations, vout, commitedHeader, synchronizer, initAta, txOptions) {
         if (requiredConfirmations !== swapData.confirmations)
             throw new Error("Invalid requiredConfirmations provided!");
@@ -490,16 +553,25 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         await this.DataAccount.removeDataAccount(storageAcc);
         return signatures[claimTxIndex] ?? signatures[0];
     }
+    /**
+     * @inheritDoc
+     */
     async refund(signer, swapData, check, initAta, txOptions) {
         let result = await this.txsRefund(signer.getAddress(), swapData, check, initAta, txOptions?.feeRate);
         const [signature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signature;
     }
+    /**
+     * @inheritDoc
+     */
     async refundWithAuthorization(signer, swapData, signature, check, initAta, txOptions) {
         let result = await this.txsRefundWithAuthorization(signer.getAddress(), swapData, signature, check, initAta, txOptions?.feeRate);
         const [txSignature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return txSignature;
     }
+    /**
+     * @inheritDoc
+     */
     async init(signer, swapData, signature, skipChecks, txOptions) {
         if (swapData.isPayIn()) {
             if (!signer.getPublicKey().equals(swapData.offerer))
@@ -513,6 +585,9 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const signatures = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signatures[signatures.length - 1];
     }
+    /**
+     * @inheritDoc
+     */
     async initAndClaimWithSecret(signer, swapData, signature, secret, skipChecks, txOptions) {
         if (!signer.getPublicKey().equals(swapData.claimer))
             throw new Error("Invalid signer provided!");
@@ -521,11 +596,17 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const signatures = await this.Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return [signatures[txsCommit.length - 1], signatures[signatures.length - 1]];
     }
+    /**
+     * @inheritDoc
+     */
     async withdraw(signer, token, amount, txOptions) {
         const txs = await this.LpVault.txsWithdraw(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, txOptions?.feeRate);
         const [txId] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
         return txId;
     }
+    /**
+     * @inheritDoc
+     */
     async deposit(signer, token, amount, txOptions) {
         const txs = await this.LpVault.txsDeposit(signer.getPublicKey(), new web3_js_1.PublicKey(token), amount, txOptions?.feeRate);
         const [txId] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
@@ -533,50 +614,71 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
     ////////////////////////////////////////////
     //// Fees
+    /**
+     * @inheritDoc
+     */
     getInitPayInFeeRate(offerer, claimer, token, claimHash) {
         const paymentHash = claimHash == null ? undefined : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
         return this.Init.getInitPayInFeeRate(toPublicKeyOrNull(offerer), toPublicKeyOrNull(claimer), toPublicKeyOrNull(token), paymentHash);
     }
+    /**
+     * @inheritDoc
+     */
     getInitFeeRate(offerer, claimer, token, claimHash) {
         const paymentHash = claimHash == null ? undefined : (0, Utils_1.fromClaimHash)(claimHash).paymentHash;
         return this.Init.getInitFeeRate(toPublicKeyOrNull(offerer), toPublicKeyOrNull(claimer), toPublicKeyOrNull(token), paymentHash);
     }
+    /**
+     * @inheritDoc
+     */
     getRefundFeeRate(swapData) {
         return this.Refund.getRefundFeeRate(swapData);
     }
+    /**
+     * @inheritDoc
+     */
     getClaimFeeRate(signer, swapData) {
         return this.Claim.getClaimFeeRate(new web3_js_1.PublicKey(signer), swapData);
     }
+    /**
+     * @inheritDoc
+     */
     getClaimFee(signer, swapData, feeRate) {
         return this.Claim.getClaimFee(new web3_js_1.PublicKey(signer), swapData, feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     getRawClaimFee(signer, swapData, feeRate) {
         return this.Claim.getRawClaimFee(new web3_js_1.PublicKey(signer), swapData, feeRate);
     }
     /**
-     * Get the estimated solana fee of the commit transaction
+     * @inheritDoc
      */
     getCommitFee(signer, swapData, feeRate) {
         return this.Init.getInitFee(swapData, feeRate);
     }
     /**
-     * Get the estimated solana fee of the commit transaction, without any deposits
+     * @inheritDoc
      */
     getRawCommitFee(signer, swapData, feeRate) {
         return this.Init.getRawInitFee(swapData, feeRate);
     }
     /**
-     * Get the estimated solana transaction fee of the refund transaction
+     * @inheritDoc
      */
     getRefundFee(signer, swapData, feeRate) {
         return this.Refund.getRefundFee(swapData, feeRate);
     }
     /**
-     * Get the estimated solana transaction fee of the refund transaction
+     * @inheritDoc
      */
     getRawRefundFee(signer, swapData, feeRate) {
         return this.Refund.getRawRefundFee(swapData, feeRate);
     }
+    /**
+     * @inheritDoc
+     */
     getExtraData(outputScript, amount, confirmations, nonce) {
         return buffer_1.Buffer.from((0, sha2_1.sha256)(buffer_1.Buffer.concat([
             base_1.BigIntBufferUtils.toBuffer(amount, "le", 8),

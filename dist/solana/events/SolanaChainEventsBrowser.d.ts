@@ -116,13 +116,23 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
      */
     private processSignatures;
     /**
-     * Polls for new events & processes them
-     *
-     * @private
+     * @inheritDoc
      */
     poll(lastSignature?: SolanaEventListenerState): Promise<SolanaEventListenerState | null>;
+    /**
+     * @inheritDoc
+     */
     init(noAutomaticPoll?: boolean): Promise<void>;
+    /**
+     * @inheritDoc
+     */
     stop(): Promise<void>;
+    /**
+     * @inheritDoc
+     */
     registerListener(cbk: EventListener<SolanaSwapData>): void;
+    /**
+     * @inheritDoc
+     */
     unregisterListener(cbk: EventListener<SolanaSwapData>): boolean;
 }

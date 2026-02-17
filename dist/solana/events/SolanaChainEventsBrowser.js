@@ -297,9 +297,7 @@ class SolanaChainEventsBrowser {
         return lastSuccessfulSignature;
     }
     /**
-     * Polls for new events & processes them
-     *
-     * @private
+     * @inheritDoc
      */
     async poll(lastSignature) {
         let signatures = lastSignature == null
@@ -310,21 +308,33 @@ class SolanaChainEventsBrowser {
         let lastSuccessfulSignature = await this.processSignatures(signatures);
         return lastSuccessfulSignature ?? lastSignature ?? null;
     }
+    /**
+     * @inheritDoc
+     */
     init(noAutomaticPoll) {
         if (noAutomaticPoll)
             return Promise.resolve();
         this.setupWebsocket();
         return Promise.resolve();
     }
+    /**
+     * @inheritDoc
+     */
     async stop() {
         for (let num of this.eventListeners) {
             await this.solanaSwapProgram.program.removeEventListener(num);
         }
         this.eventListeners = [];
     }
+    /**
+     * @inheritDoc
+     */
     registerListener(cbk) {
         this.listeners.push(cbk);
     }
+    /**
+     * @inheritDoc
+     */
     unregisterListener(cbk) {
         const index = this.listeners.indexOf(cbk);
         if (index >= 0) {

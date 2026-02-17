@@ -11,5 +11,8 @@ export declare class SolanaSigner implements AbstractSigner {
     keypair?: Signer;
     constructor(wallet: Wallet, keypair?: Signer);
     getPublicKey(): PublicKey;
+    /**
+     * @inheritDoc
+     */
     getAddress(): string;
 }

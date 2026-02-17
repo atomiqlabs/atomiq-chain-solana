@@ -46,32 +46,101 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
         error: (msg: string, ...args: any[]) => false | void;
     };
     constructor(connection: Connection, retryPolicy?: SolanaRetryPolicy, solanaFeeEstimator?: SolanaFees);
+    /**
+     * @inheritDoc
+     */
     getBalance(signer: string, tokenAddress: string): Promise<bigint>;
+    /**
+     * @inheritDoc
+     */
     isValidAddress(address: string): boolean;
+    /**
+     * @inheritDoc
+     */
     normalizeAddress(address: string): string;
+    /**
+     * @inheritDoc
+     */
     getNativeCurrencyAddress(): string;
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     transfer(signer: SolanaSigner, token: string, amount: bigint, dstAddress: string, txOptions?: TransactionConfirmationOptions): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     sendAndConfirm(signer: SolanaSigner, txs: SolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
+    /**
+     * @inheritDoc
+     */
     sendSignedAndConfirm(txs: SignedSolanaTx[], waitForConfirmation?: boolean, abortSignal?: AbortSignal, parallel?: boolean, onBeforePublish?: (txId: string, rawTx: string) => Promise<void>): Promise<string[]>;
+    /**
+     * @inheritDoc
+     */
     serializeTx(tx: SolanaTx): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     deserializeTx(txData: string): Promise<SolanaTx>;
+    /**
+     * @inheritDoc
+     */
     serializeSignedTx(tx: Transaction): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     deserializeSignedTx(txData: string): Promise<Transaction>;
+    /**
+     * @inheritDoc
+     */
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;
+    /**
+     * @inheritDoc
+     */
     getTxStatus(tx: string): Promise<"not_found" | "pending" | "success" | "reverted">;
+    /**
+     * @inheritDoc
+     */
     getFinalizedBlock(): Promise<{
         height: number;
         blockHash: string;
     }>;
+    /**
+     * @inheritDoc
+     */
     offBeforeTxReplace(callback: (oldTx: string, oldTxId: string, newTx: string, newTxId: string) => Promise<void>): boolean;
+    /**
+     * @inheritDoc
+     */
     onBeforeTxReplace(callback: (oldTx: string, oldTxId: string, newTx: string, newTxId: string) => Promise<void>): void;
+    /**
+     * @inheritDoc
+     */
     onBeforeTxSigned(callback: (tx: SolanaTx) => Promise<void>): void;
+    /**
+     * @inheritDoc
+     */
     offBeforeTxSigned(callback: (tx: SolanaTx) => Promise<void>): boolean;
     onSendTransaction(callback: (tx: Buffer, options?: SendOptions) => Promise<string>): void;
     offSendTransaction(callback: (tx: Buffer, options?: SendOptions) => Promise<string>): boolean;
+    /**
+     * @inheritDoc
+     */
     isValidToken(tokenIdentifier: string): boolean;
+    /**
+     * @inheritDoc
+     */
     randomAddress(): string;
+    /**
+     * @inheritDoc
+     */
     randomSigner(): SolanaSigner;
+    /**
+     * @inheritDoc
+     */
     wrapSigner(signer: Wallet): Promise<SolanaSigner>;
 }
