@@ -24,9 +24,8 @@ export class SolanaBlocks extends SolanaModule {
             return val as BlockChecked;
         });
         this.blockCache.set(slot, blockCacheData);
-        blockCacheData.catch(e => {
+        blockCacheData.catch(() => {
             if(this.blockCache.get(slot)==blockCacheData) this.blockCache.delete(slot);
-            throw e;
         });
         return blockCacheData;
     }

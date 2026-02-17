@@ -24,10 +24,9 @@ class SolanaBlocks extends SolanaModule_1.SolanaModule {
             return val;
         });
         this.blockCache.set(slot, blockCacheData);
-        blockCacheData.catch(e => {
+        blockCacheData.catch(() => {
             if (this.blockCache.get(slot) == blockCacheData)
                 this.blockCache.delete(slot);
-            throw e;
         });
         return blockCacheData;
     }

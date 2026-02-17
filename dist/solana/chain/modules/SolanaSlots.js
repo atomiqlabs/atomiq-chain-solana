@@ -22,11 +22,10 @@ class SolanaSlots extends SolanaModule_1.SolanaModule {
             slot: slotPromise,
             timestamp
         };
-        slotPromise.catch(e => {
+        slotPromise.catch(() => {
             const slotCache = this.slotCache[commitment];
             if (slotCache != null && slotCache.slot === slotPromise)
                 delete this.slotCache[commitment];
-            throw e;
         });
         return {
             slot: slotPromise,
