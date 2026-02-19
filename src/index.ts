@@ -5,6 +5,8 @@ export * from "./solana/btcrelay/SolanaBtcRelay";
 export * from "./solana/chain/SolanaChainInterface";
 export * from "./solana/chain/modules/SolanaFees";
 
+export {ConnectionWithRetries} from "./solana/connection/ConnectionWithRetries";
+
 export * from "./solana/events/SolanaChainEventsBrowser";
 
 export * from "./solana/swaps/SolanaSwapProgram";
