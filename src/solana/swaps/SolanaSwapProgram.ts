@@ -110,11 +110,11 @@ export class SolanaSwapProgram
     /**
      * Grace period (seconds) applied to claimer-side expiry checks.
      */
-    readonly claimGracePeriod: number = 10*60;
+    private readonly claimGracePeriod: number = 10*60;
     /**
      * Grace period (seconds) applied to offerer-side expiry checks.
      */
-    readonly refundGracePeriod: number = 10*60;
+    private readonly refundGracePeriod: number = 10*60;
     /**
      * Authorization grace period in seconds.
      */

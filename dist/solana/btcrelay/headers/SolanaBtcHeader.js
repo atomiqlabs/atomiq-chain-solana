@@ -58,5 +58,11 @@ class SolanaBtcHeader {
     getVersion() {
         return this.version;
     }
+    /**
+     * Returns block hash bytes in little-endian representation.
+     */
+    getHash() {
+        return this.hash;
+    }
 }
 exports.SolanaBtcHeader = SolanaBtcHeader;

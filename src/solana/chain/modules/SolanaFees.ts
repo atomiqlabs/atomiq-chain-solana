@@ -12,12 +12,22 @@ import {getLogger, SolanaTxUtils} from "../../../utils/Utils";
 
 const MAX_FEE_AGE = 5000;
 
+/**
+ * Bribe endpoint configuration used for Jito-compatible fee payment flows.
+ *
+ * @category Chain Interface
+ */
 export type FeeBribeData = {
     address: string,
     endpoint: string,
     getBribeFee?: (original: bigint) => bigint
 };
 
+/**
+ * Fee estimation service for Solana chains.
+ *
+ * @category Chain Interface
+ */
 export class SolanaFees {
 
     private readonly connection: Connection;

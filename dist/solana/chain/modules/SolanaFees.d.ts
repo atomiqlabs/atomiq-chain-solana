@@ -1,11 +1,21 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import { Connection, PublicKey, SendOptions, Transaction } from "@solana/web3.js";
+/**
+ * Bribe endpoint configuration used for Jito-compatible fee payment flows.
+ *
+ * @category Chain Interface
+ */
 export type FeeBribeData = {
     address: string;
     endpoint: string;
     getBribeFee?: (original: bigint) => bigint;
 };
+/**
+ * Fee estimation service for Solana chains.
+ *
+ * @category Chain Interface
+ */
 export declare class SolanaFees {
     private readonly connection;
     private readonly maxFeeMicroLamports;

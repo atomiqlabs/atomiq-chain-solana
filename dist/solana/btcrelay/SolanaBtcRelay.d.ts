@@ -46,19 +46,19 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param signer Signer paying and receiving rent refund
      * @param forkId Fork account identifier to close
      */
-    CloseForkAccount(signer: PublicKey, forkId: number): Promise<SolanaAction>;
+    private CloseForkAccount;
     /**
      * PDA of the relay main state account.
      */
-    BtcRelayMainState: PublicKey;
+    private readonly BtcRelayMainState;
     /**
      * PDA helper for per-header topic accounts.
      */
-    BtcRelayHeader: (hash: Buffer) => PublicKey;
+    private readonly BtcRelayHeader;
     /**
      * PDA helper for fork state accounts.
      */
-    BtcRelayFork: (forkId: number, pubkey: PublicKey) => PublicKey;
+    private readonly BtcRelayFork;
     /**
      * Bitcoin RPC client used for bitcoin chain lookups.
      */

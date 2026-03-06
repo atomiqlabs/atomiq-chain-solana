@@ -21,31 +21,31 @@ export class SolanaBtcHeader implements BtcHeader {
     /**
      * Version field of the blockheader.
      */
-    version: number;
+    private readonly version: number;
     /**
      * Previous block hash in little-endian representation.
      */
-    reversedPrevBlockhash: number[];
+    private readonly reversedPrevBlockhash: number[];
     /**
      * Merkle root in little-endian representation.
      */
-    merkleRoot: number[];
+    private readonly merkleRoot: number[];
     /**
      * Block timestamp in UNIX seconds.
      */
-    timestamp: number;
+    private readonly timestamp: number;
     /**
      * Compact target (`nBits`) field.
      */
-    nbits: number;
+    private readonly nbits: number;
     /**
      * Nonce field.
      */
-    nonce: number;
+    private readonly nonce: number;
     /**
      * Reversed block hash bytes.
      */
-    hash: Buffer;
+    private readonly hash: Buffer;
 
     /**
      * Constructs the bitcoin blockheader from Solana account/event data.
@@ -102,6 +102,13 @@ export class SolanaBtcHeader implements BtcHeader {
      */
     getVersion(): number {
         return this.version;
+    }
+
+    /**
+     * Returns block hash bytes in little-endian representation.
+     */
+    getHash(): Buffer {
+        return this.hash;
     }
 
 }

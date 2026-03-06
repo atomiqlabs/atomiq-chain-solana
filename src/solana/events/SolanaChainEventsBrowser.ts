@@ -15,6 +15,11 @@ import {
 import {SwapProgram} from "../swaps/programTypes";
 import {Buffer} from "buffer";
 
+/**
+ * Parsed event payload grouped by originating transaction metadata.
+ *
+ * @category Events
+ */
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[],
     instructions?: (InstructionWithAccounts<SwapProgram> | null)[],
@@ -25,6 +30,11 @@ export type EventObject = {
 const LOG_FETCH_LIMIT = 500;
 const PROCESSED_SIGNATURES_BACKLOG = 100;
 
+/**
+ * Current state of Solana event listener progress.
+ *
+ * @category Events
+ */
 export type SolanaEventListenerState = {
     signature: string,
     slot: number
@@ -34,6 +44,8 @@ export type SolanaEventListenerState = {
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
  *  rely purely on events
+ *
+ * @category Events
  */
 export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
 

@@ -5,12 +5,22 @@ import { SolanaSwapProgram } from "../swaps/SolanaSwapProgram";
 import { Connection } from "@solana/web3.js";
 import { InstructionWithAccounts, ProgramEvent } from "../program/modules/SolanaProgramEvents";
 import { SwapProgram } from "../swaps/programTypes";
+/**
+ * Parsed event payload grouped by originating transaction metadata.
+ *
+ * @category Events
+ */
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[];
     instructions?: (InstructionWithAccounts<SwapProgram> | null)[];
     blockTime: number;
     signature: string;
 };
+/**
+ * Current state of Solana event listener progress.
+ *
+ * @category Events
+ */
 export type SolanaEventListenerState = {
     signature: string;
     slot: number;
@@ -19,6 +29,8 @@ export type SolanaEventListenerState = {
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
  *  rely purely on events
+ *
+ * @category Events
  */
 export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
     protected readonly listeners: EventListener<SolanaSwapData>[];

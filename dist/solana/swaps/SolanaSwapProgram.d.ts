@@ -61,11 +61,11 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     /**
      * Grace period (seconds) applied to claimer-side expiry checks.
      */
-    readonly claimGracePeriod: number;
+    private readonly claimGracePeriod;
     /**
      * Grace period (seconds) applied to offerer-side expiry checks.
      */
-    readonly refundGracePeriod: number;
+    private readonly refundGracePeriod;
     /**
      * Authorization grace period in seconds.
      */

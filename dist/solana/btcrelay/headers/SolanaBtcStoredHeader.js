@@ -62,7 +62,7 @@ class SolanaBtcStoredHeader {
         for (let i = 1; i < 10; i++) {
             prevBlockTimestamps[i - 1] = prevBlockTimestamps[i];
         }
-        prevBlockTimestamps[9] = this.header.timestamp;
+        prevBlockTimestamps[9] = this.header.getTimestamp();
         return prevBlockTimestamps;
     }
     /**
@@ -95,10 +95,10 @@ class SolanaBtcStoredHeader {
      */
     computeNext(header) {
         return new SolanaBtcStoredHeader({
-            chainWork: this.computeNextChainWork(header.nbits),
+            chainWork: this.computeNextChainWork(header.getNbits()),
             prevBlockTimestamps: this.computeNextBlockTimestamps(),
             blockheight: this.blockheight + 1,
-            lastDiffAdjustment: this.computeNextLastDiffAdjustment(header.timestamp),
+            lastDiffAdjustment: this.computeNextLastDiffAdjustment(header.getTimestamp()),
             header
         });
     }

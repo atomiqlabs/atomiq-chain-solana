@@ -63,7 +63,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                 .accounts({
                     signer,
                     mainState: this.BtcRelayMainState,
-                    headerTopic: this.BtcRelayHeader(serializedBlock.hash),
+                    headerTopic: this.BtcRelayHeader(serializedBlock.getHash()),
                     systemProgram: SystemProgram.programId
                 })
                 .instruction(),
@@ -118,7 +118,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param signer Signer paying and receiving rent refund
      * @param forkId Fork account identifier to close
      */
-    public async CloseForkAccount(signer: PublicKey, forkId: number): Promise<SolanaAction> {
+    private async CloseForkAccount(signer: PublicKey, forkId: number): Promise<SolanaAction> {
         return new SolanaAction(signer, this.Chain,
             await this.program.methods
                 .closeForkAccount(
@@ -137,15 +137,15 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
     /**
      * PDA of the relay main state account.
      */
-    BtcRelayMainState = this.pda("state");
+    private readonly BtcRelayMainState = this.pda("state");
     /**
      * PDA helper for per-header topic accounts.
      */
-    BtcRelayHeader = this.pda("header", (hash: Buffer) => [hash]);
+    private readonly BtcRelayHeader = this.pda("header", (hash: Buffer) => [hash]);
     /**
      * PDA helper for fork state accounts.
      */
-    BtcRelayFork = this.pda("fork",
+    private readonly BtcRelayFork = this.pda("fork",
         (forkId: number, pubkey: PublicKey) => [new BN(forkId).toArrayLike(Buffer, "le", 8), pubkey.toBuffer()]
     );
 
@@ -230,7 +230,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         const tx = await createTx(blockHeaderObj)
             .remainingAccounts(blockHeaderObj.map(e => {
                 return {
-                    pubkey: this.BtcRelayHeader(e.hash),
+                    pubkey: this.BtcRelayHeader(e.getHash()),
                     isSigner: false,
                     isWritable: false
                 }
@@ -321,7 +321,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
             }
         });
         if(data!=null) this.logger.debug("retrieveLogByCommitHash(): block found," +
-            " commit hash: "+commitmentHashStr+" blockhash: "+blockData.blockhash+" height: "+data.blockheight);
+            " commit hash: "+commitmentHashStr+" blockhash: "+blockData.blockhash+" height: "+data.getBlockheight());
 
         return data;
     }
@@ -357,7 +357,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
 
         if(data!=null) this.logger.debug("retrieveLatestKnownBlockLog(): block found," +
             " commit hash: "+data.commitHash+" blockhash: "+data.resultBitcoinHeader.getHash()+
-            " height: "+data.resultStoredHeader.blockheight);
+            " height: "+data.resultStoredHeader.getBlockheight());
 
         return data;
     }
@@ -431,7 +431,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                 })
         );
 
-        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -466,7 +466,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                 })
         );
 
-        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -497,7 +497,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
                 })
         );
 
-        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if(result.forkId!==0 && StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }

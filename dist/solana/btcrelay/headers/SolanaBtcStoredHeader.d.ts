@@ -19,23 +19,23 @@ export declare class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcH
     /**
      * Total accumulated chainwork for this header.
      */
-    chainWork: number[];
+    private readonly chainWork;
     /**
      * Stored bitcoin blockheader.
      */
-    header: SolanaBtcHeader;
+    private readonly header;
     /**
      * Timestamp of the last difficulty adjustment.
      */
-    lastDiffAdjustment: number;
+    private readonly lastDiffAdjustment;
     /**
      * Blockheight of the stored header.
      */
-    blockheight: number;
+    private readonly blockheight;
     /**
      * Previous block timestamps tracked for median-time-past checks.
      */
-    prevBlockTimestamps: number[];
+    private readonly prevBlockTimestamps;
     /**
      * Constructs the stored bitcoin blockheader from Solana account/event data.
      *

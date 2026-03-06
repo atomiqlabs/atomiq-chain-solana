@@ -45,7 +45,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             .accounts({
             signer,
             mainState: this.BtcRelayMainState,
-            headerTopic: this.BtcRelayHeader(serializedBlock.hash),
+            headerTopic: this.BtcRelayHeader(serializedBlock.getHash()),
             systemProgram: web3_js_1.SystemProgram.programId
         })
             .instruction(), 100000);
@@ -159,7 +159,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         const tx = await createTx(blockHeaderObj)
             .remainingAccounts(blockHeaderObj.map(e => {
             return {
-                pubkey: this.BtcRelayHeader(e.hash),
+                pubkey: this.BtcRelayHeader(e.getHash()),
                 isSigner: false,
                 isWritable: false
             };
@@ -238,7 +238,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         });
         if (data != null)
             this.logger.debug("retrieveLogByCommitHash(): block found," +
-                " commit hash: " + commitmentHashStr + " blockhash: " + blockData.blockhash + " height: " + data.blockheight);
+                " commit hash: " + commitmentHashStr + " blockhash: " + blockData.blockhash + " height: " + data.getBlockheight());
         return data;
     }
     /**
@@ -269,7 +269,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         if (data != null)
             this.logger.debug("retrieveLatestKnownBlockLog(): block found," +
                 " commit hash: " + data.commitHash + " blockhash: " + data.resultBitcoinHeader.getHash() +
-                " height: " + data.resultStoredHeader.blockheight);
+                " height: " + data.resultStoredHeader.getBlockheight());
         return data;
     }
     /**
@@ -315,7 +315,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             forkState: this.BtcRelayFork(forkId.toNumber(), _signer),
             systemProgram: web3_js_1.SystemProgram.programId,
         }));
-        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(buffer_1.Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -337,7 +337,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             forkState: this.BtcRelayFork(forkId, _signer),
             systemProgram: web3_js_1.SystemProgram.programId,
         }));
-        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(buffer_1.Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -357,7 +357,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             signer: _signer,
             mainState: this.BtcRelayMainState
         }));
-        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(buffer_1.Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }

@@ -4,6 +4,11 @@ exports.SolanaFees = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const Utils_1 = require("../../../utils/Utils");
 const MAX_FEE_AGE = 5000;
+/**
+ * Fee estimation service for Solana chains.
+ *
+ * @category Chain Interface
+ */
 class SolanaFees {
     constructor(connection, maxFeeMicroLamports = 250000, numSamples = 8, period = 150, useHeliusApi = "auto", heliusFeeLevel = "veryHigh", getStaticFee, bribeData) {
         this.heliusApiSupported = true;

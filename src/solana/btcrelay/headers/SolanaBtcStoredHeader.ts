@@ -20,23 +20,23 @@ export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
     /**
      * Total accumulated chainwork for this header.
      */
-    chainWork: number[];
+    private readonly chainWork: number[];
     /**
      * Stored bitcoin blockheader.
      */
-    header: SolanaBtcHeader;
+    private readonly header: SolanaBtcHeader;
     /**
      * Timestamp of the last difficulty adjustment.
      */
-    lastDiffAdjustment: number;
+    private readonly lastDiffAdjustment: number;
     /**
      * Blockheight of the stored header.
      */
-    blockheight: number;
+    private readonly blockheight: number;
     /**
      * Previous block timestamps tracked for median-time-past checks.
      */
-    prevBlockTimestamps: number[];
+    private readonly prevBlockTimestamps: number[];
 
     /**
      * Constructs the stored bitcoin blockheader from Solana account/event data.
@@ -97,7 +97,7 @@ export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
         for(let i=1;i<10;i++) {
             prevBlockTimestamps[i-1] = prevBlockTimestamps[i];
         }
-        prevBlockTimestamps[9] = this.header.timestamp;
+        prevBlockTimestamps[9] = this.header.getTimestamp();
         return prevBlockTimestamps;
     }
 
@@ -135,10 +135,10 @@ export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
      */
     computeNext(header: SolanaBtcHeader): SolanaBtcStoredHeader {
         return new SolanaBtcStoredHeader({
-            chainWork: this.computeNextChainWork(header.nbits),
+            chainWork: this.computeNextChainWork(header.getNbits()),
             prevBlockTimestamps: this.computeNextBlockTimestamps(),
             blockheight: this.blockheight+1,
-            lastDiffAdjustment: this.computeNextLastDiffAdjustment(header.timestamp),
+            lastDiffAdjustment: this.computeNextLastDiffAdjustment(header.getTimestamp()),
             header
         });
     }
