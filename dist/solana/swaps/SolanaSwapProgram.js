@@ -22,6 +22,8 @@ function toPublicKeyOrNull(str) {
 }
 const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 /**
+ * Solana swap (escrow manager) program representation handling PrTLC (on-chain) and HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
@@ -29,21 +31,57 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         super(chainInterface, programIdl, programAddress);
         ////////////////////////
         //// Constants
+        /**
+         * Rent-exempt amount (lamports) for escrow state accounts.
+         */
         this.ESCROW_STATE_RENT_EXEMPT = 2658720;
         ////////////////////////
         //// PDA accessors
+        /**
+         * PDA of the swap vault authority.
+         */
         this.SwapVaultAuthority = this.pda("authority");
+        /**
+         * PDA helper for global token vault accounts.
+         */
         this.SwapVault = this.pda("vault", (tokenAddress) => [tokenAddress.toBuffer()]);
+        /**
+         * PDA helper for per-user token vault accounts.
+         */
         this.SwapUserVault = this.pda("uservault", (publicKey, tokenAddress) => [publicKey.toBuffer(), tokenAddress.toBuffer()]);
+        /**
+         * PDA helper for escrow state accounts.
+         */
         this.SwapEscrowState = this.pda("state", (hash) => [hash]);
         ////////////////////////
         //// Timeouts
+        /**
+         * @inheritDoc
+         */
         this.chainId = "SOLANA";
+        /**
+         * @inheritDoc
+         */
         this.claimWithSecretTimeout = 45;
+        /**
+         * @inheritDoc
+         */
         this.claimWithTxDataTimeout = 120;
+        /**
+         * @inheritDoc
+         */
         this.refundTimeout = 45;
+        /**
+         * Grace period (seconds) applied to claimer-side expiry checks.
+         */
         this.claimGracePeriod = 10 * 60;
+        /**
+         * Grace period (seconds) applied to offerer-side expiry checks.
+         */
         this.refundGracePeriod = 10 * 60;
+        /**
+         * Authorization grace period in seconds.
+         */
         this.authGracePeriod = 5 * 60;
         this.Init = new SwapInit_1.SwapInit(chainInterface, this);
         this.Refund = new SwapRefund_1.SwapRefund(chainInterface, this);
@@ -469,6 +507,12 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     getIntermediaryReputation(address, token) {
         return this.LpVault.getIntermediaryReputation(new web3_js_1.PublicKey(address), new web3_js_1.PublicKey(token));
     }
+    /**
+     * Returns intermediary vault balance for a specific token.
+     *
+     * @param address Intermediary address
+     * @param token Token mint
+     */
     getIntermediaryBalance(address, token) {
         return this.LpVault.getIntermediaryBalance(address, token);
     }

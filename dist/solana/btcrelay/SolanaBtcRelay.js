@@ -24,6 +24,8 @@ function serializeBlockHeader(e) {
 }
 ;
 /**
+ * Solana BTC relay (bitcoin light client) program representation.
+ *
  * @category BTC Relay
  */
 class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
@@ -69,6 +71,12 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         })
             .instruction(), undefined, undefined, undefined, true);
     }
+    /**
+     * Creates an action that closes a fork account and refunds rent to the signer.
+     *
+     * @param signer Signer paying and receiving rent refund
+     * @param forkId Fork account identifier to close
+     */
     async CloseForkAccount(signer, forkId) {
         return new SolanaAction_1.SolanaAction(signer, this.Chain, await this.program.methods
             .closeForkAccount(new BN(forkId))
@@ -81,11 +89,29 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
     }
     constructor(chainInterface, bitcoinRpc, programAddress) {
         super(chainInterface, programIdl, programAddress);
+        /**
+         * PDA of the relay main state account.
+         */
         this.BtcRelayMainState = this.pda("state");
+        /**
+         * PDA helper for per-header topic accounts.
+         */
         this.BtcRelayHeader = this.pda("header", (hash) => [hash]);
+        /**
+         * PDA helper for fork state accounts.
+         */
         this.BtcRelayFork = this.pda("fork", (forkId, pubkey) => [new BN(forkId).toArrayLike(buffer_1.Buffer, "le", 8), pubkey.toBuffer()]);
+        /**
+         * @inheritDoc
+         */
         this.maxHeadersPerTx = 5;
+        /**
+         * @inheritDoc
+         */
         this.maxForkHeadersPerTx = 4;
+        /**
+         * @inheritDoc
+         */
         this.maxShortForkHeadersPerTx = 4;
         this.bitcoinRpc = bitcoinRpc;
     }
@@ -103,7 +129,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         return storedCommitments;
     }
     /**
-     * Computes subsequent commited headers as they will appear on the blockchain when transactions
+     * Computes subsequent committed headers as they will appear on the blockchain when transactions
      *  are submitted & confirmed
      *
      * @param initialStoredHeader

@@ -4,9 +4,16 @@ exports.SolanaBtcStoredHeader = void 0;
 const base_1 = require("@atomiqlabs/base");
 const buffer_1 = require("buffer");
 /**
+ * Represents a bitcoin blockheader that has already been stored and committed in the Solana BTC relay program.
+ *
  * @category BTC Relay
  */
 class SolanaBtcStoredHeader {
+    /**
+     * Constructs the stored bitcoin blockheader from Solana account/event data.
+     *
+     * @param obj Decoded stored-header fields
+     */
     constructor(obj) {
         this.chainWork = obj.chainWork;
         this.header = obj.header;
@@ -14,18 +21,33 @@ class SolanaBtcStoredHeader {
         this.blockheight = obj.blockheight;
         this.prevBlockTimestamps = obj.prevBlockTimestamps;
     }
+    /**
+     * @inheritDoc
+     */
     getBlockheight() {
         return this.blockheight;
     }
+    /**
+     * @inheritDoc
+     */
     getChainWork() {
         return buffer_1.Buffer.from(this.chainWork);
     }
+    /**
+     * @inheritDoc
+     */
     getHeader() {
         return this.header;
     }
+    /**
+     * @inheritDoc
+     */
     getLastDiffAdjustment() {
         return this.lastDiffAdjustment;
     }
+    /**
+     * @inheritDoc
+     */
     getPrevBlockTimestamps() {
         return this.prevBlockTimestamps;
     }
@@ -68,6 +90,9 @@ class SolanaBtcStoredHeader {
         }
         return lastDiffAdjustment;
     }
+    /**
+     * @inheritDoc
+     */
     computeNext(header) {
         return new SolanaBtcStoredHeader({
             chainWork: this.computeNextChainWork(header.nbits),

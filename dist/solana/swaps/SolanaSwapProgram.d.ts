@@ -17,25 +17,78 @@ import { SolanaLpVault } from "./modules/SolanaLpVault";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 /**
+ * Solana swap (escrow manager) program representation handling PrTLC (on-chain) and HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
+    /**
+     * Rent-exempt amount (lamports) for escrow state accounts.
+     */
     readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
+    /**
+     * PDA of the swap vault authority.
+     */
     readonly SwapVaultAuthority: PublicKey;
+    /**
+     * PDA helper for global token vault accounts.
+     */
     readonly SwapVault: (tokenAddress: PublicKey) => PublicKey;
+    /**
+     * PDA helper for per-user token vault accounts.
+     */
     readonly SwapUserVault: (publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
+    /**
+     * PDA helper for escrow state accounts.
+     */
     readonly SwapEscrowState: (hash: Buffer) => PublicKey;
+    /**
+     * @inheritDoc
+     */
     readonly chainId: "SOLANA";
+    /**
+     * @inheritDoc
+     */
     readonly claimWithSecretTimeout: number;
+    /**
+     * @inheritDoc
+     */
     readonly claimWithTxDataTimeout: number;
+    /**
+     * @inheritDoc
+     */
     readonly refundTimeout: number;
+    /**
+     * Grace period (seconds) applied to claimer-side expiry checks.
+     */
     readonly claimGracePeriod: number;
+    /**
+     * Grace period (seconds) applied to offerer-side expiry checks.
+     */
     readonly refundGracePeriod: number;
+    /**
+     * Authorization grace period in seconds.
+     */
     readonly authGracePeriod: number;
+    /**
+     * Swap initialization service.
+     */
     readonly Init: SwapInit;
+    /**
+     * Swap refund service.
+     */
     readonly Refund: SwapRefund;
+    /**
+     * Swap claim service.
+     */
     readonly Claim: SwapClaim;
+    /**
+     * Temporary data-account lifecycle service.
+     */
     readonly DataAccount: SolanaDataAccount;
+    /**
+     * LP vault interaction service.
+     */
     readonly LpVault: SolanaLpVault;
     constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string);
     /**
@@ -184,6 +237,12 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @inheritDoc
      */
     getIntermediaryReputation(address: string, token: string): Promise<IntermediaryReputationType | null>;
+    /**
+     * Returns intermediary vault balance for a specific token.
+     *
+     * @param address Intermediary address
+     * @param token Token mint
+     */
     getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint>;
     /**
      * @inheritDoc

@@ -19,8 +19,17 @@ const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
  */
 class SolanaChainInterface {
     constructor(connection, retryPolicy, solanaFeeEstimator = new SolanaFees_1.SolanaFees(connection)) {
+        /**
+         * @inheritDoc
+         */
         this.chainId = "SOLANA";
+        /**
+         * Average Solana slot time in milliseconds.
+         */
         this.SLOT_TIME = 400;
+        /**
+         * Approximate number of recent slots for which a transaction remains valid.
+         */
         this.TX_SLOT_VALIDITY = 151;
         this.logger = (0, Utils_1.getLogger)(this.constructor.name + ": ");
         this.connection = connection;
@@ -165,9 +174,19 @@ class SolanaChainInterface {
     offBeforeTxSigned(callback) {
         return this.Transactions.offBeforeTxSigned(callback);
     }
+    /**
+     * Registers a low-level transaction sender override hook.
+     *
+     * @param callback Callback used for raw transaction publishing
+     */
     onSendTransaction(callback) {
         this.Transactions.onSendTransaction(callback);
     }
+    /**
+     * Unregisters a previously registered transaction sender override hook.
+     *
+     * @param callback Previously registered callback
+     */
     offSendTransaction(callback) {
         return this.Transactions.offSendTransaction(callback);
     }

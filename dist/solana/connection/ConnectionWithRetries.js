@@ -3,7 +3,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ConnectionWithRetries = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const Utils_1 = require("../../utils/Utils");
+/**
+ * Solana connection with retry logic and request timeout handling for RPC calls.
+ *
+ * @category Providers
+ */
 class ConnectionWithRetries extends web3_js_1.Connection {
+    /**
+     * Constructs a retry-enabled Solana connection.
+     *
+     * @param endpoint RPC endpoint URL
+     * @param commitmentOrConfig Commitment level or full connection configuration
+     */
     constructor(endpoint, commitmentOrConfig) {
         let config;
         if (typeof (commitmentOrConfig) === "string") {

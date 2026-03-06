@@ -27,17 +27,53 @@ export type SolanaRetryPolicy = {
  * @category Chain Interface
  */
 export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SignedSolanaTx, SolanaSigner, "SOLANA", Wallet> {
+    /**
+     * @inheritDoc
+     */
     readonly chainId = "SOLANA";
+    /**
+     * Average Solana slot time in milliseconds.
+     */
     readonly SLOT_TIME = 400;
+    /**
+     * Approximate number of recent slots for which a transaction remains valid.
+     */
     readonly TX_SLOT_VALIDITY = 151;
+    /**
+     * Underlying Solana web3.js connection.
+     */
     readonly connection: Connection;
+    /**
+     * Retry policy used by chain modules.
+     */
     readonly retryPolicy?: SolanaRetryPolicy;
+    /**
+     * Block-related read module.
+     */
     readonly Blocks: SolanaBlocks;
+    /**
+     * Fee estimation and fee-rate module.
+     */
     Fees: SolanaFees;
+    /**
+     * Slot-related read module.
+     */
     readonly Slots: SolanaSlots;
+    /**
+     * Token operations module.
+     */
     readonly Tokens: SolanaTokens;
+    /**
+     * Transaction send/confirm/serialization module.
+     */
     readonly Transactions: SolanaTransactions;
+    /**
+     * Signature utilities module.
+     */
     readonly Signatures: SolanaSignatures;
+    /**
+     * Event/log scanning module.
+     */
     readonly Events: SolanaEvents;
     protected readonly logger: {
         debug: (msg: string, ...args: any[]) => false | void;
@@ -125,7 +161,17 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
      * @inheritDoc
      */
     offBeforeTxSigned(callback: (tx: SolanaTx) => Promise<void>): boolean;
+    /**
+     * Registers a low-level transaction sender override hook.
+     *
+     * @param callback Callback used for raw transaction publishing
+     */
     onSendTransaction(callback: (tx: Buffer, options?: SendOptions) => Promise<string>): void;
+    /**
+     * Unregisters a previously registered transaction sender override hook.
+     *
+     * @param callback Previously registered callback
+     */
     offSendTransaction(callback: (tx: Buffer, options?: SendOptions) => Promise<string>): boolean;
     /**
      * @inheritDoc

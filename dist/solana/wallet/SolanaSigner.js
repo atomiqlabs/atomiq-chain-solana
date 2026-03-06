@@ -7,10 +7,16 @@ exports.SolanaSigner = void 0;
  */
 class SolanaSigner {
     constructor(wallet, keypair) {
+        /**
+         * @inheritDoc
+         */
         this.type = "AtomiqAbstractSigner";
         this.wallet = wallet;
         this.keypair = keypair;
     }
+    /**
+     * Returns public key of the wrapped wallet.
+     */
     getPublicKey() {
         return this.wallet.publicKey;
     }

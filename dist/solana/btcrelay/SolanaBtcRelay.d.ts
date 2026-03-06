@@ -9,6 +9,8 @@ import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 /**
+ * Solana BTC relay (bitcoin light client) program representation.
+ *
  * @category BTC Relay
  */
 export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> implements BtcRelay<SolanaBtcStoredHeader, {
@@ -38,13 +40,40 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param committedHeader
      */
     Verify(signer: PublicKey, reversedTxId: Buffer, confirmations: number, position: number, reversedMerkleProof: Buffer[], committedHeader: SolanaBtcStoredHeader): Promise<SolanaAction>;
+    /**
+     * Creates an action that closes a fork account and refunds rent to the signer.
+     *
+     * @param signer Signer paying and receiving rent refund
+     * @param forkId Fork account identifier to close
+     */
     CloseForkAccount(signer: PublicKey, forkId: number): Promise<SolanaAction>;
+    /**
+     * PDA of the relay main state account.
+     */
     BtcRelayMainState: PublicKey;
+    /**
+     * PDA helper for per-header topic accounts.
+     */
     BtcRelayHeader: (hash: Buffer) => PublicKey;
+    /**
+     * PDA helper for fork state accounts.
+     */
     BtcRelayFork: (forkId: number, pubkey: PublicKey) => PublicKey;
+    /**
+     * Bitcoin RPC client used for bitcoin chain lookups.
+     */
     bitcoinRpc: BitcoinRpc<B>;
+    /**
+     * @inheritDoc
+     */
     readonly maxHeadersPerTx: number;
+    /**
+     * @inheritDoc
+     */
     readonly maxForkHeadersPerTx: number;
+    /**
+     * @inheritDoc
+     */
     readonly maxShortForkHeadersPerTx: number;
     constructor(chainInterface: SolanaChainInterface, bitcoinRpc: BitcoinRpc<B>, programAddress?: string);
     /**
@@ -55,7 +84,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      */
     private getBlockCommitmentsSet;
     /**
-     * Computes subsequent commited headers as they will appear on the blockchain when transactions
+     * Computes subsequent committed headers as they will appear on the blockchain when transactions
      *  are submitted & confirmed
      *
      * @param initialStoredHeader

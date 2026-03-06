@@ -46,6 +46,8 @@ function toPublicKeyOrNull(str: string | null | undefined): PublicKey | undefine
 const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 
 /**
+ * Solana swap (escrow manager) program representation handling PrTLC (on-chain) and HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 export class SolanaSwapProgram
@@ -61,33 +63,84 @@ export class SolanaSwapProgram
 
     ////////////////////////
     //// Constants
+    /**
+     * Rent-exempt amount (lamports) for escrow state accounts.
+     */
     public readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
 
     ////////////////////////
     //// PDA accessors
+    /**
+     * PDA of the swap vault authority.
+     */
     readonly SwapVaultAuthority = this.pda("authority");
+    /**
+     * PDA helper for global token vault accounts.
+     */
     readonly SwapVault = this.pda("vault", (tokenAddress: PublicKey) => [tokenAddress.toBuffer()]);
+    /**
+     * PDA helper for per-user token vault accounts.
+     */
     readonly SwapUserVault = this.pda("uservault",
         (publicKey: PublicKey, tokenAddress: PublicKey) => [publicKey.toBuffer(), tokenAddress.toBuffer()]
     );
+    /**
+     * PDA helper for escrow state accounts.
+     */
     readonly SwapEscrowState = this.pda("state", (hash: Buffer) => [hash]);
 
     ////////////////////////
     //// Timeouts
+    /**
+     * @inheritDoc
+     */
     readonly chainId: "SOLANA" = "SOLANA";
+    /**
+     * @inheritDoc
+     */
     readonly claimWithSecretTimeout: number = 45;
+    /**
+     * @inheritDoc
+     */
     readonly claimWithTxDataTimeout: number = 120;
+    /**
+     * @inheritDoc
+     */
     readonly refundTimeout: number = 45;
+    /**
+     * Grace period (seconds) applied to claimer-side expiry checks.
+     */
     readonly claimGracePeriod: number = 10*60;
+    /**
+     * Grace period (seconds) applied to offerer-side expiry checks.
+     */
     readonly refundGracePeriod: number = 10*60;
+    /**
+     * Authorization grace period in seconds.
+     */
     readonly authGracePeriod: number = 5*60;
 
     ////////////////////////
     //// Services
+    /**
+     * Swap initialization service.
+     */
     readonly Init: SwapInit;
+    /**
+     * Swap refund service.
+     */
     readonly Refund: SwapRefund;
+    /**
+     * Swap claim service.
+     */
     readonly Claim: SwapClaim;
+    /**
+     * Temporary data-account lifecycle service.
+     */
     readonly DataAccount: SolanaDataAccount;
+    /**
+     * LP vault interaction service.
+     */
     readonly LpVault: SolanaLpVault;
 
     constructor(
@@ -626,6 +679,12 @@ export class SolanaSwapProgram
         return this.LpVault.getIntermediaryReputation(new PublicKey(address), new PublicKey(token));
     }
 
+    /**
+     * Returns intermediary vault balance for a specific token.
+     *
+     * @param address Intermediary address
+     * @param token Token mint
+     */
     getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint> {
         return this.LpVault.getIntermediaryBalance(address, token);
     }

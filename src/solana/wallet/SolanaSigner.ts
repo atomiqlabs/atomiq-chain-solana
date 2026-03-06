@@ -7,9 +7,18 @@ import {PublicKey, Signer} from "@solana/web3.js";
  * @category Wallets
  */
 export class SolanaSigner implements AbstractSigner {
+    /**
+     * @inheritDoc
+     */
     type = "AtomiqAbstractSigner" as const;
 
+    /**
+     * Wrapped wallet implementation used for signing.
+     */
     wallet: Wallet;
+    /**
+     * Optional raw keypair signer when available.
+     */
     keypair?: Signer;
 
     constructor(wallet: Wallet, keypair?: Signer) {
@@ -17,6 +26,9 @@ export class SolanaSigner implements AbstractSigner {
         this.keypair = keypair;
     }
 
+    /**
+     * Returns public key of the wrapped wallet.
+     */
     getPublicKey(): PublicKey {
         return this.wallet.publicKey;
     }

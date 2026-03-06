@@ -11,16 +11,38 @@ export type SolanaBtcStoredHeaderType = {
 }
 
 /**
+ * Represents a bitcoin blockheader that has already been stored and committed in the Solana BTC relay program.
+ *
  * @category BTC Relay
  */
 export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
 
+    /**
+     * Total accumulated chainwork for this header.
+     */
     chainWork: number[];
+    /**
+     * Stored bitcoin blockheader.
+     */
     header: SolanaBtcHeader;
+    /**
+     * Timestamp of the last difficulty adjustment.
+     */
     lastDiffAdjustment: number;
+    /**
+     * Blockheight of the stored header.
+     */
     blockheight: number;
+    /**
+     * Previous block timestamps tracked for median-time-past checks.
+     */
     prevBlockTimestamps: number[];
 
+    /**
+     * Constructs the stored bitcoin blockheader from Solana account/event data.
+     *
+     * @param obj Decoded stored-header fields
+     */
     constructor(obj: SolanaBtcStoredHeaderType) {
         this.chainWork = obj.chainWork;
         this.header = obj.header;
@@ -29,22 +51,37 @@ export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
         this.prevBlockTimestamps = obj.prevBlockTimestamps;
     }
 
+    /**
+     * @inheritDoc
+     */
     getBlockheight(): number {
         return this.blockheight;
     }
 
+    /**
+     * @inheritDoc
+     */
     getChainWork(): Buffer {
         return Buffer.from(this.chainWork);
     }
 
+    /**
+     * @inheritDoc
+     */
     getHeader(): SolanaBtcHeader {
         return this.header;
     }
 
+    /**
+     * @inheritDoc
+     */
     getLastDiffAdjustment(): number {
         return this.lastDiffAdjustment;
     }
 
+    /**
+     * @inheritDoc
+     */
     getPrevBlockTimestamps(): number[] {
         return this.prevBlockTimestamps;
     }
@@ -93,6 +130,9 @@ export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
         return lastDiffAdjustment;
     }
 
+    /**
+     * @inheritDoc
+     */
     computeNext(header: SolanaBtcHeader): SolanaBtcStoredHeader {
         return new SolanaBtcStoredHeader({
             chainWork: this.computeNextChainWork(header.nbits),
