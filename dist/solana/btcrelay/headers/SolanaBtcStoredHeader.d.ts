@@ -37,9 +37,11 @@ export declare class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcH
      */
     private readonly prevBlockTimestamps;
     /**
-     * Constructs the stored bitcoin blockheader from Solana account/event data.
+     * Constructs the stored bitcoin blockheader from Solana event data.
      *
      * @param obj Decoded stored-header fields
+     *
+     * @internal
      */
     constructor(obj: SolanaBtcStoredHeaderType);
     /**

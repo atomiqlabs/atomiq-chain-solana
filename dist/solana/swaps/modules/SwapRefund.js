@@ -24,8 +24,8 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = {
             offerer: swapData.offerer,
             claimer: swapData.claimer,
-            escrowState: this.program.SwapEscrowState(buffer_1.Buffer.from(swapData.paymentHash, "hex")),
-            claimerUserData: !swapData.payOut ? this.program.SwapUserVault(swapData.claimer, swapData.token) : null,
+            escrowState: this.program._SwapEscrowState(buffer_1.Buffer.from(swapData.paymentHash, "hex")),
+            claimerUserData: !swapData.payOut ? this.program._SwapUserVault(swapData.claimer, swapData.token) : null,
             ixSysvar: refundAuthTimeout != null ? web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY : null
         };
         const useTimeout = refundAuthTimeout != null ? refundAuthTimeout : 0n;
@@ -36,8 +36,8 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
                 .accounts({
                 ...accounts,
                 offererAta: ata,
-                vault: this.program.SwapVault(swapData.token),
-                vaultAuthority: this.program.SwapVaultAuthority,
+                vault: this.program._SwapVault(swapData.token),
+                vaultAuthority: this.program._SwapVaultAuthority,
                 tokenProgram: spl_token_1.TOKEN_PROGRAM_ID
             })
                 .instruction(), SwapRefund.CUCosts.REFUND_PAY_OUT);
@@ -47,7 +47,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
                 .offererRefund((0, Utils_1.toBN)(useTimeout))
                 .accounts({
                 ...accounts,
-                offererUserData: this.program.SwapUserVault(swapData.offerer, swapData.token)
+                offererUserData: this.program._SwapUserVault(swapData.offerer, swapData.token)
             })
                 .instruction(), SwapRefund.CUCosts.REFUND);
         }
@@ -120,7 +120,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
             throw new base_1.SignatureVerificationError("Invalid prefix");
         const expiryTimestamp = BigInt(timeout);
         const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
-        const isExpired = (expiryTimestamp - currentTimestamp) < BigInt(this.program.authGracePeriod);
+        const isExpired = (expiryTimestamp - currentTimestamp) < BigInt(this.program._authGracePeriod);
         if (isExpired)
             throw new base_1.SignatureVerificationError("Authorization expired!");
         const signatureBuffer = buffer_1.Buffer.from(signature, "hex");
@@ -230,7 +230,7 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = [];
         if (swapData.payIn) {
             if (swapData.token != null)
-                accounts.push(this.program.SwapVault(swapData.token));
+                accounts.push(this.program._SwapVault(swapData.token));
             if (swapData.offerer != null)
                 accounts.push(swapData.offerer);
             if (swapData.claimer != null)
@@ -242,13 +242,13 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
             if (swapData.offerer != null) {
                 accounts.push(swapData.offerer);
                 if (swapData.token != null)
-                    accounts.push(this.program.SwapUserVault(swapData.offerer, swapData.token));
+                    accounts.push(this.program._SwapUserVault(swapData.offerer, swapData.token));
             }
             if (swapData.claimer != null)
                 accounts.push(swapData.claimer);
         }
         if (swapData.paymentHash != null)
-            accounts.push(this.program.SwapEscrowState(buffer_1.Buffer.from(swapData.paymentHash, "hex")));
+            accounts.push(this.program._SwapEscrowState(buffer_1.Buffer.from(swapData.paymentHash, "hex")));
         return this.root.Fees.getFeeRate(accounts);
     }
     /**

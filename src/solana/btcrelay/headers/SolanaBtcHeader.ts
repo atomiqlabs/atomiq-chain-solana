@@ -12,7 +12,7 @@ type SolanaBtcHeaderType = {
 }
 
 /**
- * Represents a bitcoin blockheader struct to be submitted to the Solana BTC relay program.
+ * Represents bitcoin blockheader data to be submitted to the Solana BTC relay program.
  *
  * @category BTC Relay
  */
@@ -48,9 +48,11 @@ export class SolanaBtcHeader implements BtcHeader {
     private readonly hash: Buffer;
 
     /**
-     * Constructs the bitcoin blockheader from Solana account/event data.
+     * Constructs the bitcoin blockheader
      *
-     * @param obj Decoded blockheader fields
+     * @param obj Blockheader fields
+     *
+     * @internal
      */
     constructor(obj: SolanaBtcHeaderType) {
         this.version = obj.version;

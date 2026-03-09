@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaSwapData = exports.ConnectionWithRetries = exports.SolanaBtcStoredHeader = exports.SolanaBtcHeader = void 0;
+exports.SolanaSwapData = exports.SolanaChainEventsBrowser = exports.ConnectionWithRetries = exports.SolanaBtcStoredHeader = exports.SolanaBtcHeader = void 0;
 var SolanaBtcHeader_1 = require("./solana/btcrelay/headers/SolanaBtcHeader");
 Object.defineProperty(exports, "SolanaBtcHeader", { enumerable: true, get: function () { return SolanaBtcHeader_1.SolanaBtcHeader; } });
 var SolanaBtcStoredHeader_1 = require("./solana/btcrelay/headers/SolanaBtcStoredHeader");
@@ -24,7 +24,8 @@ __exportStar(require("./solana/chain/SolanaChainInterface"), exports);
 __exportStar(require("./solana/chain/modules/SolanaFees"), exports);
 var ConnectionWithRetries_1 = require("./solana/connection/ConnectionWithRetries");
 Object.defineProperty(exports, "ConnectionWithRetries", { enumerable: true, get: function () { return ConnectionWithRetries_1.ConnectionWithRetries; } });
-__exportStar(require("./solana/events/SolanaChainEventsBrowser"), exports);
+var SolanaChainEventsBrowser_1 = require("./solana/events/SolanaChainEventsBrowser");
+Object.defineProperty(exports, "SolanaChainEventsBrowser", { enumerable: true, get: function () { return SolanaChainEventsBrowser_1.SolanaChainEventsBrowser; } });
 __exportStar(require("./solana/swaps/SolanaSwapProgram"), exports);
 var SolanaSwapData_1 = require("./solana/swaps/SolanaSwapData");
 Object.defineProperty(exports, "SolanaSwapData", { enumerable: true, get: function () { return SolanaSwapData_1.SolanaSwapData; } });

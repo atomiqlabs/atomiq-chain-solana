@@ -17,8 +17,17 @@ const PROCESSED_SIGNATURES_BACKLOG = 100;
  */
 class SolanaChainEventsBrowser {
     constructor(connection, solanaSwapContract, logFetchLimit) {
+        /**
+         * @internal
+         */
         this.listeners = [];
+        /**
+         * @internal
+         */
         this.eventListeners = [];
+        /**
+         * @internal
+         */
         this.logger = (0, Utils_1.getLogger)("SolanaChainEventsBrowser: ");
         this.signaturesProcessing = {};
         this.processedSignatures = [];
@@ -49,8 +58,8 @@ class SolanaChainEventsBrowser {
             throw new Error(`Transaction 'meta' not found for Solana tx: ${signature}`);
         if (transaction.meta.err != null || transaction.meta.logMessages == null)
             return null;
-        const instructions = this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
-        const events = this.solanaSwapProgram.Events.parseLogs(transaction.meta.logMessages);
+        const instructions = this.solanaSwapProgram._Events.decodeInstructions(transaction.transaction.message);
+        const events = this.solanaSwapProgram._Events.parseLogs(transaction.meta.logMessages);
         return {
             instructions,
             events,
@@ -104,7 +113,7 @@ class SolanaChainEventsBrowser {
             throw new Error("Transaction 'meta' not found!");
         if (transaction.meta.err != null)
             return null;
-        return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
+        return this.solanaSwapProgram._Events.decodeInstructions(transaction.transaction.message);
     }
     /**
      * Returns async getter for fetching on-demand initialize event swap data
@@ -128,6 +137,9 @@ class SolanaChainEventsBrowser {
             return SolanaSwapData_1.SolanaSwapData.fromInstruction(initIx, txoHash);
         };
     }
+    /**
+     * @internal
+     */
     parseInitializeEvent(data, eventObject) {
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
         const txoHash = buffer_1.Buffer.from(data.txoHash).toString("hex");
@@ -136,6 +148,9 @@ class SolanaChainEventsBrowser {
             " txoHash: " + txoHash + " escrowHash: " + escrowHash);
         return new base_1.InitializeEvent(escrowHash, SwapTypeEnum_1.SwapTypeEnum.toChainSwapType(data.kind), (0, Utils_1.onceAsync)(this.getSwapDataGetter(eventObject, txoHash)));
     }
+    /**
+     * @internal
+     */
     parseRefundEvent(data) {
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
         const escrowHash = (0, Utils_1.toEscrowHash)(paymentHash, data.sequence);
@@ -143,6 +158,9 @@ class SolanaChainEventsBrowser {
             " escrowHash: " + escrowHash);
         return new base_1.RefundEvent(escrowHash);
     }
+    /**
+     * @internal
+     */
     parseClaimEvent(data) {
         const secret = buffer_1.Buffer.from(data.secret).toString("hex");
         const paymentHash = buffer_1.Buffer.from(data.hash).toString("hex");
@@ -155,7 +173,7 @@ class SolanaChainEventsBrowser {
      * Processes event as received from the chain, parses it & calls event listeners
      *
      * @param eventObject
-     * @protected
+     * @internal
      */
     async processEvent(eventObject) {
         let parsedEvents = eventObject.events.map(event => {
@@ -171,6 +189,8 @@ class SolanaChainEventsBrowser {
                     parsedEvent = this.parseInitializeEvent(event.data, eventObject);
                     break;
             }
+            if (parsedEvent == null)
+                return null;
             parsedEvent.meta = {
                 blockTime: eventObject.blockTime,
                 timestamp: eventObject.blockTime,
@@ -186,7 +206,7 @@ class SolanaChainEventsBrowser {
      * Returns websocket event handler for specific event type
      *
      * @param name
-     * @protected
+     * @internal
      * @returns event handler to be passed to program's addEventListener function
      */
     getWsEventHandler(name) {
@@ -209,7 +229,7 @@ class SolanaChainEventsBrowser {
     /**
      * Sets up event handlers listening for swap events over websocket
      *
-     * @protected
+     * @internal
      */
     setupWebsocket() {
         const program = this.solanaSwapProgram.program;

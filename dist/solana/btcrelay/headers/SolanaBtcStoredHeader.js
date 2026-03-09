@@ -10,9 +10,11 @@ const buffer_1 = require("buffer");
  */
 class SolanaBtcStoredHeader {
     /**
-     * Constructs the stored bitcoin blockheader from Solana account/event data.
+     * Constructs the stored bitcoin blockheader from Solana event data.
      *
      * @param obj Decoded stored-header fields
+     *
+     * @internal
      */
     constructor(obj) {
         this.chainWork = obj.chainWork;

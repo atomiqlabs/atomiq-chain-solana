@@ -78,7 +78,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         }
     }
 
-    async setupHttpPolling() {
+    private async setupHttpPolling() {
         this.stopped = false;
         let func: () => Promise<void>;
         func = async () => {
@@ -91,6 +91,9 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         await func();
     }
 
+    /**
+     * @inheritDoc
+     */
     async init(noAutomaticPoll?: boolean): Promise<void> {
         if(noAutomaticPoll) return;
         try {
@@ -101,6 +104,9 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         this.setupWebsocket();
     }
 
+    /**
+     * @inheritDoc
+     */
     stop(): Promise<void> {
         this.stopped = true;
         if(this.timeout!=null) clearTimeout(this.timeout)

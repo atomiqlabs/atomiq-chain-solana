@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaAction = void 0;
 const web3_js_1 = require("@solana/web3.js");
+const SolanaFees_1 = require("./modules/SolanaFees");
 class SolanaAction {
     constructor(mainSigner, root, instructions = [], computeBudget = 0, feeRate, signers, firstIxBeforeComputeBudget) {
         this.firstIxBeforeComputeBudget = false;
@@ -64,9 +65,9 @@ class SolanaAction {
             tx.add(this.instructions[0]);
             instructions = this.instructions.slice(1);
         }
-        this.root.Fees.applyFeeRateBegin(tx, this.computeBudget, feeRate);
+        SolanaFees_1.SolanaFees.applyFeeRateBegin(tx, this.computeBudget, feeRate);
         instructions.forEach(ix => tx.add(ix));
-        this.root.Fees.applyFeeRateEnd(tx, this.computeBudget, feeRate);
+        SolanaFees_1.SolanaFees.applyFeeRateEnd(tx, this.computeBudget, feeRate);
         if (block != null) {
             tx.recentBlockhash = block.blockhash;
             tx.lastValidBlockHeight = block.blockHeight + this.root.TX_SLOT_VALIDITY;

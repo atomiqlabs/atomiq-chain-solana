@@ -3,15 +3,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaBtcHeader = void 0;
 const buffer_1 = require("buffer");
 /**
- * Represents a bitcoin blockheader struct to be submitted to the Solana BTC relay program.
+ * Represents bitcoin blockheader data to be submitted to the Solana BTC relay program.
  *
  * @category BTC Relay
  */
 class SolanaBtcHeader {
     /**
-     * Constructs the bitcoin blockheader from Solana account/event data.
+     * Constructs the bitcoin blockheader
      *
-     * @param obj Decoded blockheader fields
+     * @param obj Blockheader fields
+     *
+     * @internal
      */
     constructor(obj) {
         this.version = obj.version;

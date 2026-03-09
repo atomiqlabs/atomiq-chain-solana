@@ -72,6 +72,9 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         };
         await func();
     }
+    /**
+     * @inheritDoc
+     */
     async init(noAutomaticPoll) {
         if (noAutomaticPoll)
             return;
@@ -82,6 +85,9 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         await this.setupHttpPolling();
         this.setupWebsocket();
     }
+    /**
+     * @inheritDoc
+     */
     stop() {
         this.stopped = true;
         if (this.timeout != null)

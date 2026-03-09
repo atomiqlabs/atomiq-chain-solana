@@ -29,7 +29,13 @@ export declare class SolanaChainEvents extends SolanaChainEventsBrowser {
      * @private
      */
     private checkEvents;
-    setupHttpPolling(): Promise<void>;
+    private setupHttpPolling;
+    /**
+     * @inheritDoc
+     */
     init(noAutomaticPoll?: boolean): Promise<void>;
+    /**
+     * @inheritDoc
+     */
     stop(): Promise<void>;
 }

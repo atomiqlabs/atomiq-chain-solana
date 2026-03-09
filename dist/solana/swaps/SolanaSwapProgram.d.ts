@@ -9,11 +9,8 @@ import { SwapProgram } from "./programTypes";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 import { SolanaProgramBase } from "../program/SolanaProgramBase";
 import { SolanaTx } from "../chain/modules/SolanaTransactions";
-import { SwapInit, SolanaPreFetchData, SolanaPreFetchVerification } from "./modules/SwapInit";
+import { SolanaPreFetchData, SolanaPreFetchVerification } from "./modules/SwapInit";
 import { SolanaDataAccount, StoredDataAccount } from "./modules/SolanaDataAccount";
-import { SwapRefund } from "./modules/SwapRefund";
-import { SwapClaim } from "./modules/SwapClaim";
-import { SolanaLpVault } from "./modules/SolanaLpVault";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 /**
@@ -28,20 +25,24 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
     /**
      * PDA of the swap vault authority.
+     * @internal
      */
-    readonly SwapVaultAuthority: PublicKey;
+    readonly _SwapVaultAuthority: PublicKey;
     /**
      * PDA helper for global token vault accounts.
+     * @internal
      */
-    readonly SwapVault: (tokenAddress: PublicKey) => PublicKey;
+    readonly _SwapVault: (tokenAddress: PublicKey) => PublicKey;
     /**
      * PDA helper for per-user token vault accounts.
+     * @internal
      */
-    readonly SwapUserVault: (publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
+    readonly _SwapUserVault: (publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
     /**
      * PDA helper for escrow state accounts.
+     * @internal
      */
-    readonly SwapEscrowState: (hash: Buffer) => PublicKey;
+    readonly _SwapEscrowState: (hash: Buffer) => PublicKey;
     /**
      * @inheritDoc
      */
@@ -68,28 +69,30 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     private readonly refundGracePeriod;
     /**
      * Authorization grace period in seconds.
+     * @internal
      */
-    readonly authGracePeriod: number;
+    readonly _authGracePeriod: number;
     /**
      * Swap initialization service.
      */
-    readonly Init: SwapInit;
+    private readonly Init;
     /**
      * Swap refund service.
      */
-    readonly Refund: SwapRefund;
+    private readonly Refund;
     /**
      * Swap claim service.
      */
-    readonly Claim: SwapClaim;
-    /**
-     * Temporary data-account lifecycle service.
-     */
-    readonly DataAccount: SolanaDataAccount;
+    private readonly Claim;
     /**
      * LP vault interaction service.
      */
-    readonly LpVault: SolanaLpVault;
+    private readonly LpVault;
+    /**
+     * Temporary data-account lifecycle service.
+     * @internal
+     */
+    readonly _DataAccount: SolanaDataAccount;
     constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string);
     /**
      * @inheritDoc

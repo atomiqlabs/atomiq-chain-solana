@@ -96,8 +96,8 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
     }
     constructor(chainInterface, program, storage) {
         super(chainInterface, program);
-        this.SwapTxDataAlt = this.program.keypair((reversedTxId, signer) => [Buffer.from(signer.secretKey), reversedTxId]);
-        this.SwapTxDataAltBuffer = this.program.keypair((reversedTxId, secret) => [secret, reversedTxId]);
+        this.SwapTxDataAlt = this.program._keypair((reversedTxId, signer) => [Buffer.from(signer.secretKey), reversedTxId]);
+        this.SwapTxDataAltBuffer = this.program._keypair((reversedTxId, secret) => [secret, reversedTxId]);
         this.storage = storage;
     }
     /**

@@ -7,7 +7,7 @@ export * from "./solana/chain/modules/SolanaFees";
 
 export {ConnectionWithRetries} from "./solana/connection/ConnectionWithRetries";
 
-export * from "./solana/events/SolanaChainEventsBrowser";
+export {SolanaChainEventsBrowser, SolanaEventListenerState} from "./solana/events/SolanaChainEventsBrowser";
 
 export * from "./solana/swaps/SolanaSwapProgram";
 export {SolanaSwapData} from "./solana/swaps/SolanaSwapData";

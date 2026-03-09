@@ -61,8 +61,10 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
     private readonly BtcRelayFork;
     /**
      * Bitcoin RPC client used for bitcoin chain lookups.
+     *
+     * @internal
      */
-    bitcoinRpc: BitcoinRpc<B>;
+    _bitcoinRpc: BitcoinRpc<B>;
     /**
      * @inheritDoc
      */
@@ -75,6 +77,11 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @inheritDoc
      */
     readonly maxShortForkHeadersPerTx: number;
+    /**
+     * @param chainInterface Underlying chain interface to use for the Solana chain operations
+     * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
+     * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     */
     constructor(chainInterface: SolanaChainInterface, bitcoinRpc: BitcoinRpc<B>, programAddress?: string);
     /**
      * Gets set of block commitments representing current main chain from the mainState

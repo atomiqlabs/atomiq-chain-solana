@@ -17,12 +17,18 @@ export type EventObject = {
     signature: string;
 };
 /**
- * Current state of Solana event listener progress.
+ * Current cursor of Solana event listener state.
  *
  * @category Events
  */
 export type SolanaEventListenerState = {
+    /**
+     * Last processed transaction's signature
+     */
     signature: string;
+    /**
+     * Last processed transaction's slot
+     */
     slot: number;
 };
 /**
@@ -33,15 +39,32 @@ export type SolanaEventListenerState = {
  * @category Events
  */
 export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
+    /**
+     * @internal
+     */
     protected readonly listeners: EventListener<SolanaSwapData>[];
+    /**
+     * @internal
+     */
     protected readonly connection: Connection;
+    /**
+     * @internal
+     */
     protected readonly solanaSwapProgram: SolanaSwapProgram;
+    /**
+     * @internal
+     */
     protected eventListeners: number[];
+    /**
+     * @internal
+     */
     protected readonly logger: {
         debug: (msg: string, ...args: any[]) => false | void;
         info: (msg: string, ...args: any[]) => false | void;
         warn: (msg: string, ...args: any[]) => false | void;
-        error: (msg: string, ...args: any[]) => false | void;
+        error: (msg: string, ...args: any[]) => false | void; /**
+         * @internal
+         */
     };
     private readonly logFetchLimit;
     private signaturesProcessing;
@@ -82,28 +105,37 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
      * @returns {() => Promise<SolanaSwapData>} getter to be passed to InitializeEvent constructor
      */
     private getSwapDataGetter;
+    /**
+     * @internal
+     */
     protected parseInitializeEvent(data: IdlEvents<SwapProgram>["InitializeEvent"], eventObject: EventObject): InitializeEvent<SolanaSwapData>;
+    /**
+     * @internal
+     */
     protected parseRefundEvent(data: IdlEvents<SwapProgram>["RefundEvent"]): RefundEvent<SolanaSwapData>;
+    /**
+     * @internal
+     */
     protected parseClaimEvent(data: IdlEvents<SwapProgram>["ClaimEvent"]): ClaimEvent<SolanaSwapData>;
     /**
      * Processes event as received from the chain, parses it & calls event listeners
      *
      * @param eventObject
-     * @protected
+     * @internal
      */
     protected processEvent(eventObject: EventObject): Promise<void>;
     /**
      * Returns websocket event handler for specific event type
      *
      * @param name
-     * @protected
+     * @internal
      * @returns event handler to be passed to program's addEventListener function
      */
     protected getWsEventHandler<E extends "InitializeEvent" | "RefundEvent" | "ClaimEvent">(name: E): (data: IdlEvents<SwapProgram>[E], slotNumber: number, signature: string) => void;
     /**
      * Sets up event handlers listening for swap events over websocket
      *
-     * @protected
+     * @internal
      */
     protected setupWebsocket(): void;
     /**

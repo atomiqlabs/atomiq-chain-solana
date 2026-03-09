@@ -1,5 +1,4 @@
 import {
-    Connection,
     PublicKey,
     Signer,
     SystemProgram,
@@ -17,7 +16,7 @@ import {SolanaTx} from "../chain/modules/SolanaTransactions";
 import {SolanaSigner} from "../wallet/SolanaSigner";
 import * as BN from "bn.js";
 import {SolanaChainInterface} from "../chain/SolanaChainInterface";
-import {getLogger} from "../../utils/Utils";
+import {SolanaFees} from "../chain/modules/SolanaFees";
 
 const MAX_CLOSE_IX_PER_TX = 10;
 
@@ -51,7 +50,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      */
     private async Initialize(signer: PublicKey, header: B, epochStart: number, pastBlocksTimestamps: number[]): Promise<SolanaAction> {
         const serializedBlock = serializeBlockHeader(header);
-        return new SolanaAction(signer, this.Chain,
+        return new SolanaAction(signer, this._Chain,
             await this.program.methods
                 .initialize(
                     serializedBlock,
@@ -91,7 +90,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         reversedMerkleProof: Buffer[],
         committedHeader: SolanaBtcStoredHeader
     ): Promise<SolanaAction> {
-        return new SolanaAction(signer, this.Chain,
+        return new SolanaAction(signer, this._Chain,
             await this.program.methods
                 .verifyTransaction(
                     reversedTxId,
@@ -119,7 +118,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param forkId Fork account identifier to close
      */
     private async CloseForkAccount(signer: PublicKey, forkId: number): Promise<SolanaAction> {
-        return new SolanaAction(signer, this.Chain,
+        return new SolanaAction(signer, this._Chain,
             await this.program.methods
                 .closeForkAccount(
                     new BN(forkId)
@@ -151,8 +150,10 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
 
     /**
      * Bitcoin RPC client used for bitcoin chain lookups.
+     *
+     * @internal
      */
-    bitcoinRpc: BitcoinRpc<B>;
+    _bitcoinRpc: BitcoinRpc<B>;
 
     /**
      * @inheritDoc
@@ -167,13 +168,18 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      */
     readonly maxShortForkHeadersPerTx: number = 4;
 
+    /**
+     * @param chainInterface Underlying chain interface to use for the Solana chain operations
+     * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
+     * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     */
     constructor(
         chainInterface: SolanaChainInterface,
         bitcoinRpc: BitcoinRpc<B>,
         programAddress?: string
     ) {
         super(chainInterface, programIdl, programAddress);
-        this.bitcoinRpc = bitcoinRpc;
+        this._bitcoinRpc = bitcoinRpc;
     }
 
     /**
@@ -238,8 +244,8 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
             .transaction();
         tx.feePayer = signer;
 
-        this.Chain.Fees.applyFeeRateBegin(tx, null, feeRate);
-        this.Chain.Fees.applyFeeRateEnd(tx, null, feeRate);
+        SolanaFees.applyFeeRateBegin(tx, null, feeRate);
+        SolanaFees.applyFeeRateEnd(tx, null, feeRate);
 
         const computedCommitedHeaders = this.computeCommitedHeaders(storedHeader, blockHeaderObj);
         const lastStoredHeader = computedCommitedHeaders[computedCommitedHeaders.length-1];
@@ -287,7 +293,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         const blockHashBuffer = Buffer.from(blockData.blockhash, 'hex').reverse();
         const topicKey = this.BtcRelayHeader(blockHashBuffer);
 
-        const data = await this.Events.findInEvents(topicKey, async (event) => {
+        const data = await this._Events.findInEvents(topicKey, async (event) => {
             if(event.name==="StoreFork" || event.name==="StoreHeader") {
                 const eventData: any = event.data;
                 const commitHash = Buffer.from(eventData.commitHash).toString("hex");
@@ -312,7 +318,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         const blockHashBuffer = Buffer.from(blockData.blockhash, "hex").reverse();
         const topicKey = this.BtcRelayHeader(blockHashBuffer);
 
-        const data = await this.Events.findInEvents(topicKey, async (event) => {
+        const data = await this._Events.findInEvents(topicKey, async (event) => {
             if(event.name==="StoreFork" || event.name==="StoreHeader") {
                 const eventData: any = event.data;
                 const commitHash = Buffer.from(eventData.commitHash).toString("hex");
@@ -336,15 +342,15 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         const mainState: any = await this.program.account.mainState.fetch(this.BtcRelayMainState);
         const storedCommitments = this.getBlockCommitmentsSet(mainState);
 
-        const data = await this.Events.findInEvents(this.program.programId, async (event) => {
+        const data = await this._Events.findInEvents(this.program.programId, async (event) => {
             if(event.name==="StoreFork" || event.name==="StoreHeader") {
                 const eventData: any = event.data;
                 const blockHashHex = Buffer.from(eventData.blockHash).reverse().toString("hex");
-                const isInMainChain = await this.bitcoinRpc.isInMainChain(blockHashHex).catch(() => false);
+                const isInMainChain = await this._bitcoinRpc.isInMainChain(blockHashHex).catch(() => false);
                 const commitHash = Buffer.from(eventData.commitHash).toString("hex");
                 //Check if this fork is part of main chain
                 if(isInMainChain && storedCommitments.has(commitHash)) {
-                    const blockHeader = await this.bitcoinRpc.getBlockHeader(blockHashHex);
+                    const blockHeader = await this._bitcoinRpc.getBlockHeader(blockHashHex);
                     if(blockHeader==null) return null;
                     return {
                         resultStoredHeader: new SolanaBtcStoredHeader(eventData.header),
@@ -513,7 +519,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         let forkId: number = mainState.forkCounter.toNumber();
 
         const txs: SolanaTx[] = [];
-        let action = new SolanaAction(signer.getPublicKey(), this.Chain);
+        let action = new SolanaAction(signer.getPublicKey(), this._Chain);
 
         let lastCheckedId = lastSweepId;
         for(
@@ -531,7 +537,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
 
             if(action.ixsLength()>=MAX_CLOSE_IX_PER_TX) {
                 await action.addToTxs(txs);
-                action = new SolanaAction(signer.getPublicKey(), this.Chain);
+                action = new SolanaAction(signer.getPublicKey(), this._Chain);
             }
         }
 
@@ -540,7 +546,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
         }
 
         if(txs.length>0) {
-            const signatures = await this.Chain.sendAndConfirm(signer, txs, true);
+            const signatures = await this._Chain.sendAndConfirm(signer, txs, true);
             this.logger.info("sweepForkData(): forks swept, signatures: "+signatures.join());
         }
 
@@ -580,7 +586,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      */
     public getMainFeeRate(signer: string | null): Promise<string> {
         const _signer = signer==null ? null : new PublicKey(signer);
-        return this.Chain.Fees.getFeeRate(_signer==null ? [this.BtcRelayMainState] : [
+        return this._Chain.Fees.getFeeRate(_signer==null ? [this.BtcRelayMainState] : [
             _signer,
             this.BtcRelayMainState
         ]);
@@ -591,7 +597,7 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      */
     public getForkFeeRate(signer: string, forkId: number): Promise<string> {
         const _signer = new PublicKey(signer);
-        return this.Chain.Fees.getFeeRate([
+        return this._Chain.Fees.getFeeRate([
             _signer,
             this.BtcRelayMainState,
             this.BtcRelayFork(forkId, _signer)

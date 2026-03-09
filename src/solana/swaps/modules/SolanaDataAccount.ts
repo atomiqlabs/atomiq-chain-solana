@@ -37,10 +37,10 @@ export class StoredDataAccount implements StorageObject {
 
 export class SolanaDataAccount extends SolanaSwapModule {
 
-    readonly SwapTxDataAlt = this.program.keypair(
+    readonly SwapTxDataAlt = this.program._keypair(
         (reversedTxId: Buffer, signer: Signer) => [Buffer.from(signer.secretKey), reversedTxId]
     );
-    readonly SwapTxDataAltBuffer = this.program.keypair((reversedTxId: Buffer, secret: Buffer) => [secret, reversedTxId]);
+    readonly SwapTxDataAltBuffer = this.program._keypair((reversedTxId: Buffer, secret: Buffer) => [secret, reversedTxId]);
 
     readonly storage: IStorageManager<StoredDataAccount>;
 

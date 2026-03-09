@@ -28,11 +28,11 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = {
             claimer: swapData.claimer,
             offerer: swapData.offerer,
-            escrowState: this.program.SwapEscrowState(paymentHash),
+            escrowState: this.program._SwapEscrowState(paymentHash),
             mint: swapData.token,
             systemProgram: web3_js_1.SystemProgram.programId,
             claimerAta: swapData.payOut ? claimerAta : null,
-            claimerUserData: !swapData.payOut ? this.program.SwapUserVault(swapData.claimer, swapData.token) : null
+            claimerUserData: !swapData.payOut ? this.program._SwapUserVault(swapData.claimer, swapData.token) : null
         };
         if (swapData.payIn) {
             const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.offerer);
@@ -41,8 +41,8 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
                 .accounts({
                 ...accounts,
                 offererAta: ata,
-                vault: this.program.SwapVault(swapData.token),
-                vaultAuthority: this.program.SwapVaultAuthority,
+                vault: this.program._SwapVault(swapData.token),
+                vaultAuthority: this.program._SwapVaultAuthority,
                 tokenProgram: spl_token_1.TOKEN_PROGRAM_ID,
             })
                 .instruction(), SwapInit.CUCosts.INIT_PAY_IN);
@@ -52,7 +52,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
                 .offererInitialize(swapData.toSwapDataStruct(), swapData.securityDeposit, swapData.claimerBounty, [...(swapData.txoHash != null ? buffer_1.Buffer.from(swapData.txoHash, "hex") : buffer_1.Buffer.alloc(32, 0))], (0, Utils_1.toBN)(timeout))
                 .accounts({
                 ...accounts,
-                offererUserData: this.program.SwapUserVault(swapData.offerer, swapData.token),
+                offererUserData: this.program._SwapUserVault(swapData.offerer, swapData.token),
             })
                 .instruction(), SwapInit.CUCosts.INIT);
         }
@@ -282,7 +282,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         if (prefix !== this.getAuthPrefix(swapData))
             throw new base_1.SignatureVerificationError("Invalid prefix");
         const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
-        const isExpired = (BigInt(timeout) - currentTimestamp) < BigInt(this.program.authGracePeriod);
+        const isExpired = (BigInt(timeout) - currentTimestamp) < BigInt(this.program._authGracePeriod);
         if (isExpired)
             throw new base_1.SignatureVerificationError("Authorization expired!");
         const [transactionSlot, signatureString] = signature.split(";");
@@ -321,7 +321,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
         const now = Date.now();
         const slotExpiryTime = now + (slotsLeft * this.root.SLOT_TIME);
-        const timeoutExpiryTime = (parseInt(timeout) - this.program.authGracePeriod) * 1000;
+        const timeoutExpiryTime = (parseInt(timeout) - this.program._authGracePeriod) * 1000;
         const expiry = Math.min(slotExpiryTime, timeoutExpiryTime);
         if (expiry < now)
             return 0;
@@ -342,7 +342,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         const slotsLeft = lastValidTransactionSlot - latestSlot + this.SIGNATURE_SLOT_BUFFER;
         if (slotsLeft < 0)
             return true;
-        if ((parseInt(timeout) + this.program.authGracePeriod) * 1000 < Date.now())
+        if ((parseInt(timeout) + this.program._authGracePeriod) * 1000 < Date.now())
             return true;
         return false;
     }
@@ -427,14 +427,14 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         if (offerer != null)
             accounts.push(offerer);
         if (token != null) {
-            accounts.push(this.program.SwapVault(token));
+            accounts.push(this.program._SwapVault(token));
             if (offerer != null)
                 accounts.push((0, spl_token_1.getAssociatedTokenAddressSync)(token, offerer));
             if (claimer != null)
-                accounts.push(this.program.SwapUserVault(claimer, token));
+                accounts.push(this.program._SwapUserVault(claimer, token));
         }
         if (paymentHash != null)
-            accounts.push(this.program.SwapEscrowState(buffer_1.Buffer.from(paymentHash, "hex")));
+            accounts.push(this.program._SwapEscrowState(buffer_1.Buffer.from(paymentHash, "hex")));
         const shouldCheckWSOLAta = token != null && offerer != null && token.equals(SolanaTokens_1.SolanaTokens.WSOL_ADDRESS);
         let [feeRate, account] = await Promise.all([
             this.root.Fees.getFeeRate(accounts),
@@ -461,11 +461,11 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     getInitFeeRate(offerer, claimer, token, paymentHash) {
         const accounts = [];
         if (offerer != null && token != null)
-            accounts.push(this.program.SwapUserVault(offerer, token));
+            accounts.push(this.program._SwapUserVault(offerer, token));
         if (claimer != null)
             accounts.push(claimer);
         if (paymentHash != null)
-            accounts.push(this.program.SwapEscrowState(buffer_1.Buffer.from(paymentHash, "hex")));
+            accounts.push(this.program._SwapEscrowState(buffer_1.Buffer.from(paymentHash, "hex")));
         return this.root.Fees.getFeeRate(accounts);
     }
     /**

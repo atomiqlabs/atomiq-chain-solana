@@ -19,9 +19,21 @@ import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
  * @category Chain Interface
  */
 export type SolanaRetryPolicy = {
+    /**
+     * Maximum retries to be attempted
+     */
     maxRetries?: number,
+    /**
+     * Default delay between retries
+     */
     delay?: number,
+    /**
+     * Whether the delays should scale exponentially, i.e. 1 second, 2 seconds, 4 seconds, 8 seconds
+     */
     exponential?: boolean,
+    /**
+     * Interval between re-sending Solana transaction to the RPC
+     */
     transactionResendInterval?: number
 }
 
