@@ -166,7 +166,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         if (preFetchedData != null &&
             preFetchedData.latestSlot != null &&
             preFetchedData.latestSlot.timestamp > Date.now() - this.root.Slots.SLOT_CACHE_TIME) {
-            const estimatedSlotsPassed = Math.floor((Date.now() - preFetchedData.latestSlot.timestamp) / this.root.SLOT_TIME);
+            const estimatedSlotsPassed = Math.floor((Date.now() - preFetchedData.latestSlot.timestamp) / this.root._SLOT_TIME);
             const estimatedCurrentSlot = preFetchedData.latestSlot.slot + estimatedSlotsPassed;
             this.logger.debug("getSlotForSignature(): slot: " + preFetchedData.latestSlot.slot +
                 " estimated passed slots: " + estimatedSlotsPassed + " estimated current slot: " + estimatedCurrentSlot);
@@ -291,7 +291,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             this.getSlotForSignature(preFetchedData),
             this.getBlockhashForSignature(txSlot, preFetchedData)
         ]);
-        const lastValidTransactionSlot = txSlot + this.root.TX_SLOT_VALIDITY;
+        const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
         const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
         if (slotsLeft < 0)
             throw new base_1.SignatureVerificationError("Authorization expired!");
@@ -317,10 +317,10 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         const [transactionSlotStr, signatureString] = signature.split(";");
         const txSlot = parseInt(transactionSlotStr);
         const latestSlot = await this.getSlotForSignature(preFetchedData);
-        const lastValidTransactionSlot = txSlot + this.root.TX_SLOT_VALIDITY;
+        const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
         const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
         const now = Date.now();
-        const slotExpiryTime = now + (slotsLeft * this.root.SLOT_TIME);
+        const slotExpiryTime = now + (slotsLeft * this.root._SLOT_TIME);
         const timeoutExpiryTime = (parseInt(timeout) - this.program._authGracePeriod) * 1000;
         const expiry = Math.min(slotExpiryTime, timeoutExpiryTime);
         if (expiry < now)
@@ -337,7 +337,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     async isSignatureExpired(signature, timeout) {
         const [transactionSlotStr, signatureString] = signature.split(";");
         const txSlot = parseInt(transactionSlotStr);
-        const lastValidTransactionSlot = txSlot + this.root.TX_SLOT_VALIDITY;
+        const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
         const latestSlot = await this.root.Slots.getSlot("finalized");
         const slotsLeft = lastValidTransactionSlot - latestSlot + this.SIGNATURE_SLOT_BUFFER;
         if (slotsLeft < 0)

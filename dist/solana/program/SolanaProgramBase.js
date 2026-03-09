@@ -18,7 +18,7 @@ class SolanaProgramBase {
          */
         this.logger = (0, Utils_1.getLogger)(this.constructor.name + ": ");
         this._Chain = chainInterface;
-        this.program = new anchor_1.Program(programIdl, programAddress || programIdl.metadata.address, new anchor_1.AnchorProvider(chainInterface.connection, new SolanaKeypairWallet_1.SolanaKeypairWallet(web3_js_1.Keypair.generate()), {}));
+        this.program = new anchor_1.Program(programIdl, programAddress || programIdl.metadata.address, new anchor_1.AnchorProvider(chainInterface._connection, new SolanaKeypairWallet_1.SolanaKeypairWallet(web3_js_1.Keypair.generate()), {}));
         this._Events = new SolanaProgramEvents_1.SolanaProgramEvents(chainInterface, this);
     }
     pda(seed, func) {

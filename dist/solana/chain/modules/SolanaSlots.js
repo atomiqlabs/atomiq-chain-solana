@@ -6,7 +6,7 @@ class SolanaSlots extends SolanaModule_1.SolanaModule {
     constructor() {
         super(...arguments);
         this.SLOT_CACHE_SLOTS = 12;
-        this.SLOT_CACHE_TIME = this.SLOT_CACHE_SLOTS * this.root.SLOT_TIME;
+        this.SLOT_CACHE_TIME = this.SLOT_CACHE_SLOTS * this.root._SLOT_TIME;
         this.slotCache = {};
     }
     /**
@@ -59,7 +59,7 @@ class SolanaSlots extends SolanaModule_1.SolanaModule {
     async getSlot(commitment) {
         let cachedSlotData = this.slotCache[commitment];
         if (cachedSlotData != null && Date.now() - cachedSlotData.timestamp < this.SLOT_CACHE_TIME) {
-            return (await cachedSlotData.slot) + Math.floor((Date.now() - cachedSlotData.timestamp) / this.root.SLOT_TIME);
+            return (await cachedSlotData.slot) + Math.floor((Date.now() - cachedSlotData.timestamp) / this.root._SLOT_TIME);
         }
         cachedSlotData = this.fetchAndSaveSlot(commitment);
         return await cachedSlotData.slot;

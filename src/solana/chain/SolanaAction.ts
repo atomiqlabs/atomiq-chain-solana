@@ -90,7 +90,7 @@ export class SolanaAction {
 
         if(block!=null) {
             tx.recentBlockhash = block.blockhash;
-            tx.lastValidBlockHeight = block.blockHeight + this.root.TX_SLOT_VALIDITY;
+            tx.lastValidBlockHeight = block.blockHeight + this.root._TX_SLOT_VALIDITY;
         }
 
         return {

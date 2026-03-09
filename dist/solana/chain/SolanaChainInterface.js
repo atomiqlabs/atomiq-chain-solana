@@ -25,15 +25,20 @@ class SolanaChainInterface {
         this.chainId = "SOLANA";
         /**
          * Average Solana slot time in milliseconds.
+         * @internal
          */
-        this.SLOT_TIME = 400;
+        this._SLOT_TIME = 400;
         /**
          * Approximate number of recent slots for which a transaction remains valid.
+         * @internal
          */
-        this.TX_SLOT_VALIDITY = 151;
+        this._TX_SLOT_VALIDITY = 151;
+        /**
+         * @internal
+         */
         this.logger = (0, Utils_1.getLogger)(this.constructor.name + ": ");
-        this.connection = connection;
-        this.retryPolicy = retryPolicy;
+        this._connection = connection;
+        this._retryPolicy = retryPolicy;
         this.Blocks = new SolanaBlocks_1.SolanaBlocks(this);
         this.Fees = solanaFeeEstimator;
         this.Slots = new SolanaSlots_1.SolanaSlots(this);

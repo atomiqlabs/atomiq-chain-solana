@@ -39,7 +39,7 @@ export class SolanaProgramBase<T extends Idl> {
         this.program = new Program<T>(
             programIdl as any,
             programAddress || programIdl.metadata.address,
-            new AnchorProvider(chainInterface.connection, new SolanaKeypairWallet(Keypair.generate()), {})
+            new AnchorProvider(chainInterface._connection, new SolanaKeypairWallet(Keypair.generate()), {})
         );
 
         this._Events = new SolanaProgramEvents(chainInterface, this);

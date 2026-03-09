@@ -45,20 +45,24 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
     readonly chainId = "SOLANA";
     /**
      * Average Solana slot time in milliseconds.
+     * @internal
      */
-    readonly SLOT_TIME = 400;
+    readonly _SLOT_TIME = 400;
     /**
      * Approximate number of recent slots for which a transaction remains valid.
+     * @internal
      */
-    readonly TX_SLOT_VALIDITY = 151;
+    readonly _TX_SLOT_VALIDITY = 151;
     /**
      * Underlying Solana web3.js connection.
+     * @internal
      */
-    readonly connection: Connection;
+    readonly _connection: Connection;
     /**
      * Retry policy used by chain modules.
+     * @internal
      */
-    readonly retryPolicy?: SolanaRetryPolicy;
+    readonly _retryPolicy?: SolanaRetryPolicy;
     /**
      * Block-related read module.
      */
@@ -87,6 +91,9 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
      * Event/log scanning module.
      */
     readonly Events: SolanaEvents;
+    /**
+     * @internal
+     */
     protected readonly logger: {
         debug: (msg: string, ...args: any[]) => false | void;
         info: (msg: string, ...args: any[]) => false | void;

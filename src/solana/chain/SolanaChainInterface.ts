@@ -55,21 +55,25 @@ export class SolanaChainInterface implements ChainInterface<
 
     /**
      * Average Solana slot time in milliseconds.
+     * @internal
      */
-    public readonly SLOT_TIME = 400;
+    readonly _SLOT_TIME = 400;
     /**
      * Approximate number of recent slots for which a transaction remains valid.
+     * @internal
      */
-    public readonly TX_SLOT_VALIDITY = 151;
+    readonly _TX_SLOT_VALIDITY = 151;
 
     /**
      * Underlying Solana web3.js connection.
+     * @internal
      */
-    readonly connection: Connection;
+    readonly _connection: Connection;
     /**
      * Retry policy used by chain modules.
+     * @internal
      */
-    readonly retryPolicy?: SolanaRetryPolicy;
+    readonly _retryPolicy?: SolanaRetryPolicy;
 
     /**
      * Block-related read module.
@@ -100,6 +104,9 @@ export class SolanaChainInterface implements ChainInterface<
      */
     public readonly Events: SolanaEvents;
 
+    /**
+     * @internal
+     */
     protected readonly logger = getLogger(this.constructor.name+": ");
 
     constructor(
@@ -107,8 +114,8 @@ export class SolanaChainInterface implements ChainInterface<
         retryPolicy?: SolanaRetryPolicy,
         solanaFeeEstimator: SolanaFees = new SolanaFees(connection)
     ) {
-        this.connection = connection;
-        this.retryPolicy = retryPolicy;
+        this._connection = connection;
+        this._retryPolicy = retryPolicy;
 
         this.Blocks = new SolanaBlocks(this);
         this.Fees = solanaFeeEstimator;

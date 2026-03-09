@@ -5,7 +5,7 @@ import {Commitment} from "@solana/web3.js";
 export class SolanaSlots extends SolanaModule {
 
     public readonly SLOT_CACHE_SLOTS = 12;
-    public readonly SLOT_CACHE_TIME = this.SLOT_CACHE_SLOTS*this.root.SLOT_TIME;
+    public readonly SLOT_CACHE_TIME = this.SLOT_CACHE_SLOTS*this.root._SLOT_TIME;
 
     private slotCache: {
         [key in Commitment]?: {
@@ -71,7 +71,7 @@ export class SolanaSlots extends SolanaModule {
         let cachedSlotData = this.slotCache[commitment];
 
         if(cachedSlotData!=null && Date.now()-cachedSlotData.timestamp<this.SLOT_CACHE_TIME) {
-            return (await cachedSlotData.slot) + Math.floor((Date.now()-cachedSlotData.timestamp)/this.root.SLOT_TIME);
+            return (await cachedSlotData.slot) + Math.floor((Date.now()-cachedSlotData.timestamp)/this.root._SLOT_TIME);
         }
 
         cachedSlotData = this.fetchAndSaveSlot(commitment);
