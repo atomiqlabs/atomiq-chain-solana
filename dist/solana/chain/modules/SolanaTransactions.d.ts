@@ -4,10 +4,21 @@ import { Finality, SendOptions, Signer, Transaction } from "@solana/web3.js";
 import { SolanaModule } from "../SolanaModule";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
+/**
+ * Solana unsigned transaction type, optionally also contains additional signers which should be used to additionally
+ *  sign the transaction.
+ *
+ * @category Chain Interface
+ */
 export type SolanaTx = {
     tx: Transaction;
     signers: Signer[];
 };
+/**
+ * Alias for signed Solana transaction, uses the native transaction type of `@solana/web3.js`
+ *
+ * @category Chain Interface
+ */
 export type SignedSolanaTx = Transaction;
 export declare class SolanaTransactions extends SolanaModule {
     private cbkBeforeTxSigned?;

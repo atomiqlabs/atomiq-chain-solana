@@ -71,6 +71,7 @@ export * from "./solana/btcrelay/SolanaBtcRelay";
 
 export * from "./solana/chain/SolanaChainInterface";
 export * from "./solana/chain/modules/SolanaFees";
+export {SolanaTx, SignedSolanaTx} from "./solana/chain/modules/SolanaTransactions";
 
 export {ConnectionWithRetries} from "./solana/connection/ConnectionWithRetries";
 
