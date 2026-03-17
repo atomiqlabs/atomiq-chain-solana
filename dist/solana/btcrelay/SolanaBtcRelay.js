@@ -10,6 +10,7 @@ const SolanaProgramBase_1 = require("../program/SolanaProgramBase");
 const SolanaAction_1 = require("../chain/SolanaAction");
 const buffer_1 = require("buffer");
 const BN = require("bn.js");
+const SolanaFees_1 = require("../chain/modules/SolanaFees");
 const MAX_CLOSE_IX_PER_TX = 10;
 function serializeBlockHeader(e) {
     return new SolanaBtcHeader_1.SolanaBtcHeader({
@@ -24,6 +25,8 @@ function serializeBlockHeader(e) {
 }
 ;
 /**
+ * Solana BTC relay (bitcoin light client) program representation.
+ *
  * @category BTC Relay
  */
 class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
@@ -38,12 +41,12 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
      */
     async Initialize(signer, header, epochStart, pastBlocksTimestamps) {
         const serializedBlock = serializeBlockHeader(header);
-        return new SolanaAction_1.SolanaAction(signer, this.Chain, await this.program.methods
+        return new SolanaAction_1.SolanaAction(signer, this._Chain, await this.program.methods
             .initialize(serializedBlock, header.getHeight(), header.getChainWork(), epochStart, pastBlocksTimestamps)
             .accounts({
             signer,
             mainState: this.BtcRelayMainState,
-            headerTopic: this.BtcRelayHeader(serializedBlock.hash),
+            headerTopic: this.BtcRelayHeader(serializedBlock.getHash()),
             systemProgram: web3_js_1.SystemProgram.programId
         })
             .instruction(), 100000);
@@ -61,7 +64,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
      * @param committedHeader
      */
     async Verify(signer, reversedTxId, confirmations, position, reversedMerkleProof, committedHeader) {
-        return new SolanaAction_1.SolanaAction(signer, this.Chain, await this.program.methods
+        return new SolanaAction_1.SolanaAction(signer, this._Chain, await this.program.methods
             .verifyTransaction(reversedTxId, confirmations, position, reversedMerkleProof, committedHeader)
             .accounts({
             signer,
@@ -69,8 +72,14 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         })
             .instruction(), undefined, undefined, undefined, true);
     }
+    /**
+     * Creates an action that closes a fork account and refunds rent to the signer.
+     *
+     * @param signer Signer paying and receiving rent refund
+     * @param forkId Fork account identifier to close
+     */
     async CloseForkAccount(signer, forkId) {
-        return new SolanaAction_1.SolanaAction(signer, this.Chain, await this.program.methods
+        return new SolanaAction_1.SolanaAction(signer, this._Chain, await this.program.methods
             .closeForkAccount(new BN(forkId))
             .accounts({
             signer,
@@ -79,15 +88,38 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         })
             .instruction(), 20000);
     }
+    /**
+     * @param chainInterface Underlying chain interface to use for the Solana chain operations
+     * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
+     * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     */
     constructor(chainInterface, bitcoinRpc, programAddress) {
         super(chainInterface, programIdl, programAddress);
+        /**
+         * PDA of the relay main state account.
+         */
         this.BtcRelayMainState = this.pda("state");
+        /**
+         * PDA helper for per-header topic accounts.
+         */
         this.BtcRelayHeader = this.pda("header", (hash) => [hash]);
+        /**
+         * PDA helper for fork state accounts.
+         */
         this.BtcRelayFork = this.pda("fork", (forkId, pubkey) => [new BN(forkId).toArrayLike(buffer_1.Buffer, "le", 8), pubkey.toBuffer()]);
+        /**
+         * @inheritDoc
+         */
         this.maxHeadersPerTx = 5;
+        /**
+         * @inheritDoc
+         */
         this.maxForkHeadersPerTx = 4;
+        /**
+         * @inheritDoc
+         */
         this.maxShortForkHeadersPerTx = 4;
-        this.bitcoinRpc = bitcoinRpc;
+        this._bitcoinRpc = bitcoinRpc;
     }
     /**
      * Gets set of block commitments representing current main chain from the mainState
@@ -103,7 +135,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         return storedCommitments;
     }
     /**
-     * Computes subsequent commited headers as they will appear on the blockchain when transactions
+     * Computes subsequent committed headers as they will appear on the blockchain when transactions
      *  are submitted & confirmed
      *
      * @param initialStoredHeader
@@ -133,15 +165,15 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         const tx = await createTx(blockHeaderObj)
             .remainingAccounts(blockHeaderObj.map(e => {
             return {
-                pubkey: this.BtcRelayHeader(e.hash),
+                pubkey: this.BtcRelayHeader(e.getHash()),
                 isSigner: false,
                 isWritable: false
             };
         }))
             .transaction();
         tx.feePayer = signer;
-        this.Chain.Fees.applyFeeRateBegin(tx, null, feeRate);
-        this.Chain.Fees.applyFeeRateEnd(tx, null, feeRate);
+        SolanaFees_1.SolanaFees.applyFeeRateBegin(tx, null, feeRate);
+        SolanaFees_1.SolanaFees.applyFeeRateEnd(tx, null, feeRate);
         const computedCommitedHeaders = this.computeCommitedHeaders(storedHeader, blockHeaderObj);
         const lastStoredHeader = computedCommitedHeaders[computedCommitedHeaders.length - 1];
         return {
@@ -179,7 +211,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         const storedCommitments = this.getBlockCommitmentsSet(mainState);
         const blockHashBuffer = buffer_1.Buffer.from(blockData.blockhash, 'hex').reverse();
         const topicKey = this.BtcRelayHeader(blockHashBuffer);
-        const data = await this.Events.findInEvents(topicKey, async (event) => {
+        const data = await this._Events.findInEvents(topicKey, async (event) => {
             if (event.name === "StoreFork" || event.name === "StoreHeader") {
                 const eventData = event.data;
                 const commitHash = buffer_1.Buffer.from(eventData.commitHash).toString("hex");
@@ -202,7 +234,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
     async retrieveLogByCommitHash(commitmentHashStr, blockData) {
         const blockHashBuffer = buffer_1.Buffer.from(blockData.blockhash, "hex").reverse();
         const topicKey = this.BtcRelayHeader(blockHashBuffer);
-        const data = await this.Events.findInEvents(topicKey, async (event) => {
+        const data = await this._Events.findInEvents(topicKey, async (event) => {
             if (event.name === "StoreFork" || event.name === "StoreHeader") {
                 const eventData = event.data;
                 const commitHash = buffer_1.Buffer.from(eventData.commitHash).toString("hex");
@@ -212,7 +244,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         });
         if (data != null)
             this.logger.debug("retrieveLogByCommitHash(): block found," +
-                " commit hash: " + commitmentHashStr + " blockhash: " + blockData.blockhash + " height: " + data.blockheight);
+                " commit hash: " + commitmentHashStr + " blockhash: " + blockData.blockhash + " height: " + data.getBlockheight());
         return data;
     }
     /**
@@ -221,15 +253,15 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
     async retrieveLatestKnownBlockLog() {
         const mainState = await this.program.account.mainState.fetch(this.BtcRelayMainState);
         const storedCommitments = this.getBlockCommitmentsSet(mainState);
-        const data = await this.Events.findInEvents(this.program.programId, async (event) => {
+        const data = await this._Events.findInEvents(this.program.programId, async (event) => {
             if (event.name === "StoreFork" || event.name === "StoreHeader") {
                 const eventData = event.data;
                 const blockHashHex = buffer_1.Buffer.from(eventData.blockHash).reverse().toString("hex");
-                const isInMainChain = await this.bitcoinRpc.isInMainChain(blockHashHex).catch(() => false);
+                const isInMainChain = await this._bitcoinRpc.isInMainChain(blockHashHex).catch(() => false);
                 const commitHash = buffer_1.Buffer.from(eventData.commitHash).toString("hex");
                 //Check if this fork is part of main chain
                 if (isInMainChain && storedCommitments.has(commitHash)) {
-                    const blockHeader = await this.bitcoinRpc.getBlockHeader(blockHashHex);
+                    const blockHeader = await this._bitcoinRpc.getBlockHeader(blockHashHex);
                     if (blockHeader == null)
                         return null;
                     return {
@@ -243,7 +275,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         if (data != null)
             this.logger.debug("retrieveLatestKnownBlockLog(): block found," +
                 " commit hash: " + data.commitHash + " blockhash: " + data.resultBitcoinHeader.getHash() +
-                " height: " + data.resultStoredHeader.blockheight);
+                " height: " + data.resultStoredHeader.getBlockheight());
         return data;
     }
     /**
@@ -289,7 +321,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             forkState: this.BtcRelayFork(forkId.toNumber(), _signer),
             systemProgram: web3_js_1.SystemProgram.programId,
         }));
-        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(buffer_1.Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -311,7 +343,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             forkState: this.BtcRelayFork(forkId, _signer),
             systemProgram: web3_js_1.SystemProgram.programId,
         }));
-        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(buffer_1.Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -331,7 +363,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             signer: _signer,
             mainState: this.BtcRelayMainState
         }));
-        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(buffer_1.Buffer.from(result.lastStoredHeader.chainWork), tipWork)) {
+        if (result.forkId !== 0 && base_1.StatePredictorUtils.gtBuffer(result.lastStoredHeader.getChainWork(), tipWork)) {
             //Fork's work is higher than main chain's work, this fork will become a main chain
             result.forkId = 0;
         }
@@ -344,7 +376,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
         const mainState = await this.program.account.mainState.fetch(this.BtcRelayMainState);
         let forkId = mainState.forkCounter.toNumber();
         const txs = [];
-        let action = new SolanaAction_1.SolanaAction(signer.getPublicKey(), this.Chain);
+        let action = new SolanaAction_1.SolanaAction(signer.getPublicKey(), this._Chain);
         let lastCheckedId = lastSweepId;
         for (let i = lastSweepId == null ? 0 : lastSweepId + 1; i <= forkId; i++) {
             lastCheckedId = i;
@@ -356,14 +388,14 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
             action.add(await this.CloseForkAccount(signer.getPublicKey(), i));
             if (action.ixsLength() >= MAX_CLOSE_IX_PER_TX) {
                 await action.addToTxs(txs);
-                action = new SolanaAction_1.SolanaAction(signer.getPublicKey(), this.Chain);
+                action = new SolanaAction_1.SolanaAction(signer.getPublicKey(), this._Chain);
             }
         }
         if (action.ixsLength() >= MAX_CLOSE_IX_PER_TX) {
             await action.addToTxs(txs);
         }
         if (txs.length > 0) {
-            const signatures = await this.Chain.sendAndConfirm(signer, txs, true);
+            const signatures = await this._Chain.sendAndConfirm(signer, txs, true);
             this.logger.info("sweepForkData(): forks swept, signatures: " + signatures.join());
         }
         return lastCheckedId ?? null;
@@ -397,7 +429,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
      */
     getMainFeeRate(signer) {
         const _signer = signer == null ? null : new web3_js_1.PublicKey(signer);
-        return this.Chain.Fees.getFeeRate(_signer == null ? [this.BtcRelayMainState] : [
+        return this._Chain.Fees.getFeeRate(_signer == null ? [this.BtcRelayMainState] : [
             _signer,
             this.BtcRelayMainState
         ]);
@@ -407,7 +439,7 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
      */
     getForkFeeRate(signer, forkId) {
         const _signer = new web3_js_1.PublicKey(signer);
-        return this.Chain.Fees.getFeeRate([
+        return this._Chain.Fees.getFeeRate([
             _signer,
             this.BtcRelayMainState,
             this.BtcRelayFork(forkId, _signer)

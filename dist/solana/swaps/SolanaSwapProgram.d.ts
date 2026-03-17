@@ -9,34 +9,90 @@ import { SwapProgram } from "./programTypes";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 import { SolanaProgramBase } from "../program/SolanaProgramBase";
 import { SolanaTx } from "../chain/modules/SolanaTransactions";
-import { SwapInit, SolanaPreFetchData, SolanaPreFetchVerification } from "./modules/SwapInit";
+import { SolanaPreFetchData, SolanaPreFetchVerification } from "./modules/SwapInit";
 import { SolanaDataAccount, StoredDataAccount } from "./modules/SolanaDataAccount";
-import { SwapRefund } from "./modules/SwapRefund";
-import { SwapClaim } from "./modules/SwapClaim";
-import { SolanaLpVault } from "./modules/SolanaLpVault";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 /**
+ * Solana swap (escrow manager) program representation handling PrTLC (on-chain) and HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
+    /**
+     * Rent-exempt amount (lamports) for escrow state accounts.
+     */
     readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
-    readonly SwapVaultAuthority: PublicKey;
-    readonly SwapVault: (tokenAddress: PublicKey) => PublicKey;
-    readonly SwapUserVault: (publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
-    readonly SwapEscrowState: (hash: Buffer) => PublicKey;
+    /**
+     * PDA of the swap vault authority.
+     * @internal
+     */
+    readonly _SwapVaultAuthority: PublicKey;
+    /**
+     * PDA helper for global token vault accounts.
+     * @internal
+     */
+    readonly _SwapVault: (tokenAddress: PublicKey) => PublicKey;
+    /**
+     * PDA helper for per-user token vault accounts.
+     * @internal
+     */
+    readonly _SwapUserVault: (publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
+    /**
+     * PDA helper for escrow state accounts.
+     * @internal
+     */
+    readonly _SwapEscrowState: (hash: Buffer) => PublicKey;
+    /**
+     * @inheritDoc
+     */
     readonly chainId: "SOLANA";
+    /**
+     * @inheritDoc
+     */
     readonly claimWithSecretTimeout: number;
+    /**
+     * @inheritDoc
+     */
     readonly claimWithTxDataTimeout: number;
+    /**
+     * @inheritDoc
+     */
     readonly refundTimeout: number;
-    readonly claimGracePeriod: number;
-    readonly refundGracePeriod: number;
-    readonly authGracePeriod: number;
-    readonly Init: SwapInit;
-    readonly Refund: SwapRefund;
-    readonly Claim: SwapClaim;
-    readonly DataAccount: SolanaDataAccount;
-    readonly LpVault: SolanaLpVault;
+    /**
+     * Grace period (seconds) applied to claimer-side expiry checks.
+     */
+    private readonly claimGracePeriod;
+    /**
+     * Grace period (seconds) applied to offerer-side expiry checks.
+     */
+    private readonly refundGracePeriod;
+    /**
+     * Authorization grace period in seconds.
+     * @internal
+     */
+    readonly _authGracePeriod: number;
+    /**
+     * Swap initialization service.
+     */
+    private readonly Init;
+    /**
+     * Swap refund service.
+     */
+    private readonly Refund;
+    /**
+     * Swap claim service.
+     */
+    private readonly Claim;
+    /**
+     * LP vault interaction service.
+     */
+    private readonly LpVault;
+    /**
+     * Temporary data-account lifecycle service.
+     * @internal
+     */
+    readonly _DataAccount: SolanaDataAccount;
     constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string);
     /**
      * @inheritDoc
@@ -184,6 +240,12 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @inheritDoc
      */
     getIntermediaryReputation(address: string, token: string): Promise<IntermediaryReputationType | null>;
+    /**
+     * Returns intermediary vault balance for a specific token.
+     *
+     * @param address Intermediary address
+     * @param token Token mint
+     */
     getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint>;
     /**
      * @inheritDoc

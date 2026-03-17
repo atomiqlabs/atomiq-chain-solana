@@ -10,9 +10,17 @@ class SolanaKeypairWallet {
     constructor(payer) {
         this.payer = payer;
     }
+    /**
+     * Public key of the wrapped payer keypair.
+     */
     get publicKey() {
         return this.payer.publicKey;
     }
+    /**
+     * Signs all provided transactions with the wrapped keypair.
+     *
+     * @param txs Transactions to sign
+     */
     signAllTransactions(txs) {
         txs.forEach((tx) => {
             if (tx instanceof web3_js_1.Transaction) {
@@ -24,6 +32,11 @@ class SolanaKeypairWallet {
         });
         return Promise.resolve(txs);
     }
+    /**
+     * Signs a single transaction with the wrapped keypair.
+     *
+     * @param tx Transaction to sign
+     */
     signTransaction(tx) {
         if (tx instanceof web3_js_1.Transaction) {
             tx.partialSign(this.payer);

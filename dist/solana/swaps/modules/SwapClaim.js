@@ -15,7 +15,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = {
             signer,
             initializer: swapData.isPayIn() ? swapData.offerer : swapData.claimer,
-            escrowState: this.program.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
+            escrowState: this.program._SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
             ixSysvar: web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY,
             data: isDataKey ? secretOrDataKey : null,
         };
@@ -28,8 +28,8 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
                 .accounts({
                 ...accounts,
                 claimerAta: swapData.claimerAta,
-                vault: this.program.SwapVault(swapData.token),
-                vaultAuthority: this.program.SwapVaultAuthority,
+                vault: this.program._SwapVault(swapData.token),
+                vaultAuthority: this.program._SwapVaultAuthority,
                 tokenProgram: spl_token_1.TOKEN_PROGRAM_ID
             })
                 .instruction(), this.getComputeBudget(swapData));
@@ -39,7 +39,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
                 .claimerClaim(secretBuffer)
                 .accounts({
                 ...accounts,
-                claimerUserData: this.program.SwapUserVault(swapData.claimer, swapData.token)
+                claimerUserData: this.program._SwapUserVault(swapData.claimer, swapData.token)
             })
                 .instruction(), this.getComputeBudget(swapData));
         }
@@ -133,7 +133,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             Buffer.from(tx.hex, "hex")
         ]);
         this.logger.debug("addTxsWriteTransactionData(): writing transaction data: ", writeData.toString("hex"));
-        return this.program.DataAccount.addTxsWriteData(signer, reversedTxId, writeData, txs, feeRate);
+        return this.program._DataAccount.addTxsWriteData(signer, reversedTxId, writeData, txs, feeRate);
     }
     /**
      * Checks whether we should unwrap the WSOL to SOL when claiming the swap
@@ -206,7 +206,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const signerKey = signer instanceof SolanaSigner_1.SolanaSigner ? signer.getPublicKey() : signer;
         if (feeRate == null)
             feeRate = await this.getClaimFeeRate(signerKey, swapData);
-        const merkleProof = await this.btcRelay.bitcoinRpc.getMerkleProof(tx.txid, tx.blockhash);
+        const merkleProof = await this.btcRelay._bitcoinRpc.getMerkleProof(tx.txid, tx.blockhash);
         if (merkleProof == null)
             throw new Error(`Failed to generate merkle proof for tx: ${tx.txid}`);
         this.logger.debug("txsClaimWithTxData(): merkle proof computed: ", merkleProof);
@@ -236,7 +236,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const accounts = [signer];
         if (swapData.payOut) {
             if (swapData.token != null)
-                accounts.push(this.program.SwapVault(swapData.token));
+                accounts.push(this.program._SwapVault(swapData.token));
             if (swapData.payIn) {
                 if (swapData.offerer != null)
                     accounts.push(swapData.offerer);
@@ -250,7 +250,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         }
         else {
             if (swapData.claimer != null && swapData.token != null)
-                accounts.push(this.program.SwapUserVault(swapData.claimer, swapData.token));
+                accounts.push(this.program._SwapUserVault(swapData.claimer, swapData.token));
             if (swapData.payIn) {
                 if (swapData.offerer != null)
                     accounts.push(swapData.offerer);
@@ -261,7 +261,7 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
             }
         }
         if (swapData.paymentHash != null)
-            accounts.push(this.program.SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")));
+            accounts.push(this.program._SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")));
         return this.root.Fees.getFeeRate(accounts);
     }
     /**

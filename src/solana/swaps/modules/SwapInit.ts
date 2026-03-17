@@ -59,11 +59,11 @@ export class SwapInit extends SolanaSwapModule {
         const accounts = {
             claimer: swapData.claimer,
             offerer: swapData.offerer,
-            escrowState: this.program.SwapEscrowState(paymentHash),
+            escrowState: this.program._SwapEscrowState(paymentHash),
             mint: swapData.token,
             systemProgram: SystemProgram.programId,
             claimerAta: swapData.payOut ? claimerAta : null,
-            claimerUserData: !swapData.payOut ? this.program.SwapUserVault(swapData.claimer, swapData.token) : null
+            claimerUserData: !swapData.payOut ? this.program._SwapUserVault(swapData.claimer, swapData.token) : null
         };
 
         if(swapData.payIn) {
@@ -79,8 +79,8 @@ export class SwapInit extends SolanaSwapModule {
                     .accounts({
                         ...accounts,
                         offererAta: ata,
-                        vault: this.program.SwapVault(swapData.token),
-                        vaultAuthority: this.program.SwapVaultAuthority,
+                        vault: this.program._SwapVault(swapData.token),
+                        vaultAuthority: this.program._SwapVaultAuthority,
                         tokenProgram: TOKEN_PROGRAM_ID,
                     })
                     .instruction(),
@@ -98,7 +98,7 @@ export class SwapInit extends SolanaSwapModule {
                     )
                     .accounts({
                         ...accounts,
-                        offererUserData: this.program.SwapUserVault(swapData.offerer, swapData.token),
+                        offererUserData: this.program._SwapUserVault(swapData.offerer, swapData.token),
                     })
                     .instruction(),
                 SwapInit.CUCosts.INIT
@@ -233,7 +233,7 @@ export class SwapInit extends SolanaSwapModule {
             preFetchedData.latestSlot!=null &&
             preFetchedData.latestSlot.timestamp>Date.now()-this.root.Slots.SLOT_CACHE_TIME
         ) {
-            const estimatedSlotsPassed = Math.floor((Date.now()-preFetchedData.latestSlot.timestamp)/this.root.SLOT_TIME);
+            const estimatedSlotsPassed = Math.floor((Date.now()-preFetchedData.latestSlot.timestamp)/this.root._SLOT_TIME);
             const estimatedCurrentSlot = preFetchedData.latestSlot.slot+estimatedSlotsPassed;
             this.logger.debug("getSlotForSignature(): slot: "+preFetchedData.latestSlot.slot+
                 " estimated passed slots: "+estimatedSlotsPassed+" estimated current slot: "+estimatedCurrentSlot);
@@ -374,7 +374,7 @@ export class SwapInit extends SolanaSwapModule {
         if(prefix!==this.getAuthPrefix(swapData)) throw new SignatureVerificationError("Invalid prefix");
 
         const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
-        const isExpired = (BigInt(timeout) - currentTimestamp) < BigInt(this.program.authGracePeriod);
+        const isExpired = (BigInt(timeout) - currentTimestamp) < BigInt(this.program._authGracePeriod);
         if (isExpired) throw new SignatureVerificationError("Authorization expired!");
 
         const [transactionSlot, signatureString] = signature.split(";");
@@ -385,7 +385,7 @@ export class SwapInit extends SolanaSwapModule {
             this.getBlockhashForSignature(txSlot, preFetchedData)
         ]);
 
-        const lastValidTransactionSlot = txSlot+this.root.TX_SLOT_VALIDITY;
+        const lastValidTransactionSlot = txSlot+this.root._TX_SLOT_VALIDITY;
         const slotsLeft = lastValidTransactionSlot-latestSlot-this.SIGNATURE_SLOT_BUFFER;
         if(slotsLeft<0) throw new SignatureVerificationError("Authorization expired!");
 
@@ -419,13 +419,13 @@ export class SwapInit extends SolanaSwapModule {
         const txSlot = parseInt(transactionSlotStr);
 
         const latestSlot = await this.getSlotForSignature(preFetchedData);
-        const lastValidTransactionSlot = txSlot+this.root.TX_SLOT_VALIDITY;
+        const lastValidTransactionSlot = txSlot+this.root._TX_SLOT_VALIDITY;
         const slotsLeft = lastValidTransactionSlot-latestSlot-this.SIGNATURE_SLOT_BUFFER;
 
         const now = Date.now();
 
-        const slotExpiryTime = now + (slotsLeft*this.root.SLOT_TIME);
-        const timeoutExpiryTime = (parseInt(timeout)-this.program.authGracePeriod)*1000;
+        const slotExpiryTime = now + (slotsLeft*this.root._SLOT_TIME);
+        const timeoutExpiryTime = (parseInt(timeout)-this.program._authGracePeriod)*1000;
         const expiry = Math.min(slotExpiryTime, timeoutExpiryTime);
 
         if(expiry<now) return 0;
@@ -447,12 +447,12 @@ export class SwapInit extends SolanaSwapModule {
         const [transactionSlotStr, signatureString] = signature.split(";");
         const txSlot = parseInt(transactionSlotStr);
 
-        const lastValidTransactionSlot = txSlot+this.root.TX_SLOT_VALIDITY;
+        const lastValidTransactionSlot = txSlot+this.root._TX_SLOT_VALIDITY;
         const latestSlot = await this.root.Slots.getSlot("finalized");
         const slotsLeft = lastValidTransactionSlot-latestSlot+this.SIGNATURE_SLOT_BUFFER;
 
         if(slotsLeft<0) return true;
-        if((parseInt(timeout)+this.program.authGracePeriod)*1000 < Date.now()) return true;
+        if((parseInt(timeout)+this.program._authGracePeriod)*1000 < Date.now()) return true;
         return false;
     }
 
@@ -562,11 +562,11 @@ export class SwapInit extends SolanaSwapModule {
 
         if (offerer != null) accounts.push(offerer);
         if (token != null) {
-            accounts.push(this.program.SwapVault(token));
+            accounts.push(this.program._SwapVault(token));
             if (offerer != null) accounts.push(getAssociatedTokenAddressSync(token, offerer));
-            if (claimer != null) accounts.push(this.program.SwapUserVault(claimer, token));
+            if (claimer != null) accounts.push(this.program._SwapUserVault(claimer, token));
         }
-        if (paymentHash != null) accounts.push(this.program.SwapEscrowState(Buffer.from(paymentHash, "hex")));
+        if (paymentHash != null) accounts.push(this.program._SwapEscrowState(Buffer.from(paymentHash, "hex")));
 
         const shouldCheckWSOLAta = token != null && offerer != null && token.equals(SolanaTokens.WSOL_ADDRESS);
         let [feeRate, account] = await Promise.all([
@@ -597,9 +597,9 @@ export class SwapInit extends SolanaSwapModule {
     public getInitFeeRate(offerer?: PublicKey, claimer?: PublicKey, token?: PublicKey, paymentHash?: string): Promise<string> {
         const accounts: PublicKey[] = [];
 
-        if(offerer!=null && token!=null) accounts.push(this.program.SwapUserVault(offerer, token));
+        if(offerer!=null && token!=null) accounts.push(this.program._SwapUserVault(offerer, token));
         if(claimer!=null) accounts.push(claimer)
-        if(paymentHash!=null) accounts.push(this.program.SwapEscrowState(Buffer.from(paymentHash, "hex")));
+        if(paymentHash!=null) accounts.push(this.program._SwapEscrowState(Buffer.from(paymentHash, "hex")));
 
         return this.root.Fees.getFeeRate(accounts);
     }

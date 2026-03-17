@@ -13,10 +13,13 @@ const Utils_1 = require("../../utils/Utils");
  */
 class SolanaProgramBase {
     constructor(chainInterface, programIdl, programAddress) {
+        /**
+         * @internal
+         */
         this.logger = (0, Utils_1.getLogger)(this.constructor.name + ": ");
-        this.Chain = chainInterface;
-        this.program = new anchor_1.Program(programIdl, programAddress || programIdl.metadata.address, new anchor_1.AnchorProvider(chainInterface.connection, new SolanaKeypairWallet_1.SolanaKeypairWallet(web3_js_1.Keypair.generate()), {}));
-        this.Events = new SolanaProgramEvents_1.SolanaProgramEvents(chainInterface, this);
+        this._Chain = chainInterface;
+        this.program = new anchor_1.Program(programIdl, programAddress || programIdl.metadata.address, new anchor_1.AnchorProvider(chainInterface._connection, new SolanaKeypairWallet_1.SolanaKeypairWallet(web3_js_1.Keypair.generate()), {}));
+        this._Events = new SolanaProgramEvents_1.SolanaProgramEvents(chainInterface, this);
     }
     pda(seed, func) {
         if (func == null) {
@@ -31,8 +34,10 @@ class SolanaProgramBase {
      * Returns a function for deriving a dynamic deterministic keypair from dynamic arguments
      *
      * @param func function translating the function argument to Buffer[] to be used for deriving the keypair
+     *
+     * @internal
      */
-    keypair(func) {
+    _keypair(func) {
         return (...args) => {
             const res = func(...args);
             const buff = (0, sha2_1.sha256)(buffer_1.Buffer.concat(res));

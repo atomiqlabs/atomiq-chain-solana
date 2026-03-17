@@ -5,8 +5,8 @@ const Utils_1 = require("../../utils/Utils");
 class SolanaModule {
     constructor(root) {
         this.logger = (0, Utils_1.getLogger)(this.constructor.name + ": ");
-        this.connection = root.connection;
-        this.retryPolicy = root.retryPolicy;
+        this.connection = root._connection;
+        this.retryPolicy = root._retryPolicy;
         this.root = root;
     }
 }

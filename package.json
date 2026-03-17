@@ -1,6 +1,6 @@
 {
   "name": "@atomiqlabs/chain-solana",
-  "version": "13.0.11",
+  "version": "13.1.0",
   "description": "Solana specific base implementation",
   "main": "./dist/index.js",
   "types:": "./dist/index.d.ts",
@@ -11,7 +11,8 @@
   },
   "files": [
     "/dist",
-    "/src"
+    "/src",
+    "/node"
   ],
   "keywords": [
     "Solana",
@@ -28,7 +29,7 @@
     "@coral-xyz/anchor": "0.29.0",
     "@noble/hashes": "^1.7.1",
     "@solana/spl-token": "0.4.14",
-    "bn.js": "5.2.1",
+    "bn.js": "5.2.3",
     "bs58": "^4.0.1",
     "buffer": "6.0.3",
     "tweetnacl": "1.0.3"

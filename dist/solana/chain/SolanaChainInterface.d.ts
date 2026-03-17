@@ -17,9 +17,21 @@ import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
  * @category Chain Interface
  */
 export type SolanaRetryPolicy = {
+    /**
+     * Maximum retries to be attempted
+     */
     maxRetries?: number;
+    /**
+     * Default delay between retries
+     */
     delay?: number;
+    /**
+     * Whether the delays should scale exponentially, i.e. 1 second, 2 seconds, 4 seconds, 8 seconds
+     */
     exponential?: boolean;
+    /**
+     * Interval between re-sending Solana transaction to the RPC
+     */
     transactionResendInterval?: number;
 };
 /**
@@ -27,18 +39,61 @@ export type SolanaRetryPolicy = {
  * @category Chain Interface
  */
 export declare class SolanaChainInterface implements ChainInterface<SolanaTx, SignedSolanaTx, SolanaSigner, "SOLANA", Wallet> {
+    /**
+     * @inheritDoc
+     */
     readonly chainId = "SOLANA";
-    readonly SLOT_TIME = 400;
-    readonly TX_SLOT_VALIDITY = 151;
-    readonly connection: Connection;
-    readonly retryPolicy?: SolanaRetryPolicy;
+    /**
+     * Average Solana slot time in milliseconds.
+     * @internal
+     */
+    readonly _SLOT_TIME = 400;
+    /**
+     * Approximate number of recent slots for which a transaction remains valid.
+     * @internal
+     */
+    readonly _TX_SLOT_VALIDITY = 151;
+    /**
+     * Underlying Solana web3.js connection.
+     * @internal
+     */
+    readonly _connection: Connection;
+    /**
+     * Retry policy used by chain modules.
+     * @internal
+     */
+    readonly _retryPolicy?: SolanaRetryPolicy;
+    /**
+     * Block-related read module.
+     */
     readonly Blocks: SolanaBlocks;
+    /**
+     * Fee estimation and fee-rate module.
+     */
     Fees: SolanaFees;
+    /**
+     * Slot-related read module.
+     */
     readonly Slots: SolanaSlots;
+    /**
+     * Token operations module.
+     */
     readonly Tokens: SolanaTokens;
+    /**
+     * Transaction send/confirm/serialization module.
+     */
     readonly Transactions: SolanaTransactions;
+    /**
+     * Signature utilities module.
+     */
     readonly Signatures: SolanaSignatures;
+    /**
+     * Event/log scanning module.
+     */
     readonly Events: SolanaEvents;
+    /**
+     * @internal
+     */
     protected readonly logger: {
         debug: (msg: string, ...args: any[]) => false | void;
         info: (msg: string, ...args: any[]) => false | void;
@@ -125,7 +180,17 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
      * @inheritDoc
      */
     offBeforeTxSigned(callback: (tx: SolanaTx) => Promise<void>): boolean;
+    /**
+     * Registers a low-level transaction sender override hook.
+     *
+     * @param callback Callback used for raw transaction publishing
+     */
     onSendTransaction(callback: (tx: Buffer, options?: SendOptions) => Promise<string>): void;
+    /**
+     * Unregisters a previously registered transaction sender override hook.
+     *
+     * @param callback Previously registered callback
+     */
     offSendTransaction(callback: (tx: Buffer, options?: SendOptions) => Promise<string>): boolean;
     /**
      * @inheritDoc

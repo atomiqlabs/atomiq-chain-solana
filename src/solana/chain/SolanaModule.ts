@@ -13,8 +13,8 @@ export class SolanaModule {
     constructor(
         root: SolanaChainInterface
     ) {
-        this.connection = root.connection;
-        this.retryPolicy = root.retryPolicy;
+        this.connection = root._connection;
+        this.retryPolicy = root._retryPolicy;
         this.root = root;
     }
 

@@ -15,6 +15,8 @@ function isSerializedData(obj) {
 }
 exports.isSerializedData = isSerializedData;
 /**
+ * Represents Solana swap data for executing PrTLC (on-chain) or HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 class SolanaSwapData extends base_1.SwapData {
@@ -239,6 +241,9 @@ class SolanaSwapData extends base_1.SwapData {
     getTotalDeposit() {
         return (0, Utils_1.toBigInt)(this.claimerBounty.lt(this.securityDeposit) ? this.securityDeposit : this.claimerBounty);
     }
+    /**
+     * Serializes the swap data into the Solana program `SwapData` struct representation.
+     */
     toSwapDataStruct() {
         return {
             kind: SwapTypeEnum_1.SwapTypeEnum.fromNumber(this.kind),
@@ -252,6 +257,11 @@ class SolanaSwapData extends base_1.SwapData {
             sequence: this.sequence
         };
     }
+    /**
+     * Checks whether the provided escrow account matches this swap data.
+     *
+     * @param account Escrow account data fetched from chain
+     */
     correctPDA(account) {
         return SwapTypeEnum_1.SwapTypeEnum.toNumber(account.data.kind) === this.kind &&
             account.data.confirmations === this.confirmations &&
@@ -306,12 +316,11 @@ class SolanaSwapData extends base_1.SwapData {
             other.token.equals(this.token);
     }
     /**
-     * Converts initialize instruction data into {SolanaSwapData}
+     * Converts initialize instruction data into {@link SolanaSwapData}.
      *
-     * @param initIx
-     * @param txoHash
-     * @private
-     * @returns {SolanaSwapData} converted and parsed swap data
+     * @param initIx Decoded initialize instruction
+     * @param txoHash Parsed txo hash hint from initialize event
+     * @returns Converted and parsed swap data
      */
     static fromInstruction(initIx, txoHash) {
         const paymentHash = buffer_1.Buffer.from(initIx.data.swapData.hash);
@@ -343,6 +352,11 @@ class SolanaSwapData extends base_1.SwapData {
             txoHash
         });
     }
+    /**
+     * Deserializes swap data from an on-chain escrow account state.
+     *
+     * @param account Escrow account state as returned by Anchor
+     */
     static fromEscrowState(account) {
         const data = account.data;
         return new SolanaSwapData({
@@ -364,6 +378,11 @@ class SolanaSwapData extends base_1.SwapData {
             claimerBounty: account.claimerBounty
         });
     }
+    /**
+     * Converts abstract swap type to Solana program kind discriminator.
+     *
+     * @param type Chain-agnostic swap type
+     */
     static typeToKind(type) {
         switch (type) {
             case base_1.ChainSwapType.HTLC:
@@ -376,6 +395,11 @@ class SolanaSwapData extends base_1.SwapData {
                 return 3;
         }
     }
+    /**
+     * Converts Solana program kind discriminator to abstract swap type.
+     *
+     * @param value Solana program swap kind value
+     */
     static kindToType(value) {
         switch (value) {
             case 0:

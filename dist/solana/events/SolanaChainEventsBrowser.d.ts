@@ -5,31 +5,66 @@ import { SolanaSwapProgram } from "../swaps/SolanaSwapProgram";
 import { Connection } from "@solana/web3.js";
 import { InstructionWithAccounts, ProgramEvent } from "../program/modules/SolanaProgramEvents";
 import { SwapProgram } from "../swaps/programTypes";
+/**
+ * Parsed event payload grouped by originating transaction metadata.
+ *
+ * @category Events
+ */
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[];
     instructions?: (InstructionWithAccounts<SwapProgram> | null)[];
     blockTime: number;
     signature: string;
 };
+/**
+ * Current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
 export type SolanaEventListenerState = {
+    /**
+     * Last processed transaction's signature
+     */
     signature: string;
+    /**
+     * Last processed transaction's slot
+     */
     slot: number;
 };
 /**
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
  *  rely purely on events
+ *
+ * @category Events
  */
 export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
+    /**
+     * @internal
+     */
     protected readonly listeners: EventListener<SolanaSwapData>[];
+    /**
+     * @internal
+     */
     protected readonly connection: Connection;
+    /**
+     * @internal
+     */
     protected readonly solanaSwapProgram: SolanaSwapProgram;
+    /**
+     * @internal
+     */
     protected eventListeners: number[];
+    /**
+     * @internal
+     */
     protected readonly logger: {
         debug: (msg: string, ...args: any[]) => false | void;
         info: (msg: string, ...args: any[]) => false | void;
         warn: (msg: string, ...args: any[]) => false | void;
-        error: (msg: string, ...args: any[]) => false | void;
+        error: (msg: string, ...args: any[]) => false | void; /**
+         * @internal
+         */
     };
     private readonly logFetchLimit;
     private signaturesProcessing;
@@ -70,28 +105,37 @@ export declare class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapD
      * @returns {() => Promise<SolanaSwapData>} getter to be passed to InitializeEvent constructor
      */
     private getSwapDataGetter;
+    /**
+     * @internal
+     */
     protected parseInitializeEvent(data: IdlEvents<SwapProgram>["InitializeEvent"], eventObject: EventObject): InitializeEvent<SolanaSwapData>;
+    /**
+     * @internal
+     */
     protected parseRefundEvent(data: IdlEvents<SwapProgram>["RefundEvent"]): RefundEvent<SolanaSwapData>;
+    /**
+     * @internal
+     */
     protected parseClaimEvent(data: IdlEvents<SwapProgram>["ClaimEvent"]): ClaimEvent<SolanaSwapData>;
     /**
      * Processes event as received from the chain, parses it & calls event listeners
      *
      * @param eventObject
-     * @protected
+     * @internal
      */
     protected processEvent(eventObject: EventObject): Promise<void>;
     /**
      * Returns websocket event handler for specific event type
      *
      * @param name
-     * @protected
+     * @internal
      * @returns event handler to be passed to program's addEventListener function
      */
     protected getWsEventHandler<E extends "InitializeEvent" | "RefundEvent" | "ClaimEvent">(name: E): (data: IdlEvents<SwapProgram>[E], slotNumber: number, signature: string) => void;
     /**
      * Sets up event handlers listening for swap events over websocket
      *
-     * @protected
+     * @internal
      */
     protected setupWebsocket(): void;
     /**

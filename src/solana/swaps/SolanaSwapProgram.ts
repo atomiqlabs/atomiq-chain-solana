@@ -46,6 +46,8 @@ function toPublicKeyOrNull(str: string | null | undefined): PublicKey | undefine
 const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
 
 /**
+ * Solana swap (escrow manager) program representation handling PrTLC (on-chain) and HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 export class SolanaSwapProgram
@@ -61,34 +63,91 @@ export class SolanaSwapProgram
 
     ////////////////////////
     //// Constants
+    /**
+     * Rent-exempt amount (lamports) for escrow state accounts.
+     */
     public readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
 
     ////////////////////////
     //// PDA accessors
-    readonly SwapVaultAuthority = this.pda("authority");
-    readonly SwapVault = this.pda("vault", (tokenAddress: PublicKey) => [tokenAddress.toBuffer()]);
-    readonly SwapUserVault = this.pda("uservault",
+    /**
+     * PDA of the swap vault authority.
+     * @internal
+     */
+    readonly _SwapVaultAuthority = this.pda("authority");
+    /**
+     * PDA helper for global token vault accounts.
+     * @internal
+     */
+    readonly _SwapVault = this.pda("vault", (tokenAddress: PublicKey) => [tokenAddress.toBuffer()]);
+    /**
+     * PDA helper for per-user token vault accounts.
+     * @internal
+     */
+    readonly _SwapUserVault = this.pda("uservault",
         (publicKey: PublicKey, tokenAddress: PublicKey) => [publicKey.toBuffer(), tokenAddress.toBuffer()]
     );
-    readonly SwapEscrowState = this.pda("state", (hash: Buffer) => [hash]);
+    /**
+     * PDA helper for escrow state accounts.
+     * @internal
+     */
+    readonly _SwapEscrowState = this.pda("state", (hash: Buffer) => [hash]);
 
     ////////////////////////
     //// Timeouts
+    /**
+     * @inheritDoc
+     */
     readonly chainId: "SOLANA" = "SOLANA";
+    /**
+     * @inheritDoc
+     */
     readonly claimWithSecretTimeout: number = 45;
+    /**
+     * @inheritDoc
+     */
     readonly claimWithTxDataTimeout: number = 120;
+    /**
+     * @inheritDoc
+     */
     readonly refundTimeout: number = 45;
-    readonly claimGracePeriod: number = 10*60;
-    readonly refundGracePeriod: number = 10*60;
-    readonly authGracePeriod: number = 5*60;
+    /**
+     * Grace period (seconds) applied to claimer-side expiry checks.
+     */
+    private readonly claimGracePeriod: number = 10*60;
+    /**
+     * Grace period (seconds) applied to offerer-side expiry checks.
+     */
+    private readonly refundGracePeriod: number = 10*60;
+    /**
+     * Authorization grace period in seconds.
+     * @internal
+     */
+    readonly _authGracePeriod: number = 5*60;
 
     ////////////////////////
     //// Services
-    readonly Init: SwapInit;
-    readonly Refund: SwapRefund;
-    readonly Claim: SwapClaim;
-    readonly DataAccount: SolanaDataAccount;
-    readonly LpVault: SolanaLpVault;
+    /**
+     * Swap initialization service.
+     */
+    private readonly Init: SwapInit;
+    /**
+     * Swap refund service.
+     */
+    private readonly Refund: SwapRefund;
+    /**
+     * Swap claim service.
+     */
+    private readonly Claim: SwapClaim;
+    /**
+     * LP vault interaction service.
+     */
+    private readonly LpVault: SolanaLpVault;
+    /**
+     * Temporary data-account lifecycle service.
+     * @internal
+     */
+    readonly _DataAccount: SolanaDataAccount;
 
     constructor(
         chainInterface: SolanaChainInterface,
@@ -101,7 +160,7 @@ export class SolanaSwapProgram
         this.Init = new SwapInit(chainInterface, this);
         this.Refund = new SwapRefund(chainInterface, this);
         this.Claim = new SwapClaim(chainInterface, this, btcRelay);
-        this.DataAccount = new SolanaDataAccount(chainInterface, this, storage);
+        this._DataAccount = new SolanaDataAccount(chainInterface, this, storage);
         this.LpVault = new SolanaLpVault(chainInterface, this);
     }
 
@@ -109,21 +168,21 @@ export class SolanaSwapProgram
      * @inheritDoc
      */
     async start(): Promise<void> {
-        await this.DataAccount.init();
+        await this._DataAccount.init();
     }
 
     /**
      * @inheritDoc
      */
     getClaimableDeposits(signer: string): Promise<{count: number, totalValue: bigint}> {
-        return this.DataAccount.getDataAccountsInfo(new PublicKey(signer));
+        return this._DataAccount.getDataAccountsInfo(new PublicKey(signer));
     }
 
     /**
      * @inheritDoc
      */
     claimDeposits(signer: SolanaSigner): Promise<{txIds: string[], count: number, totalValue: bigint}> {
-        return this.DataAccount.sweepDataAccounts(signer);
+        return this._DataAccount.sweepDataAccounts(signer);
     }
 
     ////////////////////////////////////////////
@@ -188,14 +247,14 @@ export class SolanaSwapProgram
      * @inheritDoc
      */
     getDataSignature(signer: SolanaSigner, data: Buffer): Promise<string> {
-        return this.Chain.Signatures.getDataSignature(signer, data);
+        return this._Chain.Signatures.getDataSignature(signer, data);
     }
 
     /**
      * @inheritDoc
      */
     isValidDataSignature(data: Buffer, signature: string, publicKey: string): Promise<boolean> {
-        return this.Chain.Signatures.isValidDataSignature(data, signature, publicKey);
+        return this._Chain.Signatures.isValidDataSignature(data, signature, publicKey);
     }
 
     ////////////////////////////////////////////
@@ -215,7 +274,7 @@ export class SolanaSwapProgram
     async isCommited(swapData: SolanaSwapData): Promise<boolean> {
         const paymentHash = Buffer.from(swapData.paymentHash, "hex");
 
-        const account = await this.program.account.escrowState.fetchNullable(this.SwapEscrowState(paymentHash));
+        const account = await this.program.account.escrowState.fetchNullable(this._SwapEscrowState(paymentHash));
         if(account==null) return false;
 
         return swapData.correctPDA(account);
@@ -282,7 +341,7 @@ export class SolanaSwapProgram
      * @inheritDoc
      */
     async getCommitStatus(signer: string, data: SolanaSwapData): Promise<SwapCommitState> {
-        const escrowStateKey = this.SwapEscrowState(Buffer.from(data.paymentHash, "hex"));
+        const escrowStateKey = this._SwapEscrowState(Buffer.from(data.paymentHash, "hex"));
         const [escrowState, isExpired] = await Promise.all([
             this.program.account.escrowState.fetchNullable(escrowStateKey) as Promise<IdlAccounts<SwapProgram>["escrowState"]>,
             this.isExpired(signer,data)
@@ -299,7 +358,7 @@ export class SolanaSwapProgram
         }
 
         //Check if paid or what
-        const status: SwapNotCommitedState | SwapExpiredState | SwapPaidState | null = await this.Events.findInEvents(escrowStateKey, async (event, tx) => {
+        const status: SwapNotCommitedState | SwapExpiredState | SwapPaidState | null = await this._Events.findInEvents(escrowStateKey, async (event, tx) => {
             if(event.name==="ClaimEvent") {
                 const paymentHash = Buffer.from(event.data.hash).toString("hex");
                 if(paymentHash!==data.paymentHash) return null;
@@ -362,11 +421,11 @@ export class SolanaSwapProgram
      */
     async getClaimHashStatus(claimHash: string): Promise<SwapCommitStateType> {
         const {paymentHash} = fromClaimHash(claimHash);
-        const escrowStateKey = this.SwapEscrowState(Buffer.from(paymentHash, "hex"));
+        const escrowStateKey = this._SwapEscrowState(Buffer.from(paymentHash, "hex"));
         const abortController = new AbortController();
 
         //Start fetching events before checking escrow PDA, this call is used when quoting, so saving 100ms here helps a lot!
-        const eventsPromise = this.Events.findInEvents(escrowStateKey, async (event) => {
+        const eventsPromise = this._Events.findInEvents(escrowStateKey, async (event) => {
             if(event.name==="ClaimEvent") return SwapCommitStateType.PAID;
             if(event.name==="RefundEvent") return SwapCommitStateType.NOT_COMMITED;
         }, abortController.signal).catch(e => {
@@ -398,7 +457,7 @@ export class SolanaSwapProgram
 
         const account: IdlAccounts<SwapProgram>["escrowState"] | null =
             await this.program.account.escrowState.fetchNullable(
-                this.SwapEscrowState(paymentHashBuffer)
+                this._SwapEscrowState(paymentHashBuffer)
             );
         if(account==null) return null;
 
@@ -428,7 +487,7 @@ export class SolanaSwapProgram
 
         const events: {event: ProgramEvent<SwapProgram>, tx: ParsedTransactionWithMeta}[] = [];
 
-        await this.Events.findInEvents(new PublicKey(signer), async (event, tx) => {
+        await this._Events.findInEvents(new PublicKey(signer), async (event, tx) => {
             if(latestBlockheight==null) latestBlockheight = tx.slot;
             events.push({event, tx});
         }, undefined, undefined, startBlockheight);
@@ -466,7 +525,7 @@ export class SolanaSwapProgram
             if(event.name==="InitializeEvent") {
                 //Parse swap data from initialize event
                 const txoHash: string = Buffer.from(event.data.txoHash).toString("hex");
-                const instructions = this.Events.decodeInstructions(tx.transaction.message);
+                const instructions = this._Events.decodeInstructions(tx.transaction.message);
                 if(instructions == null) {
                     this.logger.warn(`getHistoricalSwaps(): Skipping tx ${txSignature} because cannot parse instructions!`);
                     continue;
@@ -600,7 +659,7 @@ export class SolanaSwapProgram
      */
     async getBalance(signer: string, tokenAddress: string, inContract: boolean): Promise<bigint> {
         if(!inContract) {
-            return await this.Chain.getBalance(signer, tokenAddress);
+            return await this._Chain.getBalance(signer, tokenAddress);
         }
 
         const token = new PublicKey(tokenAddress);
@@ -626,6 +685,12 @@ export class SolanaSwapProgram
         return this.LpVault.getIntermediaryReputation(new PublicKey(address), new PublicKey(token));
     }
 
+    /**
+     * Returns intermediary vault balance for a specific token.
+     *
+     * @param address Intermediary address
+     * @param token Token mint
+     */
     getIntermediaryBalance(address: PublicKey, token: PublicKey): Promise<bigint> {
         return this.LpVault.getIntermediaryBalance(address, token);
     }
@@ -726,7 +791,7 @@ export class SolanaSwapProgram
         txOptions?: TransactionConfirmationOptions
     ): Promise<string> {
         const result = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, checkExpiry, initAta, txOptions?.feeRate);
-        const [signature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [signature] = await this._Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signature;
     }
 
@@ -751,8 +816,8 @@ export class SolanaSwapProgram
             commitedHeader, synchronizer, initAta, txOptions?.feeRate
         );
 
-        const signatures = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal);
-        await this.DataAccount.removeDataAccount(storageAcc);
+        const signatures = await this._Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        await this._DataAccount.removeDataAccount(storageAcc);
 
         return signatures[claimTxIndex] ?? signatures[0];
     }
@@ -769,7 +834,7 @@ export class SolanaSwapProgram
     ): Promise<string> {
         let result = await this.txsRefund(signer.getAddress(), swapData, check, initAta, txOptions?.feeRate);
 
-        const [signature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [signature] = await this._Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
 
         return signature;
     }
@@ -787,7 +852,7 @@ export class SolanaSwapProgram
     ): Promise<string> {
         let result = await this.txsRefundWithAuthorization(signer.getAddress(), swapData, signature, check, initAta, txOptions?.feeRate);
 
-        const [txSignature] = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const [txSignature] = await this._Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
 
         return txSignature;
     }
@@ -810,7 +875,7 @@ export class SolanaSwapProgram
 
         const result = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
 
-        const signatures = await this.Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const signatures = await this._Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
 
         return signatures[signatures.length-1];
     }
@@ -831,7 +896,7 @@ export class SolanaSwapProgram
         const txsCommit = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
         const txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, false, txOptions?.feeRate, true);
 
-        const signatures = await this.Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
+        const signatures = await this._Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return [signatures[txsCommit.length-1], signatures[signatures.length-1]]
     }
 
@@ -845,7 +910,7 @@ export class SolanaSwapProgram
         txOptions?: TransactionConfirmationOptions
     ): Promise<string> {
         const txs = await this.LpVault.txsWithdraw(signer.getPublicKey(), new PublicKey(token), amount, txOptions?.feeRate);
-        const [txId] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
+        const [txId] = await this._Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
         return txId;
     }
 
@@ -859,7 +924,7 @@ export class SolanaSwapProgram
         txOptions?: TransactionConfirmationOptions
     ): Promise<string> {
         const txs = await this.LpVault.txsDeposit(signer.getPublicKey(), new PublicKey(token), amount, txOptions?.feeRate);
-        const [txId] = await this.Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
+        const [txId] = await this._Chain.sendAndConfirm(signer, txs, txOptions?.waitForConfirmation, txOptions?.abortSignal, false);
         return txId;
     }
 

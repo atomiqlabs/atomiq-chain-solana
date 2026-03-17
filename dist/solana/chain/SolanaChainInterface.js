@@ -19,12 +19,26 @@ const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
  */
 class SolanaChainInterface {
     constructor(connection, retryPolicy, solanaFeeEstimator = new SolanaFees_1.SolanaFees(connection)) {
+        /**
+         * @inheritDoc
+         */
         this.chainId = "SOLANA";
-        this.SLOT_TIME = 400;
-        this.TX_SLOT_VALIDITY = 151;
+        /**
+         * Average Solana slot time in milliseconds.
+         * @internal
+         */
+        this._SLOT_TIME = 400;
+        /**
+         * Approximate number of recent slots for which a transaction remains valid.
+         * @internal
+         */
+        this._TX_SLOT_VALIDITY = 151;
+        /**
+         * @internal
+         */
         this.logger = (0, Utils_1.getLogger)(this.constructor.name + ": ");
-        this.connection = connection;
-        this.retryPolicy = retryPolicy;
+        this._connection = connection;
+        this._retryPolicy = retryPolicy;
         this.Blocks = new SolanaBlocks_1.SolanaBlocks(this);
         this.Fees = solanaFeeEstimator;
         this.Slots = new SolanaSlots_1.SolanaSlots(this);
@@ -165,9 +179,19 @@ class SolanaChainInterface {
     offBeforeTxSigned(callback) {
         return this.Transactions.offBeforeTxSigned(callback);
     }
+    /**
+     * Registers a low-level transaction sender override hook.
+     *
+     * @param callback Callback used for raw transaction publishing
+     */
     onSendTransaction(callback) {
         this.Transactions.onSendTransaction(callback);
     }
+    /**
+     * Unregisters a previously registered transaction sender override hook.
+     *
+     * @param callback Previously registered callback
+     */
     offSendTransaction(callback) {
         return this.Transactions.offSendTransaction(callback);
     }

@@ -35,9 +35,9 @@ export class SolanaLpVault extends SolanaSwapModule {
                 .accounts({
                     signer,
                     signerAta: ata,
-                    userData: this.program.SwapUserVault(signer, token),
-                    vault: this.program.SwapVault(token),
-                    vaultAuthority: this.program.SwapVaultAuthority,
+                    userData: this.program._SwapUserVault(signer, token),
+                    vault: this.program._SwapVault(token),
+                    vaultAuthority: this.program._SwapVaultAuthority,
                     mint: token,
                     tokenProgram: TOKEN_PROGRAM_ID
                 })
@@ -62,9 +62,9 @@ export class SolanaLpVault extends SolanaSwapModule {
                 .accounts({
                     signer,
                     signerAta: ata,
-                    userData: this.program.SwapUserVault(signer, token),
-                    vault: this.program.SwapVault(token),
-                    vaultAuthority: this.program.SwapVaultAuthority,
+                    userData: this.program._SwapUserVault(signer, token),
+                    vault: this.program._SwapVault(token),
+                    vaultAuthority: this.program._SwapVaultAuthority,
                     mint: token,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID
@@ -85,7 +85,7 @@ export class SolanaLpVault extends SolanaSwapModule {
         reputation: IntermediaryReputationType
     } | null> {
         const data = await this.swapProgram.account.userAccount.fetchNullable(
-            this.program.SwapUserVault(address, token)
+            this.program._SwapUserVault(address, token)
         );
 
         if(data==null) return null;
@@ -201,8 +201,8 @@ export class SolanaLpVault extends SolanaSwapModule {
         return this.root.Fees.getFeeRate([
             signer,
             ata,
-            this.program.SwapUserVault(signer, token),
-            this.program.SwapVault(token)
+            this.program._SwapUserVault(signer, token),
+            this.program._SwapVault(token)
         ])
     }
 

@@ -9,6 +9,8 @@ import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 /**
+ * Solana BTC relay (bitcoin light client) program representation.
+ *
  * @category BTC Relay
  */
 export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> implements BtcRelay<SolanaBtcStoredHeader, {
@@ -38,14 +40,48 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param committedHeader
      */
     Verify(signer: PublicKey, reversedTxId: Buffer, confirmations: number, position: number, reversedMerkleProof: Buffer[], committedHeader: SolanaBtcStoredHeader): Promise<SolanaAction>;
-    CloseForkAccount(signer: PublicKey, forkId: number): Promise<SolanaAction>;
-    BtcRelayMainState: PublicKey;
-    BtcRelayHeader: (hash: Buffer) => PublicKey;
-    BtcRelayFork: (forkId: number, pubkey: PublicKey) => PublicKey;
-    bitcoinRpc: BitcoinRpc<B>;
+    /**
+     * Creates an action that closes a fork account and refunds rent to the signer.
+     *
+     * @param signer Signer paying and receiving rent refund
+     * @param forkId Fork account identifier to close
+     */
+    private CloseForkAccount;
+    /**
+     * PDA of the relay main state account.
+     */
+    private readonly BtcRelayMainState;
+    /**
+     * PDA helper for per-header topic accounts.
+     */
+    private readonly BtcRelayHeader;
+    /**
+     * PDA helper for fork state accounts.
+     */
+    private readonly BtcRelayFork;
+    /**
+     * Bitcoin RPC client used for bitcoin chain lookups.
+     *
+     * @internal
+     */
+    _bitcoinRpc: BitcoinRpc<B>;
+    /**
+     * @inheritDoc
+     */
     readonly maxHeadersPerTx: number;
+    /**
+     * @inheritDoc
+     */
     readonly maxForkHeadersPerTx: number;
+    /**
+     * @inheritDoc
+     */
     readonly maxShortForkHeadersPerTx: number;
+    /**
+     * @param chainInterface Underlying chain interface to use for the Solana chain operations
+     * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
+     * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     */
     constructor(chainInterface: SolanaChainInterface, bitcoinRpc: BitcoinRpc<B>, programAddress?: string);
     /**
      * Gets set of block commitments representing current main chain from the mainState
@@ -55,7 +91,7 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      */
     private getBlockCommitmentsSet;
     /**
-     * Computes subsequent commited headers as they will appear on the blockchain when transactions
+     * Computes subsequent committed headers as they will appear on the blockchain when transactions
      *  are submitted & confirmed
      *
      * @param initialStoredHeader

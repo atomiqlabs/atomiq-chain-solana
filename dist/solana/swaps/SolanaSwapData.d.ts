@@ -29,27 +29,90 @@ export declare function isSerializedData(obj: any): obj is ({
     type: "sol";
 } & Serialized<SolanaSwapData>);
 /**
+ * Represents Solana swap data for executing PrTLC (on-chain) or HTLC (lightning) based swaps.
+ *
  * @category Swaps
  */
 export declare class SolanaSwapData extends SwapData {
+    /**
+     * Offerer address funding the swap.
+     */
     offerer: PublicKey;
+    /**
+     * Claimer address receiving the swap funds.
+     */
     claimer: PublicKey;
+    /**
+     * Token mint used for the swap.
+     */
     token: PublicKey;
+    /**
+     * Swap amount.
+     */
     amount: BN;
+    /**
+     * Payment hash identifying the swap.
+     */
     paymentHash: string;
+    /**
+     * Swap sequence used for uniqueness.
+     */
     sequence: BN;
+    /**
+     * Swap expiry timestamp.
+     */
     expiry: BN;
+    /**
+     * Nonce used in claim hash derivation.
+     */
     nonce: BN;
+    /**
+     * Required bitcoin confirmations for claim.
+     */
     confirmations: number;
+    /**
+     * Whether funds are paid out to claimer wallet directly.
+     */
     payOut: boolean;
+    /**
+     * Solana on-chain swap kind discriminator.
+     */
     kind: number;
+    /**
+     * Whether funds are paid in from offerer wallet.
+     */
     payIn: boolean;
+    /**
+     * Optional claimer associated token account.
+     */
     claimerAta?: PublicKey;
+    /**
+     * Optional offerer associated token account.
+     */
     offererAta?: PublicKey;
+    /**
+     * Security deposit amount.
+     */
     securityDeposit: BN;
+    /**
+     * Claimer bounty amount.
+     */
     claimerBounty: BN;
+    /**
+     * Optional txo hash hint.
+     */
     txoHash?: string;
+    /**
+     * Creates swap data from structured constructor arguments.
+     *
+     * @param args Swap data fields
+     */
     constructor(args: SolanaSwapDataCtorArgs);
+    /**
+     * Deserializes swap data from serialized storage representation.
+     *
+     * @param data Serialized swap data from {@link SolanaSwapData.serialize}
+     */
     constructor(data: {
         type: "sol";
     } & Serialized<SolanaSwapData>);
@@ -155,23 +218,45 @@ export declare class SolanaSwapData extends SwapData {
      * @inheritDoc
      */
     getTotalDeposit(): bigint;
+    /**
+     * Serializes the swap data into the Solana program `SwapData` struct representation.
+     */
     toSwapDataStruct(): IdlTypes<SwapProgram>["SwapData"];
+    /**
+     * Checks whether the provided escrow account matches this swap data.
+     *
+     * @param account Escrow account data fetched from chain
+     */
     correctPDA(account: IdlAccounts<SwapProgram>["escrowState"]): boolean;
     /**
      * @inheritDoc
      */
     equals(other: SolanaSwapData): boolean;
     /**
-     * Converts initialize instruction data into {SolanaSwapData}
+     * Converts initialize instruction data into {@link SolanaSwapData}.
      *
-     * @param initIx
-     * @param txoHash
-     * @private
-     * @returns {SolanaSwapData} converted and parsed swap data
+     * @param initIx Decoded initialize instruction
+     * @param txoHash Parsed txo hash hint from initialize event
+     * @returns Converted and parsed swap data
      */
     static fromInstruction(initIx: InitInstruction, txoHash: string): SolanaSwapData;
+    /**
+     * Deserializes swap data from an on-chain escrow account state.
+     *
+     * @param account Escrow account state as returned by Anchor
+     */
     static fromEscrowState(account: IdlAccounts<SwapProgram>["escrowState"]): SolanaSwapData;
+    /**
+     * Converts abstract swap type to Solana program kind discriminator.
+     *
+     * @param type Chain-agnostic swap type
+     */
     static typeToKind(type: ChainSwapType): number;
+    /**
+     * Converts Solana program kind discriminator to abstract swap type.
+     *
+     * @param value Solana program swap kind value
+     */
     static kindToType(value: number): ChainSwapType;
     /**
      * @inheritDoc

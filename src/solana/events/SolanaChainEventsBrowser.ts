@@ -15,6 +15,11 @@ import {
 import {SwapProgram} from "../swaps/programTypes";
 import {Buffer} from "buffer";
 
+/**
+ * Parsed event payload grouped by originating transaction metadata.
+ *
+ * @category Events
+ */
 export type EventObject = {
     events: ProgramEvent<SwapProgram>[],
     instructions?: (InstructionWithAccounts<SwapProgram> | null)[],
@@ -25,8 +30,19 @@ export type EventObject = {
 const LOG_FETCH_LIMIT = 500;
 const PROCESSED_SIGNATURES_BACKLOG = 100;
 
+/**
+ * Current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
 export type SolanaEventListenerState = {
+    /**
+     * Last processed transaction's signature
+     */
     signature: string,
+    /**
+     * Last processed transaction's slot
+     */
     slot: number
 };
 
@@ -34,13 +50,30 @@ export type SolanaEventListenerState = {
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not
  *  rely purely on events
+ *
+ * @category Events
  */
 export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, SolanaEventListenerState> {
 
+    /**
+     * @internal
+     */
     protected readonly listeners: EventListener<SolanaSwapData>[] = [];
+    /**
+     * @internal
+     */
     protected readonly connection: Connection;
+    /**
+     * @internal
+     */
     protected readonly solanaSwapProgram: SolanaSwapProgram;
+    /**
+     * @internal
+     */
     protected eventListeners: number[] = [];
+    /**
+     * @internal
+     */
     protected readonly logger = getLogger("SolanaChainEventsBrowser: ");
 
     private readonly logFetchLimit: number;
@@ -82,8 +115,8 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         if(transaction.meta==null) throw new Error(`Transaction 'meta' not found for Solana tx: ${signature}`);
         if(transaction.meta.err!=null || transaction.meta.logMessages==null) return null;
 
-        const instructions = this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
-        const events = this.solanaSwapProgram.Events.parseLogs(transaction.meta.logMessages);
+        const instructions = this.solanaSwapProgram._Events.decodeInstructions(transaction.transaction.message);
+        const events = this.solanaSwapProgram._Events.parseLogs(transaction.meta.logMessages);
 
         return {
             instructions,
@@ -136,7 +169,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         });
         if(transaction.meta==null) throw new Error("Transaction 'meta' not found!");
         if(transaction.meta.err!=null) return null;
-        return this.solanaSwapProgram.Events.decodeInstructions(transaction.transaction.message);
+        return this.solanaSwapProgram._Events.decodeInstructions(transaction.transaction.message);
     }
 
     /**
@@ -164,6 +197,9 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         }
     }
 
+    /**
+     * @internal
+     */
     protected parseInitializeEvent(data: IdlEvents<SwapProgram>["InitializeEvent"], eventObject: EventObject): InitializeEvent<SolanaSwapData> {
         const paymentHash: string = Buffer.from(data.hash).toString("hex");
         const txoHash: string = Buffer.from(data.txoHash).toString("hex");
@@ -177,6 +213,9 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         );
     }
 
+    /**
+     * @internal
+     */
     protected parseRefundEvent(data: IdlEvents<SwapProgram>["RefundEvent"]): RefundEvent<SolanaSwapData> {
         const paymentHash: string = Buffer.from(data.hash).toString("hex");
         const escrowHash = toEscrowHash(paymentHash, data.sequence);
@@ -185,6 +224,9 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
         return new RefundEvent<SolanaSwapData>(escrowHash);
     }
 
+    /**
+     * @internal
+     */
     protected parseClaimEvent(data: IdlEvents<SwapProgram>["ClaimEvent"]): ClaimEvent<SolanaSwapData> {
         const secret: string = Buffer.from(data.secret).toString("hex");
         const paymentHash: string = Buffer.from(data.hash).toString("hex");
@@ -198,11 +240,11 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
      * Processes event as received from the chain, parses it & calls event listeners
      *
      * @param eventObject
-     * @protected
+     * @internal
      */
     protected async processEvent(eventObject : EventObject) {
         let parsedEvents: SwapEvent<SolanaSwapData>[] = eventObject.events.map(event => {
-            let parsedEvent: SwapEvent<SolanaSwapData>;
+            let parsedEvent: SwapEvent<SolanaSwapData> | undefined;
             switch(event.name) {
                 case "ClaimEvent":
                     parsedEvent = this.parseClaimEvent(event.data);
@@ -214,6 +256,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
                     parsedEvent = this.parseInitializeEvent(event.data, eventObject);
                     break;
             }
+            if(parsedEvent==null) return null;
             (parsedEvent as any).meta = {
                 blockTime: eventObject.blockTime,
                 timestamp: eventObject.blockTime,
@@ -231,7 +274,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
      * Returns websocket event handler for specific event type
      *
      * @param name
-     * @protected
+     * @internal
      * @returns event handler to be passed to program's addEventListener function
      */
     protected getWsEventHandler<E extends "InitializeEvent" | "RefundEvent" | "ClaimEvent">(
@@ -257,7 +300,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
     /**
      * Sets up event handlers listening for swap events over websocket
      *
-     * @protected
+     * @internal
      */
     protected setupWebsocket() {
         const program = this.solanaSwapProgram.program;
