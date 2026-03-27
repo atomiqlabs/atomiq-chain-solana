@@ -1,6 +1,6 @@
 {
   "name": "@atomiqlabs/chain-solana",
-  "version": "13.1.0",
+  "version": "13.2.0",
   "description": "Solana specific base implementation",
   "main": "./dist/index.js",
   "types:": "./dist/index.d.ts",
@@ -25,7 +25,7 @@
   "author": "adambor",
   "license": "ISC",
   "dependencies": {
-    "@atomiqlabs/base": "^13.0.4",
+    "@atomiqlabs/base": "github:atomiqlabs/atomiq-base#develop",
     "@coral-xyz/anchor": "0.29.0",
     "@noble/hashes": "^1.7.1",
     "@solana/spl-token": "0.4.14",

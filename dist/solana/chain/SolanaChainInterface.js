@@ -112,6 +112,13 @@ class SolanaChainInterface {
     /**
      * @inheritDoc
      */
+    async prepareTxs(txs) {
+        await this.Transactions.prepareTransactions(txs);
+        return txs;
+    }
+    /**
+     * @inheritDoc
+     */
     serializeTx(tx) {
         return Promise.resolve(this.Transactions.serializeUnsignedTx(tx));
     }

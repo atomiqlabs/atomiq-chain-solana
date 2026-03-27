@@ -195,11 +195,14 @@ export class SolanaTransactions extends SolanaModule {
      * Prepares solana transactions, assigns recentBlockhash if needed, applies Phantom hotfix,
      *  sets feePayer to ourselves, calls beforeTxSigned callback & signs transaction with provided signers array
      *
-     * @param signer
      * @param txs
-     * @private
+     * @param signer
      */
-    private async prepareTransactions(signer: SolanaSigner, txs: SolanaTx[]): Promise<void> {
+    public async prepareTransactions(txs: SolanaTx[], signer?: SolanaSigner): Promise<void> {
+        if(txs.length===0) return;
+        const signerAddress = signer?.getPublicKey() ?? txs[0].tx.feePayer;
+        if(signerAddress==null) throw new Error("Cannot get tx sender address!");
+
         let latestBlockData: {blockhash: string, lastValidBlockHeight: number} | null = null;
 
         for(let tx of txs) {
@@ -215,13 +218,13 @@ export class SolanaTransactions extends SolanaModule {
 
             //This is a hotfix for Phantom adding compute unit price instruction on the first position & breaking
             // required instructions order (e.g. btc relay verify needs to be 0th instruction in a tx)
-            if(signer.keypair==null && tx.tx.signatures.length===0) {
+            if((signer==null || signer.keypair==null) && tx.tx.signatures.length===0) {
                 const foundIx = tx.tx.instructions.find(ix => ix.programId.equals(ComputeBudgetProgram.programId) && ComputeBudgetInstruction.decodeInstructionType(ix)==="SetComputeUnitPrice")
                 if(foundIx==null) tx.tx.instructions.splice(tx.tx.instructions.length-1, 0, ComputeBudgetProgram.setComputeUnitPrice({microLamports: 1}));
             }
 
-            tx.tx.feePayer = signer.getPublicKey();
-            if(this.cbkBeforeTxSigned!=null) await this.cbkBeforeTxSigned(tx);
+            tx.tx.feePayer = signerAddress;
+            if(signer!=null && this.cbkBeforeTxSigned!=null) await this.cbkBeforeTxSigned(tx);
             if(tx.signers!=null && tx.signers.length>0) for(let signer of tx.signers) tx.tx.sign(signer);
         }
     }
@@ -275,7 +278,7 @@ export class SolanaTransactions extends SolanaModule {
         for(let e=0;e<_txs.length;e+=BATCH_SIZE) {
             const txs = _txs.slice(e, e+BATCH_SIZE);
 
-            await this.prepareTransactions(signer, txs)
+            await this.prepareTransactions(txs, signer)
             const signedTxs = await signer.wallet.signAllTransactions(txs.map(e => e.tx));
             signedTxs.forEach((tx, index) => {
                 const solTx = txs[index];

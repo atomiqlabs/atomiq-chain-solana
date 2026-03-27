@@ -73,11 +73,10 @@ export declare class SolanaTransactions extends SolanaModule {
      * Prepares solana transactions, assigns recentBlockhash if needed, applies Phantom hotfix,
      *  sets feePayer to ourselves, calls beforeTxSigned callback & signs transaction with provided signers array
      *
-     * @param signer
      * @param txs
-     * @private
+     * @param signer
      */
-    private prepareTransactions;
+    prepareTransactions(txs: SolanaTx[], signer?: SolanaSigner): Promise<void>;
     /**
      * Sends out a signed transaction to the RPC
      *

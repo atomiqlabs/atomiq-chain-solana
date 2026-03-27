@@ -136,6 +136,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
     /**
      * @inheritDoc
      */
+    prepareTxs(txs: SolanaTx[]): Promise<SolanaTx[]>;
+    /**
+     * @inheritDoc
+     */
     serializeTx(tx: SolanaTx): Promise<string>;
     /**
      * @inheritDoc

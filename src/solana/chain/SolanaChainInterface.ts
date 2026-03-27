@@ -219,6 +219,14 @@ export class SolanaChainInterface implements ChainInterface<
     /**
      * @inheritDoc
      */
+    async prepareTxs(txs: SolanaTx[]): Promise<SolanaTx[]> {
+        await this.Transactions.prepareTransactions(txs);
+        return txs;
+    }
+
+    /**
+     * @inheritDoc
+     */
     serializeTx(tx: SolanaTx): Promise<string> {
         return Promise.resolve(this.Transactions.serializeUnsignedTx(tx));
     }
