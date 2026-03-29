@@ -309,7 +309,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      */
     serializeUnsignedTx(tx) {
         return JSON.stringify({
-            tx: tx.tx.serialize().toString("hex"),
+            tx: tx.tx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("hex"),
             signers: tx.signers.map(e => buffer_1.Buffer.from(e.secretKey).toString("hex")),
             lastValidBlockheight: tx.tx.lastValidBlockHeight
         });
@@ -320,7 +320,7 @@ class SolanaTransactions extends SolanaModule_1.SolanaModule {
      * @param signedTx
      */
     serializeSignedTx(signedTx) {
-        return signedTx.serialize().toString("hex");
+        return signedTx.serialize({ requireAllSignatures: false, verifySignatures: false }).toString("hex");
     }
     /**
      * Deserializes saved solana transaction, extracting the transaction, signers & last valid blockheight

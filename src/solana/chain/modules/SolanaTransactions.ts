@@ -360,7 +360,7 @@ export class SolanaTransactions extends SolanaModule {
      */
     public serializeUnsignedTx(tx: SolanaTx): string {
         return JSON.stringify({
-            tx: tx.tx.serialize().toString("hex"),
+            tx: tx.tx.serialize({requireAllSignatures: false, verifySignatures: false}).toString("hex"),
             signers: tx.signers.map(e => Buffer.from(e.secretKey).toString("hex")),
             lastValidBlockheight: tx.tx.lastValidBlockHeight
         });
@@ -372,7 +372,7 @@ export class SolanaTransactions extends SolanaModule {
      * @param signedTx
      */
     public serializeSignedTx(signedTx: Transaction): string {
-        return signedTx.serialize().toString("hex");
+        return signedTx.serialize({requireAllSignatures: false, verifySignatures: false}).toString("hex");
     }
 
     /**
