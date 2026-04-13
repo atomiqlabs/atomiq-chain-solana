@@ -5,6 +5,7 @@
   "main": "./dist/index.js",
   "types:": "./dist/index.d.ts",
   "scripts": {
+    "build": "npx -y -p typescript@4.9 tsc",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build:ts4": "npx -p typescript@4.9 tsc --noEmit",
     "build:ts5": "npx -p typescript@5 tsc --noEmit"
