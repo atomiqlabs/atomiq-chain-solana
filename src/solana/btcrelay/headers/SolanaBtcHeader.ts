@@ -1,7 +1,7 @@
 import {BtcHeader} from "@atomiqlabs/base";
 import {Buffer} from "buffer";
 
-type SolanaBtcHeaderType = {
+export type SolanaBtcHeaderType = {
     version: number,
     reversedPrevBlockhash: number[],
     merkleRoot: number[],

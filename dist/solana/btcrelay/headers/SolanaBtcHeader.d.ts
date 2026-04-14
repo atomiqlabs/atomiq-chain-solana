@@ -2,7 +2,7 @@
 /// <reference types="node" />
 import { BtcHeader } from "@atomiqlabs/base";
 import { Buffer } from "buffer";
-type SolanaBtcHeaderType = {
+export type SolanaBtcHeaderType = {
     version: number;
     reversedPrevBlockhash: number[];
     merkleRoot: number[];
@@ -82,4 +82,3 @@ export declare class SolanaBtcHeader implements BtcHeader {
      */
     getHash(): Buffer;
 }
-export {};

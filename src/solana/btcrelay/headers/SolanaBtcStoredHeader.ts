@@ -1,10 +1,10 @@
 import {BtcStoredHeader, StatePredictorUtils} from "@atomiqlabs/base";
-import {SolanaBtcHeader} from "./SolanaBtcHeader";
+import {SolanaBtcHeader, SolanaBtcHeaderType} from "./SolanaBtcHeader";
 import {Buffer} from "buffer";
 
 export type SolanaBtcStoredHeaderType = {
     chainWork: number[],
-    header: SolanaBtcHeader,
+    header: SolanaBtcHeaderType | SolanaBtcHeader,
     lastDiffAdjustment: number,
     blockheight: number,
     prevBlockTimestamps: number[]
@@ -47,7 +47,7 @@ export class SolanaBtcStoredHeader implements BtcStoredHeader<SolanaBtcHeader> {
      */
     constructor(obj: SolanaBtcStoredHeaderType) {
         this.chainWork = obj.chainWork;
-        this.header = obj.header;
+        this.header = obj.header instanceof SolanaBtcHeader ? obj.header : new SolanaBtcHeader(obj.header);
         this.lastDiffAdjustment = obj.lastDiffAdjustment;
         this.blockheight = obj.blockheight;
         this.prevBlockTimestamps = obj.prevBlockTimestamps;

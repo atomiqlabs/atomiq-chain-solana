@@ -1,11 +1,11 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import { BtcStoredHeader } from "@atomiqlabs/base";
-import { SolanaBtcHeader } from "./SolanaBtcHeader";
+import { SolanaBtcHeader, SolanaBtcHeaderType } from "./SolanaBtcHeader";
 import { Buffer } from "buffer";
 export type SolanaBtcStoredHeaderType = {
     chainWork: number[];
-    header: SolanaBtcHeader;
+    header: SolanaBtcHeaderType | SolanaBtcHeader;
     lastDiffAdjustment: number;
     blockheight: number;
     prevBlockTimestamps: number[];

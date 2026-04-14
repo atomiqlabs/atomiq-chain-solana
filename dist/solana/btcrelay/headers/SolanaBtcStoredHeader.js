@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaBtcStoredHeader = void 0;
 const base_1 = require("@atomiqlabs/base");
+const SolanaBtcHeader_1 = require("./SolanaBtcHeader");
 const buffer_1 = require("buffer");
 /**
  * Represents a bitcoin blockheader that has already been stored and committed in the Solana BTC relay program.
@@ -18,7 +19,7 @@ class SolanaBtcStoredHeader {
      */
     constructor(obj) {
         this.chainWork = obj.chainWork;
-        this.header = obj.header;
+        this.header = obj.header instanceof SolanaBtcHeader_1.SolanaBtcHeader ? obj.header : new SolanaBtcHeader_1.SolanaBtcHeader(obj.header);
         this.lastDiffAdjustment = obj.lastDiffAdjustment;
         this.blockheight = obj.blockheight;
         this.prevBlockTimestamps = obj.prevBlockTimestamps;
