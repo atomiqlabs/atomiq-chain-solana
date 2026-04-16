@@ -65,12 +65,15 @@ export class SolanaSlots extends SolanaModule {
      * Gets the slot for a given commitment, uses slot cache & tries to estimate current slot based on the cached
      *  value, cache has relatively short expiry of just 12 slots (4.8 seconds)
      *
+     * @remarks Doesn't try to extrapolate the slot number for `finalized` commitment level
+     *
      * @param commitment
      */
     public async getSlot(commitment: Commitment): Promise<number> {
         let cachedSlotData = this.slotCache[commitment];
 
         if(cachedSlotData!=null && Date.now()-cachedSlotData.timestamp<this.SLOT_CACHE_TIME) {
+            if(commitment==="finalized") return await cachedSlotData.slot;
             return (await cachedSlotData.slot) + Math.floor((Date.now()-cachedSlotData.timestamp)/this.root._SLOT_TIME);
         }
 

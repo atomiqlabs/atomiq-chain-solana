@@ -40,7 +40,7 @@ class SolanaBlocks extends SolanaModule_1.SolanaModule {
      */
     async findLatestParsedBlock(commitment) {
         let slot = await this.root.Slots.getSlot(commitment);
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 16; i++) {
             const block = await this.getParsedBlock(slot).catch(e => {
                 const errorStr = e.toString();
                 if (errorStr.startsWith("SolanaJSONRPCError: failed to get block:") && (errorStr.includes("Block not available for slot") ||
@@ -60,7 +60,7 @@ class SolanaBlocks extends SolanaModule_1.SolanaModule {
             }
             slot--;
         }
-        throw new Error("Ran out of tries trying to find a parsedBlock");
+        throw new Error(`Ran out of tries trying to find a parsedBlock, last attempted slot: ${slot + 1}`);
     }
     /**
      * Gets parsed block for a given slot, uses block cache if the block was already fetched before

@@ -1,5 +1,5 @@
 import {SolanaModule} from "../SolanaModule";
-import {Commitment, ParsedAccountsModeBlockResponse} from "@solana/web3.js";
+import {Commitment, Finality, ParsedAccountsModeBlockResponse} from "@solana/web3.js";
 
 
 export type BlockChecked = ParsedAccountsModeBlockResponse & {blockTime: number, blockHeight: number};
@@ -38,13 +38,13 @@ export class SolanaBlocks extends SolanaModule {
      *
      * @param commitment
      */
-    public async findLatestParsedBlock(commitment: Commitment): Promise<{
+    public async findLatestParsedBlock(commitment: Finality): Promise<{
         block: BlockChecked,
         slot: number
     }> {
         let slot = await this.root.Slots.getSlot(commitment);
 
-        for(let i=0;i<10;i++) {
+        for(let i=0;i<16;i++) {
             const block = await this.getParsedBlock(slot).catch(e => {
                 const errorStr = e.toString();
                 if(
@@ -71,7 +71,7 @@ export class SolanaBlocks extends SolanaModule {
             slot--;
         }
 
-        throw new Error("Ran out of tries trying to find a parsedBlock");
+        throw new Error(`Ran out of tries trying to find a parsedBlock, last attempted slot: ${slot + 1}`);
     }
 
     /**

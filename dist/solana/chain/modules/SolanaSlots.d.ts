@@ -25,6 +25,8 @@ export declare class SolanaSlots extends SolanaModule {
      * Gets the slot for a given commitment, uses slot cache & tries to estimate current slot based on the cached
      *  value, cache has relatively short expiry of just 12 slots (4.8 seconds)
      *
+     * @remarks Doesn't try to extrapolate the slot number for `finalized` commitment level
+     *
      * @param commitment
      */
     getSlot(commitment: Commitment): Promise<number>;

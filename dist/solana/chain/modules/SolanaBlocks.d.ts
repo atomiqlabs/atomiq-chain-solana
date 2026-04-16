@@ -1,5 +1,5 @@
 import { SolanaModule } from "../SolanaModule";
-import { Commitment, ParsedAccountsModeBlockResponse } from "@solana/web3.js";
+import { Finality, ParsedAccountsModeBlockResponse } from "@solana/web3.js";
 export type BlockChecked = ParsedAccountsModeBlockResponse & {
     blockTime: number;
     blockHeight: number;
@@ -19,7 +19,7 @@ export declare class SolanaBlocks extends SolanaModule {
      *
      * @param commitment
      */
-    findLatestParsedBlock(commitment: Commitment): Promise<{
+    findLatestParsedBlock(commitment: Finality): Promise<{
         block: BlockChecked;
         slot: number;
     }>;
