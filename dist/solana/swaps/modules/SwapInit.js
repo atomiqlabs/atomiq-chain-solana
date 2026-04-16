@@ -244,7 +244,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         txToSign.feePayer = swapData.isPayIn() ? swapData.offerer : swapData.claimer;
         txToSign.recentBlockhash = latestBlock.blockhash;
         txToSign.sign(signer.keypair);
-        this.logger.debug("signSwapInitialization(): Signed tx: ", txToSign);
+        // this.logger.debug("signSwapInitialization(): Signed tx: ",txToSign);
         const sig = txToSign.signatures.find(e => e.publicKey.equals(signer.getPublicKey()));
         if (sig == null || sig.signature == null)
             throw new Error(`Unable to extract transaction signature! Signer: ${signer.getAddress()}`);
@@ -299,7 +299,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         txToSign.feePayer = new web3_js_1.PublicKey(sender);
         txToSign.recentBlockhash = blockhash;
         txToSign.addSignature(signer, buffer_1.Buffer.from(signatureString, "hex"));
-        this.logger.debug("isSignatureValid(): Signed tx: ", txToSign);
+        // this.logger.debug("isSignatureValid(): Signed tx: ",txToSign);
         const valid = txToSign.verifySignatures(false);
         if (!valid)
             throw new base_1.SignatureVerificationError("Invalid signature!");
