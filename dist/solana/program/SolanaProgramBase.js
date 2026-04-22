@@ -23,11 +23,17 @@ class SolanaProgramBase {
     }
     pda(seed, func) {
         if (func == null) {
-            return web3_js_1.PublicKey.findProgramAddressSync([buffer_1.Buffer.from(seed)], this.program.programId)[0];
+            return SolanaProgramBase._pda(seed)(this.program.programId);
         }
-        return (...args) => {
+        return SolanaProgramBase._pda(seed, func).bind(this, this.program.programId);
+    }
+    static _pda(seed, func) {
+        if (func == null) {
+            return (programId) => web3_js_1.PublicKey.findProgramAddressSync([buffer_1.Buffer.from(seed)], programId)[0];
+        }
+        return (programId, ...args) => {
             const res = func(...args);
-            return web3_js_1.PublicKey.findProgramAddressSync([buffer_1.Buffer.from(seed)].concat(res), this.program.programId)[0];
+            return web3_js_1.PublicKey.findProgramAddressSync([buffer_1.Buffer.from(seed)].concat(res), programId)[0];
         };
     }
     /**

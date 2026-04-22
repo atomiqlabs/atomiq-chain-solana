@@ -46,6 +46,23 @@ export declare class SolanaProgramBase<T extends Idl> {
      */
     protected pda<T extends Array<any>>(seed: string, func: (...args: T) => Buffer[]): (...args: T) => PublicKey;
     /**
+     * Derives static PDA address from the seed
+     *
+     * @param seed
+     *
+     * @internal
+     */
+    static _pda(seed: string): (programId: PublicKey) => PublicKey;
+    /**
+     * Returns a function for deriving a dynamic PDA address from seed + dynamic arguments
+     *
+     * @param seed
+     * @param func function translating the function argument to Buffer[]
+     *
+     * @internal
+     */
+    static _pda<T extends Array<any>>(seed: string, func: (...args: T) => Buffer[]): (programId: PublicKey, ...args: T) => PublicKey;
+    /**
      * Returns a function for deriving a dynamic deterministic keypair from dynamic arguments
      *
      * @param func function translating the function argument to Buffer[] to be used for deriving the keypair

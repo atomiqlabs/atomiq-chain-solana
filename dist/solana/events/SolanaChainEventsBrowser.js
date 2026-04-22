@@ -134,7 +134,7 @@ class SolanaChainEventsBrowser {
             const initIx = eventObject.instructions.find(ix => ix != null && (ix.name === "offererInitializePayIn" || ix.name === "offererInitialize"));
             if (initIx == null)
                 return null;
-            return SolanaSwapData_1.SolanaSwapData.fromInstruction(initIx, txoHash);
+            return SolanaSwapData_1.SolanaSwapData.fromInstruction(this.solanaSwapProgram.program.programId, initIx, txoHash);
         };
     }
     /**

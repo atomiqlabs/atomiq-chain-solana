@@ -64,19 +64,44 @@ export class SolanaProgramBase<T extends Idl> {
     protected pda<T extends Array<any>>(seed: string, func: (...args: T) => Buffer[]): (...args: T) => PublicKey;
     protected pda<T extends Array<any>>(seed: string, func?: (...args: T) => Buffer[]): PublicKey | ((...args: T) => PublicKey) {
         if(func==null) {
-            return PublicKey.findProgramAddressSync(
+            return SolanaProgramBase._pda(seed)(this.program.programId);
+        }
+        return SolanaProgramBase._pda(seed, func).bind(this, this.program.programId);
+    }
+
+    /**
+     * Derives static PDA address from the seed
+     *
+     * @param seed
+     *
+     * @internal
+     */
+    static _pda(seed: string): (programId: PublicKey) => PublicKey;
+    /**
+     * Returns a function for deriving a dynamic PDA address from seed + dynamic arguments
+     *
+     * @param seed
+     * @param func function translating the function argument to Buffer[]
+     *
+     * @internal
+     */
+    static _pda<T extends Array<any>>(seed: string, func: (...args: T) => Buffer[]): (programId: PublicKey, ...args: T) => PublicKey;
+    static _pda<T extends Array<any>>(seed: string, func?: (...args: T) => Buffer[]): ((programId: PublicKey) => PublicKey) | ((programId: PublicKey, ...args: T) => PublicKey) {
+        if(func==null) {
+            return (programId: PublicKey) => PublicKey.findProgramAddressSync(
                 [Buffer.from(seed)],
-                this.program.programId
+                programId
             )[0];
         }
-        return (...args: T) => {
+        return (programId: PublicKey, ...args: T) => {
             const res = func(...args);
             return PublicKey.findProgramAddressSync(
                 [Buffer.from(seed)].concat(res as Buffer<ArrayBuffer>[]),
-                this.program.programId
+                programId
             )[0]
         }
     }
+
     /**
      * Returns a function for deriving a dynamic deterministic keypair from dynamic arguments
      *

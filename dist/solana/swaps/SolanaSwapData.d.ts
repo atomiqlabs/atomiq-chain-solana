@@ -7,6 +7,7 @@ import { Serialized } from "../../utils/Utils";
 import { SingleInstructionWithAccounts } from "../program/modules/SolanaProgramEvents";
 export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
 export type SolanaSwapDataCtorArgs = {
+    programId: PublicKey;
     offerer: PublicKey;
     claimer: PublicKey;
     token: PublicKey;
@@ -34,6 +35,10 @@ export declare function isSerializedData(obj: any): obj is ({
  * @category Swaps
  */
 export declare class SolanaSwapData extends SwapData {
+    /**
+     * Program ID for which this swap data was created
+     */
+    programId: PublicKey;
     /**
      * Offerer address funding the swap.
      */
@@ -235,17 +240,19 @@ export declare class SolanaSwapData extends SwapData {
     /**
      * Converts initialize instruction data into {@link SolanaSwapData}.
      *
+     * @param programId
      * @param initIx Decoded initialize instruction
      * @param txoHash Parsed txo hash hint from initialize event
      * @returns Converted and parsed swap data
      */
-    static fromInstruction(initIx: InitInstruction, txoHash: string): SolanaSwapData;
+    static fromInstruction(programId: PublicKey, initIx: InitInstruction, txoHash: string): SolanaSwapData;
     /**
      * Deserializes swap data from an on-chain escrow account state.
      *
+     * @param programId
      * @param account Escrow account state as returned by Anchor
      */
-    static fromEscrowState(account: IdlAccounts<SwapProgram>["escrowState"]): SolanaSwapData;
+    static fromEscrowState(programId: PublicKey, account: IdlAccounts<SwapProgram>["escrowState"]): SolanaSwapData;
     /**
      * Converts abstract swap type to Solana program kind discriminator.
      *
@@ -274,4 +281,8 @@ export declare class SolanaSwapData extends SwapData {
      * @inheritDoc
      */
     isDepositToken(token: string): boolean;
+    /**
+     * @inheritDoc
+     */
+    getEscrowStruct(): any;
 }

@@ -9,6 +9,7 @@ const buffer_1 = require("buffer");
 const spl_token_1 = require("@solana/spl-token");
 const Utils_1 = require("../../utils/Utils");
 const SolanaTokens_1 = require("../chain/modules/SolanaTokens");
+const SolanaSwapProgram_1 = require("./SolanaSwapProgram");
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 function isSerializedData(obj) {
     return obj.type === "sol";
@@ -23,6 +24,7 @@ class SolanaSwapData extends base_1.SwapData {
     constructor(data) {
         super();
         if (!isSerializedData(data)) {
+            this.programId = data.programId;
             this.offerer = data.offerer;
             this.claimer = data.claimer;
             this.token = data.token;
@@ -42,6 +44,7 @@ class SolanaSwapData extends base_1.SwapData {
             this.txoHash = data.txoHash;
         }
         else {
+            this.programId = new web3_js_1.PublicKey(data.programId ?? "4hfUykhqmD7ZRvNh1HuzVKEY7ToENixtdUKZspNDCrEM");
             this.offerer = new web3_js_1.PublicKey(data.offerer);
             this.claimer = new web3_js_1.PublicKey(data.claimer);
             this.token = new web3_js_1.PublicKey(data.token);
@@ -96,6 +99,7 @@ class SolanaSwapData extends base_1.SwapData {
     serialize() {
         return {
             type: "sol",
+            programId: this.programId?.toBase58(),
             offerer: this.offerer?.toBase58(),
             claimer: this.claimer?.toBase58(),
             token: this.token?.toBase58(),
@@ -318,11 +322,12 @@ class SolanaSwapData extends base_1.SwapData {
     /**
      * Converts initialize instruction data into {@link SolanaSwapData}.
      *
+     * @param programId
      * @param initIx Decoded initialize instruction
      * @param txoHash Parsed txo hash hint from initialize event
      * @returns Converted and parsed swap data
      */
-    static fromInstruction(initIx, txoHash) {
+    static fromInstruction(programId, initIx, txoHash) {
         const paymentHash = buffer_1.Buffer.from(initIx.data.swapData.hash);
         let securityDeposit = new BN(0);
         let claimerBounty = new BN(0);
@@ -333,6 +338,7 @@ class SolanaSwapData extends base_1.SwapData {
             claimerBounty = initIx.data.claimerBounty;
         }
         return new SolanaSwapData({
+            programId,
             offerer: initIx.accounts.offerer,
             claimer: initIx.accounts.claimer,
             token: initIx.accounts.mint,
@@ -355,11 +361,13 @@ class SolanaSwapData extends base_1.SwapData {
     /**
      * Deserializes swap data from an on-chain escrow account state.
      *
+     * @param programId
      * @param account Escrow account state as returned by Anchor
      */
-    static fromEscrowState(account) {
+    static fromEscrowState(programId, account) {
         const data = account.data;
         return new SolanaSwapData({
+            programId,
             offerer: account.offerer,
             claimer: account.claimer,
             token: account.mint,
@@ -443,6 +451,40 @@ class SolanaSwapData extends base_1.SwapData {
      */
     isDepositToken(token) {
         return SolanaTokens_1.SolanaTokens.WSOL_ADDRESS.equals(new web3_js_1.PublicKey(token));
+    }
+    /**
+     * @inheritDoc
+     */
+    getEscrowStruct() {
+        return {
+            accounts: {
+                offerer: this.offerer.toString(),
+                claimer: this.claimer.toString(),
+                claimerAta: this.claimerAta == null || this.claimerAta.equals(web3_js_1.PublicKey.default) ? null : this.claimerAta.toString(),
+                offererAta: this.offererAta == null || this.offererAta.equals(web3_js_1.PublicKey.default) ? null : this.offererAta.toString(),
+                claimerUserData: SolanaSwapProgram_1.SolanaSwapProgram._SwapUserVault(this.programId, this.claimer, this.token).toString(),
+                offererUserData: SolanaSwapProgram_1.SolanaSwapProgram._SwapUserVault(this.programId, this.offerer, this.token).toString(),
+                initializer: this.isPayIn() ? this.offerer.toString() : this.claimer.toString(),
+                escrowState: SolanaSwapProgram_1.SolanaSwapProgram._SwapEscrowState(this.programId, buffer_1.Buffer.from(this.paymentHash, "hex")).toString(),
+                mint: this.token.toString(),
+                vault: SolanaSwapProgram_1.SolanaSwapProgram._SwapVault(this.programId, this.token).toString(),
+                vaultAuthority: SolanaSwapProgram_1.SolanaSwapProgram._SwapVaultAuthority(this.programId).toString(),
+                systemProgram: web3_js_1.SystemProgram.programId.toString(),
+                tokenProgram: spl_token_1.TOKEN_PROGRAM_ID.toString(),
+                ixSysvar: web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY.toString(),
+            },
+            data: {
+                kind: SwapTypeEnum_1.SwapTypeEnum.fromNumber(this.kind),
+                confirmations: this.confirmations,
+                nonce: this.nonce.toString(10),
+                hash: [...buffer_1.Buffer.from(this.paymentHash, "hex")],
+                payIn: this.payIn,
+                payOut: this.payOut,
+                amount: this.amount.toString(10),
+                expiry: this.expiry.toString(10),
+                sequence: this.sequence.toString(10)
+            }
+        };
     }
 }
 exports.SolanaSwapData = SolanaSwapData;

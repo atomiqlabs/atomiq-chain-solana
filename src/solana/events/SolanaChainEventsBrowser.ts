@@ -193,7 +193,7 @@ export class SolanaChainEventsBrowser implements ChainEvents<SolanaSwapData, Sol
             ) as InitInstruction;
             if(initIx == null) return null;
 
-            return SolanaSwapData.fromInstruction(initIx, txoHash);
+            return SolanaSwapData.fromInstruction(this.solanaSwapProgram.program.programId, initIx, txoHash);
         }
     }
 

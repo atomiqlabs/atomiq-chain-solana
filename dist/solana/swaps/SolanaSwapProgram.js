@@ -35,28 +35,10 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
          * Rent-exempt amount (lamports) for escrow state accounts.
          */
         this.ESCROW_STATE_RENT_EXEMPT = 2658720;
-        ////////////////////////
-        //// PDA accessors
-        /**
-         * PDA of the swap vault authority.
-         * @internal
-         */
-        this._SwapVaultAuthority = this.pda("authority");
-        /**
-         * PDA helper for global token vault accounts.
-         * @internal
-         */
-        this._SwapVault = this.pda("vault", (tokenAddress) => [tokenAddress.toBuffer()]);
-        /**
-         * PDA helper for per-user token vault accounts.
-         * @internal
-         */
-        this._SwapUserVault = this.pda("uservault", (publicKey, tokenAddress) => [publicKey.toBuffer(), tokenAddress.toBuffer()]);
-        /**
-         * PDA helper for escrow state accounts.
-         * @internal
-         */
-        this._SwapEscrowState = this.pda("state", (hash) => [hash]);
+        this._SwapVaultAuthority = SolanaSwapProgram._SwapVaultAuthority(this.program.programId);
+        this._SwapVault = SolanaSwapProgram._SwapVault.bind(this, this.program.programId);
+        this._SwapUserVault = SolanaSwapProgram._SwapUserVault.bind(this, this.program.programId);
+        this._SwapEscrowState = SolanaSwapProgram._SwapEscrowState.bind(this, this.program.programId);
         ////////////////////////
         //// Timeouts
         /**
@@ -360,7 +342,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const account = await this.program.account.escrowState.fetchNullable(this._SwapEscrowState(paymentHashBuffer));
         if (account == null)
             return null;
-        return SolanaSwapData_1.SolanaSwapData.fromEscrowState(account);
+        return SolanaSwapData_1.SolanaSwapData.fromEscrowState(this.program.programId, account);
     }
     /**
      * @inheritDoc
@@ -395,7 +377,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     continue;
                 }
                 swapsOpened[escrowHash] = {
-                    data: SolanaSwapData_1.SolanaSwapData.fromInstruction(initIx, txoHash),
+                    data: SolanaSwapData_1.SolanaSwapData.fromInstruction(this.program.programId, initIx, txoHash),
                     getInitTxId: () => Promise.resolve(txSignature),
                     getTxBlock: () => Promise.resolve({
                         blockHeight: tx.slot,
@@ -468,6 +450,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const claimerKey = new web3_js_1.PublicKey(claimer);
         const { paymentHash, nonce, confirmations } = (0, Utils_1.fromClaimHash)(claimHash);
         const swapData = new SolanaSwapData_1.SolanaSwapData({
+            programId: this.program.programId,
             offerer: offererKey,
             claimer: claimerKey,
             token: tokenAddr,
@@ -736,3 +719,25 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     }
 }
 exports.SolanaSwapProgram = SolanaSwapProgram;
+////////////////////////
+//// PDA accessors
+/**
+ * PDA of the swap vault authority.
+ * @internal
+ */
+SolanaSwapProgram._SwapVaultAuthority = SolanaProgramBase_1.SolanaProgramBase._pda("authority");
+/**
+ * PDA helper for global token vault accounts.
+ * @internal
+ */
+SolanaSwapProgram._SwapVault = SolanaProgramBase_1.SolanaProgramBase._pda("vault", (tokenAddress) => [tokenAddress.toBuffer()]);
+/**
+ * PDA helper for per-user token vault accounts.
+ * @internal
+ */
+SolanaSwapProgram._SwapUserVault = SolanaProgramBase_1.SolanaProgramBase._pda("uservault", (publicKey, tokenAddress) => [publicKey.toBuffer(), tokenAddress.toBuffer()]);
+/**
+ * PDA helper for escrow state accounts.
+ * @internal
+ */
+SolanaSwapProgram._SwapEscrowState = SolanaProgramBase_1.SolanaProgramBase._pda("state", (hash) => [hash]);

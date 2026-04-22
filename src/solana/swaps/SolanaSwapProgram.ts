@@ -74,24 +74,28 @@ export class SolanaSwapProgram
      * PDA of the swap vault authority.
      * @internal
      */
-    readonly _SwapVaultAuthority = this.pda("authority");
+    static readonly _SwapVaultAuthority = SolanaProgramBase._pda("authority");
+    readonly _SwapVaultAuthority = SolanaSwapProgram._SwapVaultAuthority(this.program.programId);
     /**
      * PDA helper for global token vault accounts.
      * @internal
      */
-    readonly _SwapVault = this.pda("vault", (tokenAddress: PublicKey) => [tokenAddress.toBuffer()]);
+    static readonly _SwapVault = SolanaProgramBase._pda("vault", (tokenAddress: PublicKey) => [tokenAddress.toBuffer()]);
+    readonly _SwapVault = SolanaSwapProgram._SwapVault.bind(this, this.program.programId);
     /**
      * PDA helper for per-user token vault accounts.
      * @internal
      */
-    readonly _SwapUserVault = this.pda("uservault",
+    static readonly _SwapUserVault = SolanaProgramBase._pda("uservault",
         (publicKey: PublicKey, tokenAddress: PublicKey) => [publicKey.toBuffer(), tokenAddress.toBuffer()]
     );
+    readonly _SwapUserVault = SolanaSwapProgram._SwapUserVault.bind(this, this.program.programId);
     /**
      * PDA helper for escrow state accounts.
      * @internal
      */
-    readonly _SwapEscrowState = this.pda("state", (hash: Buffer) => [hash]);
+    static readonly _SwapEscrowState = SolanaProgramBase._pda("state", (hash: Buffer) => [hash]);
+    readonly _SwapEscrowState = SolanaSwapProgram._SwapEscrowState.bind(this, this.program.programId);
 
     ////////////////////////
     //// Timeouts
@@ -461,7 +465,7 @@ export class SolanaSwapProgram
             );
         if(account==null) return null;
 
-        return SolanaSwapData.fromEscrowState(account);
+        return SolanaSwapData.fromEscrowState(this.program.programId, account);
     }
 
     /**
@@ -540,7 +544,7 @@ export class SolanaSwapProgram
                 }
 
                 swapsOpened[escrowHash] = {
-                    data: SolanaSwapData.fromInstruction(initIx, txoHash),
+                    data: SolanaSwapData.fromInstruction(this.program.programId, initIx, txoHash),
                     getInitTxId: () => Promise.resolve(txSignature),
                     getTxBlock: () => Promise.resolve({
                         blockHeight: tx.slot,
@@ -632,6 +636,7 @@ export class SolanaSwapProgram
         const claimerKey = new PublicKey(claimer);
         const {paymentHash, nonce, confirmations} = fromClaimHash(claimHash);
         const swapData = new SolanaSwapData({
+            programId: this.program.programId,
             offerer: offererKey,
             claimer: claimerKey,
             token: tokenAddr,

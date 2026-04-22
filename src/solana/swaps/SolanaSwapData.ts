@@ -1,20 +1,23 @@
-import {PublicKey} from "@solana/web3.js";
+import {PublicKey, SystemProgram, SYSVAR_INSTRUCTIONS_PUBKEY} from "@solana/web3.js";
 import * as BN from "bn.js";
 import {ChainSwapType, SwapData} from "@atomiqlabs/base";
 import {SwapProgram} from "./programTypes";
 import {IdlAccounts, IdlTypes} from "@coral-xyz/anchor";
 import {SwapTypeEnum} from "./SwapTypeEnum";
 import {Buffer} from "buffer";
-import {getAssociatedTokenAddressSync} from "@solana/spl-token";
+import {getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID} from "@solana/spl-token";
 import {Serialized, toBigInt, toClaimHash, toEscrowHash} from "../../utils/Utils";
 import {SolanaTokens} from "../chain/modules/SolanaTokens";
 import {SingleInstructionWithAccounts} from "../program/modules/SolanaProgramEvents";
+import {SolanaSwapProgram} from "./SolanaSwapProgram";
 
 export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
 
 const EXPIRY_BLOCKHEIGHT_THRESHOLD = new BN("1000000000");
 
 export type SolanaSwapDataCtorArgs = {
+    programId: PublicKey,
+
     offerer: PublicKey,
     claimer: PublicKey,
     token: PublicKey,
@@ -48,6 +51,10 @@ export function isSerializedData(obj: any): obj is ({type: "sol"} & Serialized<S
  */
 export class SolanaSwapData extends SwapData {
 
+    /**
+     * Program ID for which this swap data was created
+     */
+    programId: PublicKey;
     /**
      * Offerer address funding the swap.
      */
@@ -135,6 +142,7 @@ export class SolanaSwapData extends SwapData {
     constructor(data: ({type: "sol"} & Serialized<SolanaSwapData>) | SolanaSwapDataCtorArgs) {
         super();
         if(!isSerializedData(data)) {
+            this.programId = data.programId;
             this.offerer = data.offerer;
             this.claimer = data.claimer;
             this.token = data.token;
@@ -153,6 +161,7 @@ export class SolanaSwapData extends SwapData {
             this.claimerBounty = data.claimerBounty;
             this.txoHash = data.txoHash;
         } else {
+            this.programId = new PublicKey(data.programId ?? "4hfUykhqmD7ZRvNh1HuzVKEY7ToENixtdUKZspNDCrEM");
             this.offerer = new PublicKey(data.offerer);
             this.claimer = new PublicKey(data.claimer);
             this.token = new PublicKey(data.token);
@@ -212,6 +221,7 @@ export class SolanaSwapData extends SwapData {
     serialize(): {type: "sol"} & Serialized<SolanaSwapData> {
         return {
             type: "sol",
+            programId: this.programId?.toBase58(),
             offerer: this.offerer?.toBase58(),
             claimer: this.claimer?.toBase58(),
             token: this.token?.toBase58(),
@@ -452,11 +462,13 @@ export class SolanaSwapData extends SwapData {
     /**
      * Converts initialize instruction data into {@link SolanaSwapData}.
      *
+     * @param programId
      * @param initIx Decoded initialize instruction
      * @param txoHash Parsed txo hash hint from initialize event
      * @returns Converted and parsed swap data
      */
     static fromInstruction(
+        programId: PublicKey,
         initIx: InitInstruction,
         txoHash: string
     ): SolanaSwapData {
@@ -471,6 +483,7 @@ export class SolanaSwapData extends SwapData {
         }
 
         return new SolanaSwapData({
+            programId,
             offerer: initIx.accounts.offerer,
             claimer: initIx.accounts.claimer,
             token: initIx.accounts.mint,
@@ -494,12 +507,17 @@ export class SolanaSwapData extends SwapData {
     /**
      * Deserializes swap data from an on-chain escrow account state.
      *
+     * @param programId
      * @param account Escrow account state as returned by Anchor
      */
-    static fromEscrowState(account: IdlAccounts<SwapProgram>["escrowState"]) {
+    static fromEscrowState(
+        programId: PublicKey,
+        account: IdlAccounts<SwapProgram>["escrowState"]
+    ) {
         const data: IdlTypes<SwapProgram>["SwapData"] = account.data;
 
         return new SolanaSwapData({
+            programId,
             offerer: account.offerer,
             claimer: account.claimer,
             token: account.mint,
@@ -588,6 +606,44 @@ export class SolanaSwapData extends SwapData {
      */
     isDepositToken(token: string): boolean {
         return SolanaTokens.WSOL_ADDRESS.equals(new PublicKey(token));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    getEscrowStruct(): any {
+        return {
+            accounts: {
+                offerer: this.offerer.toString(),
+                claimer: this.claimer.toString(),
+                claimerAta: this.claimerAta==null || this.claimerAta.equals(PublicKey.default) ? null : this.claimerAta.toString(),
+                offererAta: this.offererAta==null || this.offererAta.equals(PublicKey.default) ? null : this.offererAta.toString(),
+                claimerUserData: SolanaSwapProgram._SwapUserVault(this.programId, this.claimer, this.token).toString(),
+                offererUserData: SolanaSwapProgram._SwapUserVault(this.programId, this.offerer, this.token).toString(),
+
+                initializer: this.isPayIn() ? this.offerer.toString() : this.claimer.toString(),
+
+                escrowState: SolanaSwapProgram._SwapEscrowState(this.programId, Buffer.from(this.paymentHash, "hex")).toString(),
+                mint: this.token.toString(),
+                vault: SolanaSwapProgram._SwapVault(this.programId, this.token).toString(),
+                vaultAuthority: SolanaSwapProgram._SwapVaultAuthority(this.programId).toString(),
+
+                systemProgram: SystemProgram.programId.toString(),
+                tokenProgram: TOKEN_PROGRAM_ID.toString(),
+                ixSysvar: SYSVAR_INSTRUCTIONS_PUBKEY.toString(),
+            },
+            data: {
+                kind: SwapTypeEnum.fromNumber(this.kind as 0 | 1 | 2 | 3),
+                confirmations: this.confirmations,
+                nonce: this.nonce.toString(10),
+                hash: [...Buffer.from(this.paymentHash, "hex")],
+                payIn: this.payIn,
+                payOut: this.payOut,
+                amount: this.amount.toString(10),
+                expiry: this.expiry.toString(10),
+                sequence: this.sequence.toString(10)
+            }
+        }
     }
 
 }

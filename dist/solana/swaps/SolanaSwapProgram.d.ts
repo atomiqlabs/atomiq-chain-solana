@@ -27,21 +27,25 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * PDA of the swap vault authority.
      * @internal
      */
+    static readonly _SwapVaultAuthority: (programId: PublicKey) => PublicKey;
     readonly _SwapVaultAuthority: PublicKey;
     /**
      * PDA helper for global token vault accounts.
      * @internal
      */
+    static readonly _SwapVault: (programId: PublicKey, tokenAddress: PublicKey) => PublicKey;
     readonly _SwapVault: (tokenAddress: PublicKey) => PublicKey;
     /**
      * PDA helper for per-user token vault accounts.
      * @internal
      */
+    static readonly _SwapUserVault: (programId: PublicKey, publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
     readonly _SwapUserVault: (publicKey: PublicKey, tokenAddress: PublicKey) => PublicKey;
     /**
      * PDA helper for escrow state accounts.
      * @internal
      */
+    static readonly _SwapEscrowState: (programId: PublicKey, hash: Buffer) => PublicKey;
     readonly _SwapEscrowState: (hash: Buffer) => PublicKey;
     /**
      * @inheritDoc
