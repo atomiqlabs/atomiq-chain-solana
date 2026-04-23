@@ -8,7 +8,7 @@ import { SolanaTokens } from "./modules/SolanaTokens";
 import { SignedSolanaTx, SolanaTransactions, SolanaTx } from "./modules/SolanaTransactions";
 import { SolanaSignatures } from "./modules/SolanaSignatures";
 import { SolanaEvents } from "./modules/SolanaEvents";
-import { ChainInterface, TransactionConfirmationOptions } from "@atomiqlabs/base";
+import { BitcoinNetwork, ChainInterface, TransactionConfirmationOptions } from "@atomiqlabs/base";
 import { SolanaSigner } from "../wallet/SolanaSigner";
 import { Buffer } from "buffer";
 import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
@@ -212,4 +212,5 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
      * @inheritDoc
      */
     wrapSigner(signer: Wallet): Promise<SolanaSigner>;
+    verifyNetwork(bitcoinNetwork: BitcoinNetwork): Promise<void>;
 }

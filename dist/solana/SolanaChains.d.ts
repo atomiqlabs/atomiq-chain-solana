@@ -5,5 +5,6 @@ export declare const SolanaChains: {
             swapContract: string;
             btcRelayContract: string;
         };
+        clusterName: "mainnet-beta" | "devnet" | "testnet";
     };
 };

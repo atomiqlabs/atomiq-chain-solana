@@ -7,12 +7,19 @@ import {SignedSolanaTx, SolanaTransactions, SolanaTx} from "./modules/SolanaTran
 import {SolanaSignatures} from "./modules/SolanaSignatures";
 import {SolanaEvents} from "./modules/SolanaEvents";
 import {getLogger} from "../../utils/Utils";
-import {ChainInterface, TransactionConfirmationOptions} from "@atomiqlabs/base";
+import {BitcoinNetwork, ChainInterface, TransactionConfirmationOptions} from "@atomiqlabs/base";
 import {SolanaAddresses} from "./modules/SolanaAddresses";
 import {SolanaSigner} from "../wallet/SolanaSigner";
 import {Buffer} from "buffer";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
 import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
+import {SolanaChains} from "../SolanaChains";
+
+const CLUSTER_BY_GENESIS_HASH: Record<string, "mainnet-beta" | "devnet" | "testnet"> = {
+    "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d": "mainnet-beta",
+    "GH7ome3EiwEr7tu9JuTh2dpYWBJK3z69Xm1ZE3MEE6JC": "devnet",
+    "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY": "testnet",
+};
 
 /**
  * Retry policy configuration for Solana RPC calls
@@ -357,6 +364,24 @@ export class SolanaChainInterface implements ChainInterface<
      */
     wrapSigner(signer: Wallet): Promise<SolanaSigner> {
         return Promise.resolve(new SolanaSigner(signer));
+    }
+
+    async verifyNetwork(bitcoinNetwork: BitcoinNetwork): Promise<void> {
+        const genesisHash = await this._connection.getGenesisHash();
+        const result = CLUSTER_BY_GENESIS_HASH[genesisHash];
+        if(result==null) {
+            this.logger.warn(`verifyNetwork(): Unknown cluster detected, genesis hash: ${genesisHash}`);
+            return;
+        }
+
+        const deployment = SolanaChains[bitcoinNetwork];
+        if(deployment==null) {
+            this.logger.warn(`verifyNetwork(): No Solana deployment is defined for ${BitcoinNetwork[bitcoinNetwork]}, the RPC check is skipped.`);
+            return;
+        }
+
+        if(deployment.clusterName!==result)
+            throw new Error(`Expected ${deployment.clusterName} Solana cluster for ${BitcoinNetwork[bitcoinNetwork]}, but got ${result}!`);
     }
 
 }

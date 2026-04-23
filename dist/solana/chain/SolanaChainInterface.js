@@ -10,9 +10,16 @@ const SolanaTransactions_1 = require("./modules/SolanaTransactions");
 const SolanaSignatures_1 = require("./modules/SolanaSignatures");
 const SolanaEvents_1 = require("./modules/SolanaEvents");
 const Utils_1 = require("../../utils/Utils");
+const base_1 = require("@atomiqlabs/base");
 const SolanaAddresses_1 = require("./modules/SolanaAddresses");
 const SolanaSigner_1 = require("../wallet/SolanaSigner");
 const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
+const SolanaChains_1 = require("../SolanaChains");
+const CLUSTER_BY_GENESIS_HASH = {
+    "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d": "mainnet-beta",
+    "GH7ome3EiwEr7tu9JuTh2dpYWBJK3z69Xm1ZE3MEE6JC": "devnet",
+    "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY": "testnet",
+};
 /**
  * Main chain interface for interacting with Solana blockchain
  * @category Chain Interface
@@ -233,6 +240,21 @@ class SolanaChainInterface {
      */
     wrapSigner(signer) {
         return Promise.resolve(new SolanaSigner_1.SolanaSigner(signer));
+    }
+    async verifyNetwork(bitcoinNetwork) {
+        const genesisHash = await this._connection.getGenesisHash();
+        const result = CLUSTER_BY_GENESIS_HASH[genesisHash];
+        if (result == null) {
+            this.logger.warn(`verifyNetwork(): Unknown cluster detected, genesis hash: ${genesisHash}`);
+            return;
+        }
+        const deployment = SolanaChains_1.SolanaChains[bitcoinNetwork];
+        if (deployment == null) {
+            this.logger.warn(`verifyNetwork(): No Solana deployment is defined for ${base_1.BitcoinNetwork[bitcoinNetwork]}, the RPC check is skipped.`);
+            return;
+        }
+        if (deployment.clusterName !== result)
+            throw new Error(`Expected ${deployment.clusterName} Solana cluster for ${base_1.BitcoinNetwork[bitcoinNetwork]}, but got ${result}!`);
     }
 }
 exports.SolanaChainInterface = SolanaChainInterface;
