@@ -17,7 +17,7 @@ import {SolanaChains} from "../SolanaChains";
 
 const CLUSTER_BY_GENESIS_HASH: Record<string, "mainnet-beta" | "devnet" | "testnet"> = {
     "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d": "mainnet-beta",
-    "GH7ome3EiwEr7tu9JuTh2dpYWBJK3z69Xm1ZE3MEE6JC": "devnet",
+    "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG": "devnet",
     "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY": "testnet",
 };
 
