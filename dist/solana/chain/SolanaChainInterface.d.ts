@@ -156,6 +156,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
     /**
      * @inheritDoc
      */
+    getTxId(signedTX: SignedSolanaTx): Promise<string>;
+    /**
+     * @inheritDoc
+     */
     getTxIdStatus(txId: string): Promise<"not_found" | "pending" | "success" | "reverted">;
     /**
      * @inheritDoc

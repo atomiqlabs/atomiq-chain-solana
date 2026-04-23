@@ -34,7 +34,7 @@ import {SwapClaim} from "./modules/SwapClaim";
 import {SolanaLpVault} from "./modules/SolanaLpVault";
 import {Buffer} from "buffer";
 import {SolanaSigner} from "../wallet/SolanaSigner";
-import {fromClaimHash, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
+import {fromClaimHash, onceAsync, toBN, toClaimHash, toEscrowHash} from "../../utils/Utils";
 import {SolanaTokens} from "../chain/modules/SolanaTokens";
 import * as BN from "bn.js";
 import {ProgramEvent} from "../program/modules/SolanaProgramEvents";
@@ -351,10 +351,23 @@ export class SolanaSwapProgram
             this.isExpired(signer,data)
         ]);
 
+        const getInitTxId = onceAsync(async () => {
+            const txId = await this._Events.findInEvents(escrowStateKey, async (event, tx) => {
+                if (event.name === "InitializeEvent") {
+                    const paymentHash = Buffer.from(event.data.hash).toString("hex");
+                    if(paymentHash!==data.paymentHash) return null;
+                    if(!event.data.sequence.eq(data.sequence)) return null;
+                    return tx.transaction.signatures[0];
+                }
+            });
+            if(txId==null) throw new Error("Initialize event not found!");
+            return txId;
+        });
+
         if(escrowState!=null) {
             if(data.correctPDA(escrowState)) {
-                if(data.isOfferer(signer) && isExpired) return {type: SwapCommitStateType.REFUNDABLE};
-                return {type: SwapCommitStateType.COMMITED};
+                if(data.isOfferer(signer) && isExpired) return {type: SwapCommitStateType.REFUNDABLE, getInitTxId};
+                return {type: SwapCommitStateType.COMMITED, getInitTxId};
             }
 
             if(data.isOfferer(signer) && isExpired) return {type: SwapCommitStateType.EXPIRED};
@@ -369,6 +382,7 @@ export class SolanaSwapProgram
                 if(!event.data.sequence.eq(data.sequence)) return null;
                 return {
                     type: SwapCommitStateType.PAID,
+                    getInitTxId,
                     getClaimTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
                     getTxBlock: () => Promise.resolve({
@@ -383,6 +397,7 @@ export class SolanaSwapProgram
                 if(!event.data.sequence.eq(data.sequence)) return null;
                 return {
                     type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
+                    getInitTxId,
                     getRefundTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getTxBlock: () => Promise.resolve({
                         blockHeight: tx.slot,
@@ -560,6 +575,7 @@ export class SolanaSwapProgram
                     init: foundSwapData,
                     state: {
                         type: SwapCommitStateType.PAID,
+                        getInitTxId: foundSwapData?.getInitTxId,
                         getClaimTxId: () => Promise.resolve(txSignature),
                         getClaimResult: () => Promise.resolve(Buffer.from(event.data.secret).toString("hex")),
                         getTxBlock: () => Promise.resolve({
@@ -578,6 +594,7 @@ export class SolanaSwapProgram
                     init: foundSwapData,
                     state: {
                         type: isExpired ? SwapCommitStateType.EXPIRED : SwapCommitStateType.NOT_COMMITED,
+                        getInitTxId: foundSwapData?.getInitTxId,
                         getRefundTxId: () => Promise.resolve(txSignature),
                         getTxBlock: () => Promise.resolve({
                             blockHeight: tx.slot,
@@ -597,8 +614,8 @@ export class SolanaSwapProgram
             resultingSwaps[escrowHash] = {
                 init: foundSwapData,
                 state: foundSwapData.data.isOfferer(signer) && isExpired
-                  ? {type: SwapCommitStateType.REFUNDABLE}
-                  : {type: SwapCommitStateType.COMMITED}
+                  ? {type: SwapCommitStateType.REFUNDABLE, getInitTxId: foundSwapData.getInitTxId}
+                  : {type: SwapCommitStateType.COMMITED, getInitTxId: foundSwapData.getInitTxId}
             }
         }
 
