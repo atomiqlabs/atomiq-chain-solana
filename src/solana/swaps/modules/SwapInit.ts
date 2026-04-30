@@ -26,7 +26,7 @@ import {SolanaSigner} from "../../wallet/SolanaSigner";
 import {SolanaTokens} from "../../chain/modules/SolanaTokens";
 import {isSwapProgramV1, isSwapProgramV2} from "../SolanaSwapProgram";
 import {BlockChecked} from "../../chain/modules/SolanaBlocks";
-import BN from "bn.js";
+import * as BN from "bn.js";
 
 export type SolanaPreFetchVerification = {
     latestSlot?: {
