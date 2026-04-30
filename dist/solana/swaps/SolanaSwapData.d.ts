@@ -1,13 +1,15 @@
 import { PublicKey } from "@solana/web3.js";
 import * as BN from "bn.js";
 import { ChainSwapType, SwapData } from "@atomiqlabs/base";
-import { SwapProgram } from "./programTypes";
+import { SwapProgram } from "./v1/programTypes";
 import { IdlAccounts, IdlTypes } from "@coral-xyz/anchor";
 import { Serialized } from "../../utils/Utils";
 import { SingleInstructionWithAccounts } from "../program/modules/SolanaProgramEvents";
-export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3], SwapProgram>;
+import { SwapProgramV2 } from "./v2/programTypes";
+export type InitInstruction = SingleInstructionWithAccounts<SwapProgram["instructions"][2 | 3] | SwapProgramV2["instructions"][2 | 3], SwapProgram>;
 export type SolanaSwapDataCtorArgs = {
     programId: PublicKey;
+    version: "v1" | "v2";
     offerer: PublicKey;
     claimer: PublicKey;
     token: PublicKey;
@@ -25,6 +27,7 @@ export type SolanaSwapDataCtorArgs = {
     securityDeposit: BN;
     claimerBounty: BN;
     txoHash?: string;
+    offererInitializer?: boolean;
 };
 export declare function isSerializedData(obj: any): obj is ({
     type: "sol";
@@ -39,6 +42,10 @@ export declare class SolanaSwapData extends SwapData {
      * Program ID for which this swap data was created
      */
     programId: PublicKey;
+    /**
+     * Program version for which this swap was created
+     */
+    version: "v1" | "v2";
     /**
      * Offerer address funding the swap.
      */
@@ -107,6 +114,10 @@ export declare class SolanaSwapData extends SwapData {
      * Optional txo hash hint.
      */
     txoHash?: string;
+    /**
+     * Optional flag whether the offerer is the initializer for V2 swap data
+     */
+    offererInitializer?: boolean;
     /**
      * Creates swap data from structured constructor arguments.
      *
@@ -232,7 +243,7 @@ export declare class SolanaSwapData extends SwapData {
      *
      * @param account Escrow account data fetched from chain
      */
-    correctPDA(account: IdlAccounts<SwapProgram>["escrowState"]): boolean;
+    correctPDA(account: IdlAccounts<SwapProgram | SwapProgramV2>["escrowState"]): boolean;
     /**
      * @inheritDoc
      */
@@ -241,18 +252,20 @@ export declare class SolanaSwapData extends SwapData {
      * Converts initialize instruction data into {@link SolanaSwapData}.
      *
      * @param programId
+     * @param version
      * @param initIx Decoded initialize instruction
      * @param txoHash Parsed txo hash hint from initialize event
      * @returns Converted and parsed swap data
      */
-    static fromInstruction(programId: PublicKey, initIx: InitInstruction, txoHash: string): SolanaSwapData;
+    static fromInstruction(programId: PublicKey, version: "v1" | "v2", initIx: InitInstruction, txoHash: string): SolanaSwapData;
     /**
      * Deserializes swap data from an on-chain escrow account state.
      *
      * @param programId
+     * @param version
      * @param account Escrow account state as returned by Anchor
      */
-    static fromEscrowState(programId: PublicKey, account: IdlAccounts<SwapProgram>["escrowState"]): SolanaSwapData;
+    static fromEscrowState(programId: PublicKey, version: "v1" | "v2", account: IdlAccounts<SwapProgram | SwapProgramV2>["escrowState"]): SolanaSwapData;
     /**
      * Converts abstract swap type to Solana program kind discriminator.
      *
@@ -285,4 +298,36 @@ export declare class SolanaSwapData extends SwapData {
      * @inheritDoc
      */
     getEscrowStruct(): any;
+}
+export declare class SolanaSwapDataV1 extends SolanaSwapData {
+    /**
+     * Creates swap data from structured constructor arguments.
+     *
+     * @param args Swap data fields
+     */
+    constructor(args: SolanaSwapDataCtorArgs);
+    /**
+     * Deserializes swap data from serialized storage representation.
+     *
+     * @param data Serialized swap data from {@link SolanaSwapData.serialize}
+     */
+    constructor(data: {
+        type: "sol";
+    } & Serialized<SolanaSwapData>);
+}
+export declare class SolanaSwapDataV2 extends SolanaSwapData {
+    /**
+     * Creates swap data from structured constructor arguments.
+     *
+     * @param args Swap data fields
+     */
+    constructor(args: SolanaSwapDataCtorArgs);
+    /**
+     * Deserializes swap data from serialized storage representation.
+     *
+     * @param data Serialized swap data from {@link SolanaSwapData.serialize}
+     */
+    constructor(data: {
+        type: "sol";
+    } & Serialized<SolanaSwapData>);
 }

@@ -1,11 +1,12 @@
 /// <reference types="node" />
 /// <reference types="node" />
 import { SolanaSwapData } from "./SolanaSwapData";
+import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { SolanaBtcRelay } from "../btcrelay/SolanaBtcRelay";
 import { IStorageManager, SwapContract, ChainSwapType, IntermediaryReputationType, TransactionConfirmationOptions, SignatureData, RelaySynchronizer, SwapCommitState, SwapCommitStateType } from "@atomiqlabs/base";
 import { SolanaBtcStoredHeader } from "../btcrelay/headers/SolanaBtcStoredHeader";
-import { SwapProgram } from "./programTypes";
+import { SwapProgram } from "./v1/programTypes";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
 import { SolanaProgramBase } from "../program/SolanaProgramBase";
 import { SolanaTx } from "../chain/modules/SolanaTransactions";
@@ -13,16 +14,21 @@ import { SolanaPreFetchData, SolanaPreFetchVerification } from "./modules/SwapIn
 import { SolanaDataAccount, StoredDataAccount } from "./modules/SolanaDataAccount";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../wallet/SolanaSigner";
+import { SwapProgramV2 } from "./v2/programTypes";
+export declare function isSwapProgramV1(obj: any): obj is Program<SwapProgram>;
+export declare function isSwapProgramV2(obj: any): obj is Program<SwapProgramV2>;
 /**
  * Solana swap (escrow manager) program representation handling PrTLC (on-chain) and HTLC (lightning) based swaps.
  *
  * @category Swaps
  */
-export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
+export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram | SwapProgramV2> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
     /**
      * Rent-exempt amount (lamports) for escrow state accounts.
      */
-    readonly ESCROW_STATE_RENT_EXEMPT = 2658720;
+    readonly ESCROW_STATE_RENT_EXEMPT: number;
+    readonly version: "v1" | "v2";
+    readonly supportsInitWithoutClaimer: boolean;
     /**
      * PDA of the swap vault authority.
      * @internal
@@ -97,7 +103,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
      * @internal
      */
     readonly _DataAccount: SolanaDataAccount;
-    constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string);
+    constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string, version?: "v1" | "v2");
     /**
      * @inheritDoc
      */
@@ -168,7 +174,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram> im
     /**
      * @inheritDoc
      */
-    isExpired(signer: string, data: SolanaSwapData): Promise<boolean>;
+    isExpired(signer: string, data: SolanaSwapData, refundSide?: boolean): Promise<boolean>;
     /**
      * @inheritDoc
      */
