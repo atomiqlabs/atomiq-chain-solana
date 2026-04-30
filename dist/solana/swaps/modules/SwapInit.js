@@ -10,7 +10,7 @@ const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
 const SolanaTokens_1 = require("../../chain/modules/SolanaTokens");
 const SolanaSwapProgram_1 = require("../SolanaSwapProgram");
-const bn_js_1 = require("bn.js");
+const BN = require("bn.js");
 class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     constructor() {
         super(...arguments);
@@ -43,9 +43,9 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             let instruction;
             const program = this.swapProgram;
             if ((0, SolanaSwapProgram_1.isSwapProgramV1)(program)) {
-                if (!swapData.securityDeposit.eq(new bn_js_1.default(0)))
+                if (!swapData.securityDeposit.eq(new BN(0)))
                     throw new Error("Swap data for V1 payIn=true swaps cannot have any security deposit!");
-                if (!swapData.claimerBounty.eq(new bn_js_1.default(0)))
+                if (!swapData.claimerBounty.eq(new BN(0)))
                     throw new Error("Swap data for V1 payIn=true swaps cannot have any claimer bounty!");
                 instruction = await program.methods
                     .offererInitializePayIn(swapData.toSwapDataStruct(), [...buffer_1.Buffer.alloc(32, 0)], (0, Utils_1.toBN)(timeout))
