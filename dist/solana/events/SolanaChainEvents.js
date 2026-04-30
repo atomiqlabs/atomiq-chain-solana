@@ -10,8 +10,8 @@ const LOG_FETCH_INTERVAL = 5 * 1000;
  *  any events
  */
 class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrowser {
-    constructor(directory, connection, solanaSwapProgram, logFetchInterval) {
-        super(connection, solanaSwapProgram);
+    constructor(directory, connection, contractVersions, logFetchInterval) {
+        super(connection, contractVersions);
         this.stopped = true;
         this.directory = directory;
         this.logFetchInterval = logFetchInterval || LOG_FETCH_INTERVAL;
@@ -22,8 +22,18 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
      * @private
      */
     async getLastSignature() {
+        let txt;
         try {
-            const txt = (await fs.readFile(this.directory + BLOCKHEIGHT_FILENAME)).toString();
+            txt = (await fs.readFile(this.directory + BLOCKHEIGHT_FILENAME)).toString();
+        }
+        catch (e) {
+            return null;
+        }
+        try {
+            return JSON.parse(txt);
+        }
+        catch (e) { }
+        try {
             const arr = txt.split(";");
             if (arr.length < 2)
                 return {
@@ -44,8 +54,8 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
      *
      * @private
      */
-    saveLastSignature(lastSignature, slot) {
-        return fs.writeFile(this.directory + BLOCKHEIGHT_FILENAME, lastSignature + ";" + slot);
+    saveLastSignature(lastState) {
+        return fs.writeFile(this.directory + BLOCKHEIGHT_FILENAME, JSON.stringify(lastState));
     }
     /**
      * Polls for new events & processes them
@@ -56,7 +66,7 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
         const lastSignature = await this.getLastSignature();
         const result = await this.poll(lastSignature ?? undefined);
         if (result != null) {
-            await this.saveLastSignature(result.signature, result.slot);
+            await this.saveLastSignature(result);
         }
     }
     async setupHttpPolling() {

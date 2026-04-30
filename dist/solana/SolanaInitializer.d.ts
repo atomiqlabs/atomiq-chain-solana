@@ -40,6 +40,10 @@ export type SolanaSwapperOptions = {
      * Solana fee API to use for fetching Solana network fees
      */
     fees?: SolanaFees;
+    /**
+     * Determines the default version of the contracts exposed
+     */
+    defaultVersion?: "v1" | "v2";
 };
 /**
  * Initialize Solana chain integration

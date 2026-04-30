@@ -28,6 +28,7 @@ export declare class SwapInit extends SolanaSwapModule {
     /**
      * bare Init action based on the data passed in swapData
      *
+     * @param sender
      * @param swapData
      * @param timeout
      * @private
@@ -36,6 +37,7 @@ export declare class SwapInit extends SolanaSwapModule {
     /**
      * InitPayIn action which includes SOL to WSOL wrapping if indicated by the fee rate
      *
+     * @param signer
      * @param swapData
      * @param timeout
      * @param feeRate
@@ -46,6 +48,7 @@ export declare class SwapInit extends SolanaSwapModule {
      * InitNotPayIn action with additional createAssociatedTokenAccountIdempotentInstruction instruction, such that
      *  a recipient ATA is created if it doesn't exist
      *
+     * @param sender
      * @param swapData
      * @param timeout
      * @private
@@ -135,7 +138,7 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param preFetchedData
      * @public
      */
-    isSignatureValid(sender: string, swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, feeRate?: string, preFetchedData?: SolanaPreFetchVerification): Promise<Buffer>;
+    isSignatureValid(sender: PublicKey, swapData: SolanaSwapData, timeout: string, prefix: string, signature: string | null, feeRate?: string, preFetchedData?: SolanaPreFetchVerification): Promise<Buffer>;
     /**
      * Gets expiry of the provided signature data, this is a minimum of slot expiry & swap signature expiry
      *
@@ -144,7 +147,7 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param preFetchedData
      * @public
      */
-    getSignatureExpiry(timeout: string, signature: string, preFetchedData?: SolanaPreFetchVerification): Promise<number>;
+    getSignatureExpiry(timeout: string, signature: string | null, preFetchedData?: SolanaPreFetchVerification): Promise<number>;
     /**
      * Checks whether signature is expired for good (uses "finalized" slot)
      *
@@ -152,12 +155,13 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param timeout
      * @public
      */
-    isSignatureExpired(signature: string, timeout: string): Promise<boolean>;
+    isSignatureExpired(signature: string | null, timeout: string): Promise<boolean>;
     /**
      * Creates init transaction (InitPayIn) with a valid signature from an LP, also adds a SOL to WSOL wrapping ix to
      *  the init transaction (if indicated by the fee rate) or adds the wrapping in a separate transaction (if no
      *  indication in the fee rate)
      *
+     * @param sender
      * @param swapData swap to initialize
      * @param timeout init signature timeout
      * @param prefix init signature prefix
@@ -165,10 +169,11 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param skipChecks whether to skip signature validity checks
      * @param feeRate fee rate to use for the transaction
      */
-    txsInitPayIn(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    txsInitPayIn(sender: PublicKey, swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     /**
      * Creates init transactions (InitNotPayIn) with a valid signature from an intermediary
      *
+     * @param sender
      * @param swapData swap to initialize
      * @param timeout init signature timeout
      * @param prefix init signature prefix
@@ -176,7 +181,7 @@ export declare class SwapInit extends SolanaSwapModule {
      * @param skipChecks whether to skip signature validity checks
      * @param feeRate fee rate to use for the transaction
      */
-    txsInit(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    txsInit(sender: PublicKey, swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, skipChecks?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     /**
      * Returns the fee rate to be used for a specific init transaction, also adding indication whether the WSOL ATA
      *  should be initialized in the init transaction and/or current balance in the WSOL ATA

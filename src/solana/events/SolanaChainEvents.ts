@@ -1,7 +1,11 @@
 import {Connection} from "@solana/web3.js";
 import * as fs from "fs/promises";
 import {SolanaSwapProgram} from "../swaps/SolanaSwapProgram";
-import {SolanaChainEventsBrowser} from "./SolanaChainEventsBrowser";
+import {
+    SolanaChainEventsBrowser,
+    SolanaEventListenerState,
+    SolanaLegacyEventListenerState
+} from "./SolanaChainEventsBrowser";
 
 const BLOCKHEIGHT_FILENAME = "/blockheight.txt";
 const LOG_FETCH_INTERVAL = 5*1000;
@@ -21,10 +25,10 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
     constructor(
         directory: string,
         connection: Connection,
-        solanaSwapProgram: SolanaSwapProgram,
+        contractVersions: SolanaSwapProgram | {[version: string]: {swapContract: SolanaSwapProgram}},
         logFetchInterval?: number
     ) {
-        super(connection, solanaSwapProgram)
+        super(connection, contractVersions);
         this.directory = directory;
         this.logFetchInterval = logFetchInterval || LOG_FETCH_INTERVAL;
     }
@@ -34,12 +38,19 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
      *
      * @private
      */
-    private async getLastSignature(): Promise<{
-        signature: string,
-        slot: number
-    } | null> {
+    private async getLastSignature(): Promise<SolanaLegacyEventListenerState | SolanaEventListenerState | null> {
+        let txt: string;
         try {
-            const txt = (await fs.readFile(this.directory+BLOCKHEIGHT_FILENAME)).toString();
+            txt = (await fs.readFile(this.directory+BLOCKHEIGHT_FILENAME)).toString();
+        } catch (e) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(txt);
+        } catch (e) {}
+
+        try {
             const arr = txt.split(";");
             if(arr.length<2) return {
                 signature: txt,
@@ -59,8 +70,8 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
      *
      * @private
      */
-    private saveLastSignature(lastSignature: string, slot: number): Promise<void> {
-        return fs.writeFile(this.directory+BLOCKHEIGHT_FILENAME, lastSignature+";"+slot);
+    private saveLastSignature(lastState: SolanaEventListenerState): Promise<void> {
+        return fs.writeFile(this.directory+BLOCKHEIGHT_FILENAME, JSON.stringify(lastState));
     }
 
     /**
@@ -74,7 +85,7 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         const result = await this.poll(lastSignature ?? undefined);
 
         if(result!=null) {
-            await this.saveLastSignature(result.signature, result.slot);
+            await this.saveLastSignature(result);
         }
     }
 

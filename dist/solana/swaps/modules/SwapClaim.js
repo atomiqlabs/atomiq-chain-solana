@@ -14,6 +14,8 @@ class SwapClaim extends SolanaSwapModule_1.SolanaSwapModule {
         const isDataKey = typeof (secretOrDataKey) !== "string";
         const accounts = {
             signer,
+            offerer: swapData.offerer,
+            claimer: swapData.claimer,
             initializer: swapData.isPayIn() ? swapData.offerer : swapData.claimer,
             escrowState: this.program._SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
             ixSysvar: web3_js_1.SYSVAR_INSTRUCTIONS_PUBKEY,

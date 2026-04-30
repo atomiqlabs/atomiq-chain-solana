@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaSwapData = exports.isSerializedData = void 0;
+exports.SolanaSwapDataV2 = exports.SolanaSwapDataV1 = exports.SolanaSwapData = exports.isSerializedData = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const BN = require("bn.js");
 const base_1 = require("@atomiqlabs/base");
@@ -25,6 +25,7 @@ class SolanaSwapData extends base_1.SwapData {
         super();
         if (!isSerializedData(data)) {
             this.programId = data.programId;
+            this.version = data.version;
             this.offerer = data.offerer;
             this.claimer = data.claimer;
             this.token = data.token;
@@ -42,9 +43,11 @@ class SolanaSwapData extends base_1.SwapData {
             this.securityDeposit = data.securityDeposit;
             this.claimerBounty = data.claimerBounty;
             this.txoHash = data.txoHash;
+            this.offererInitializer = data.offererInitializer;
         }
         else {
             this.programId = new web3_js_1.PublicKey(data.programId ?? "4hfUykhqmD7ZRvNh1HuzVKEY7ToENixtdUKZspNDCrEM");
+            this.version = data.version ?? "v1";
             this.offerer = new web3_js_1.PublicKey(data.offerer);
             this.claimer = new web3_js_1.PublicKey(data.claimer);
             this.token = new web3_js_1.PublicKey(data.token);
@@ -62,6 +65,7 @@ class SolanaSwapData extends base_1.SwapData {
             this.securityDeposit = new BN(data.securityDeposit);
             this.claimerBounty = new BN(data.claimerBounty);
             this.txoHash = data.txoHash;
+            this.offererInitializer = data.offererInitializer;
         }
     }
     /**
@@ -100,6 +104,7 @@ class SolanaSwapData extends base_1.SwapData {
         return {
             type: "sol",
             programId: this.programId?.toBase58(),
+            version: this.version,
             offerer: this.offerer?.toBase58(),
             claimer: this.claimer?.toBase58(),
             token: this.token?.toBase58(),
@@ -116,7 +121,8 @@ class SolanaSwapData extends base_1.SwapData {
             claimerAta: this.claimerAta?.toBase58(),
             securityDeposit: this.securityDeposit?.toString(10),
             claimerBounty: this.claimerBounty?.toString(10),
-            txoHash: this.txoHash
+            txoHash: this.txoHash,
+            offererInitializer: this.offererInitializer
         };
     }
     /**
@@ -282,7 +288,8 @@ class SolanaSwapData extends base_1.SwapData {
             (this.claimerAta == null || account.claimerAta.equals(this.claimerAta)) &&
             account.mint.equals(this.token) &&
             this.claimerBounty.eq(account.claimerBounty) &&
-            this.securityDeposit.eq(account.securityDeposit);
+            this.securityDeposit.eq(account.securityDeposit) &&
+            (this.offererInitializer == null || account.offererInitializer === this.offererInitializer);
     }
     /**
      * @inheritDoc
@@ -304,6 +311,14 @@ class SolanaSwapData extends base_1.SwapData {
             if (!this.offererAta.equals(other.offererAta))
                 return false;
         }
+        if (this.offererInitializer == null && other.offererInitializer != null)
+            return false;
+        if (this.offererInitializer != null && other.offererInitializer == null)
+            return false;
+        if (this.offererInitializer != null && other.offererInitializer != null) {
+            if (this.offererInitializer !== other.offererInitializer)
+                return false;
+        }
         return other.kind === this.kind &&
             other.confirmations === this.confirmations &&
             this.nonce.eq(other.nonce) &&
@@ -323,11 +338,12 @@ class SolanaSwapData extends base_1.SwapData {
      * Converts initialize instruction data into {@link SolanaSwapData}.
      *
      * @param programId
+     * @param version
      * @param initIx Decoded initialize instruction
      * @param txoHash Parsed txo hash hint from initialize event
      * @returns Converted and parsed swap data
      */
-    static fromInstruction(programId, initIx, txoHash) {
+    static fromInstruction(programId, version, initIx, txoHash) {
         const paymentHash = buffer_1.Buffer.from(initIx.data.swapData.hash);
         let securityDeposit = new BN(0);
         let claimerBounty = new BN(0);
@@ -337,8 +353,14 @@ class SolanaSwapData extends base_1.SwapData {
             securityDeposit = initIx.data.securityDeposit;
             claimerBounty = initIx.data.claimerBounty;
         }
+        if (version !== "v1" && initIx.name === "offererInitializePayIn") {
+            payIn = true;
+            securityDeposit = initIx.data.securityDeposit;
+            claimerBounty = initIx.data.claimerBounty;
+        }
         return new SolanaSwapData({
             programId,
+            version,
             offerer: initIx.accounts.offerer,
             claimer: initIx.accounts.claimer,
             token: initIx.accounts.mint,
@@ -355,19 +377,22 @@ class SolanaSwapData extends base_1.SwapData {
             claimerAta: initIx.data.swapData.payOut ? initIx.accounts.claimerAta : web3_js_1.PublicKey.default,
             securityDeposit,
             claimerBounty,
-            txoHash
+            txoHash,
+            offererInitializer: initIx.accounts.initializer != null ? initIx.accounts.initializer.equals(initIx.accounts.offerer) : undefined
         });
     }
     /**
      * Deserializes swap data from an on-chain escrow account state.
      *
      * @param programId
+     * @param version
      * @param account Escrow account state as returned by Anchor
      */
-    static fromEscrowState(programId, account) {
+    static fromEscrowState(programId, version, account) {
         const data = account.data;
         return new SolanaSwapData({
             programId,
+            version,
             offerer: account.offerer,
             claimer: account.claimer,
             token: account.mint,
@@ -383,7 +408,8 @@ class SolanaSwapData extends base_1.SwapData {
             offererAta: account.offererAta,
             claimerAta: account.claimerAta,
             securityDeposit: account.securityDeposit,
-            claimerBounty: account.claimerBounty
+            claimerBounty: account.claimerBounty,
+            offererInitializer: account.offererInitializer ?? undefined
         });
     }
     /**
@@ -464,7 +490,9 @@ class SolanaSwapData extends base_1.SwapData {
                 offererAta: this.offererAta == null || this.offererAta.equals(web3_js_1.PublicKey.default) ? null : this.offererAta.toString(),
                 claimerUserData: SolanaSwapProgram_1.SolanaSwapProgram._SwapUserVault(this.programId, this.claimer, this.token).toString(),
                 offererUserData: SolanaSwapProgram_1.SolanaSwapProgram._SwapUserVault(this.programId, this.offerer, this.token).toString(),
-                initializer: this.isPayIn() ? this.offerer.toString() : this.claimer.toString(),
+                initializer: this.offererInitializer != null
+                    ? (this.offererInitializer ? this.offerer.toString() : this.claimer.toString())
+                    : (this.isPayIn() ? this.offerer.toString() : this.claimer.toString()),
                 escrowState: SolanaSwapProgram_1.SolanaSwapProgram._SwapEscrowState(this.programId, buffer_1.Buffer.from(this.paymentHash, "hex")).toString(),
                 mint: this.token.toString(),
                 vault: SolanaSwapProgram_1.SolanaSwapProgram._SwapVault(this.programId, this.token).toString(),
@@ -488,4 +516,20 @@ class SolanaSwapData extends base_1.SwapData {
     }
 }
 exports.SolanaSwapData = SolanaSwapData;
+class SolanaSwapDataV1 extends SolanaSwapData {
+    constructor(data) {
+        super(data);
+        if (this.version !== "v1")
+            throw new Error(`Invalid swap data version, expected v1, got ${this.version}`);
+    }
+}
+exports.SolanaSwapDataV1 = SolanaSwapDataV1;
+class SolanaSwapDataV2 extends SolanaSwapData {
+    constructor(data) {
+        super(data);
+        if (this.version !== "v2")
+            throw new Error(`Invalid swap data version, expected v2, got ${this.version}`);
+    }
+}
+exports.SolanaSwapDataV2 = SolanaSwapDataV2;
 base_1.SwapData.deserializers["sol"] = SolanaSwapData;

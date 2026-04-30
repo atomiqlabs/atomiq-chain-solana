@@ -51,6 +51,8 @@ export class SwapClaim extends SolanaSwapModule {
 
         const accounts = {
             signer,
+            offerer: swapData.offerer,
+            claimer: swapData.claimer,
             initializer: swapData.isPayIn() ? swapData.offerer : swapData.claimer,
             escrowState: this.program._SwapEscrowState(Buffer.from(swapData.paymentHash, "hex")),
             ixSysvar: SYSVAR_INSTRUCTIONS_PUBKEY,
@@ -68,7 +70,7 @@ export class SwapClaim extends SolanaSwapModule {
                         ...accounts,
                         claimerAta: swapData.claimerAta,
                         vault: this.program._SwapVault(swapData.token),
-                        vaultAuthority: this.program._SwapVaultAuthority,
+                        vaultAuthority: this.program._SwapVaultAuthority, // Only necessary for V1 program
                         tokenProgram: TOKEN_PROGRAM_ID
                     })
                     .instruction(),

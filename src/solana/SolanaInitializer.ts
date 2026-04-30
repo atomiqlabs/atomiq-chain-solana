@@ -16,7 +16,7 @@ import {SolanaBtcRelay} from "./btcrelay/SolanaBtcRelay";
 import {SolanaChains} from "./SolanaChains";
 import {SolanaSwapProgram} from "./swaps/SolanaSwapProgram";
 import {SolanaChainEventsBrowser} from "./events/SolanaChainEventsBrowser";
-import {SolanaSwapData} from "./swaps/SolanaSwapData";
+import {SolanaSwapData, SolanaSwapDataV1, SolanaSwapDataV2} from "./swaps/SolanaSwapData";
 
 const chainId = "SOLANA" as const;
 
@@ -80,7 +80,12 @@ export type SolanaSwapperOptions = {
     /**
      * Solana fee API to use for fetching Solana network fees
      */
-    fees?: SolanaFees
+    fees?: SolanaFees,
+
+    /**
+     * Determines the default version of the contracts exposed
+     */
+    defaultVersion?: "v1" | "v2"
 };
 
 /**
@@ -105,33 +110,90 @@ export function initializeSolana(
         new Connection(options.rpcUrl) :
         options.rpcUrl;
 
-    const solanaChainData = SolanaChains[network];
-    if(solanaChainData==null) throw new Error(`Unsupported bitcoin network for Solana: ${BitcoinNetwork[network]}`);
-
     const Fees = options.fees ?? new SolanaFees(connection, 200000, 4, 100);
-
     const chainInterface = new SolanaChainInterface(connection, options.retryPolicy ?? {transactionResendInterval: 1000}, Fees);
 
-    const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? solanaChainData.addresses.btcRelayContract);
+    const versionedContracts: {
+        [version in "v1" | "v2"]?: {
+            btcRelay: SolanaBtcRelay<any>;
+            swapContract: SolanaSwapProgram;
+            swapDataConstructor: new (data: any) => SolanaSwapData;
+            spvVaultContract: never;
+            spvVaultDataConstructor: never;
+            spvVaultWithdrawalDataConstructor: never;
+        }
+    } = {};
 
-    const swapContract = new SolanaSwapProgram(
-        chainInterface,
-        btcRelay,
-        options.dataAccountStorage || storageCtor("solAccounts"),
-        options.swapContract ?? solanaChainData.addresses.swapContract
-    );
-    const chainEvents = new SolanaChainEventsBrowser(connection, swapContract);
+    const version = options.defaultVersion ?? "v1";
+    if(options.btcRelayContract || options.swapContract) {
+        // Initialize only that version
+        const btcRelayContractAddress = options.btcRelayContract ?? SolanaChains[network]?.addresses[version]?.btcRelayContract;
+        const swapContractAddress = options.swapContract ?? SolanaChains[network]?.addresses[version]?.swapContract;
+        if(btcRelayContractAddress==null) throw new Error(`Unsupported bitcoin network for Solana, using default version ${version}: ${BitcoinNetwork[network]}, please pass a custom deployment btc relay program address!`);
+        if(swapContractAddress==null) throw new Error(`Unsupported bitcoin network for Solana, using default version ${version}: ${BitcoinNetwork[network]}, please pass a custom deployment swap program address!`);
+
+        const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, btcRelayContractAddress);
+        const swapContract = new SolanaSwapProgram(
+            chainInterface,
+            btcRelay,
+            options.dataAccountStorage || storageCtor("solAccounts"),
+            swapContractAddress,
+            version
+        );
+
+        versionedContracts[version] = {
+            btcRelay,
+            swapContract,
+            swapDataConstructor: version==="v1" ? SolanaSwapDataV1 : SolanaSwapDataV2,
+            spvVaultContract: null as never,
+            spvVaultDataConstructor: null as never,
+            spvVaultWithdrawalDataConstructor: null as never
+        };
+    } else {
+        // Initialize all versions
+        const solanaChainData = SolanaChains[network];
+        if(solanaChainData==null) throw new Error(`Unsupported bitcoin network for Solana: ${BitcoinNetwork[network]}, please pass a custom deployment program addresses!`);
+
+        for(let _version in solanaChainData.addresses) {
+            const version = _version as "v1" | "v2";
+            const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, solanaChainData.addresses[version]!.btcRelayContract);
+            const swapContract = new SolanaSwapProgram(
+                chainInterface,
+                btcRelay,
+                options.dataAccountStorage || storageCtor("solAccounts"),
+                solanaChainData.addresses[version]!.swapContract,
+                version
+            );
+
+            versionedContracts[version] = {
+                btcRelay,
+                swapContract,
+                swapDataConstructor: version==="v1" ? SolanaSwapDataV1 : SolanaSwapDataV2,
+                spvVaultContract: null as never,
+                spvVaultDataConstructor: null as never,
+                spvVaultWithdrawalDataConstructor: null as never
+            }
+        }
+    }
+
+    const chainEvents = new SolanaChainEventsBrowser(connection, versionedContracts);
+
+    const defaults = versionedContracts[version];
+    if(defaults==null) throw new Error(`Unsupported bitcoin network for Solana, using default version ${version}: ${BitcoinNetwork[network]}, please pass a custom deployment program addresses!`);
 
     return {
         chainId,
-        btcRelay,
-        swapContract,
-        chainEvents,
-        swapDataConstructor: SolanaSwapData,
         chainInterface,
-        spvVaultContract: null as never,
-        spvVaultDataConstructor: null as never,
-        spvVaultWithdrawalDataConstructor: null as never
+        btcRelay: defaults.btcRelay,
+        swapContract: defaults.swapContract,
+        chainEvents,
+        swapDataConstructor: defaults.swapDataConstructor,
+        spvVaultContract: defaults.spvVaultContract,
+        spvVaultDataConstructor: defaults.spvVaultDataConstructor,
+        spvVaultWithdrawalDataConstructor: defaults.spvVaultWithdrawalDataConstructor,
+
+        defaultVersion: version,
+        versions: versionedContracts
     };
 }
 

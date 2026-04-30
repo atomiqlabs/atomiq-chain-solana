@@ -2,8 +2,10 @@ import { BitcoinNetwork } from "@atomiqlabs/base";
 export declare const SolanaChains: {
     [key in BitcoinNetwork]?: {
         addresses: {
-            swapContract: string;
-            btcRelayContract: string;
+            [version in "v1" | "v2"]?: {
+                swapContract: string;
+                btcRelayContract: string;
+            };
         };
         clusterName: "mainnet-beta" | "devnet" | "testnet";
     };

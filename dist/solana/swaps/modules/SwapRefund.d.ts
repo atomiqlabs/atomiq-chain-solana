@@ -3,6 +3,7 @@
 import { SolanaSwapModule } from "../SolanaSwapModule";
 import { SolanaSwapData } from "../SolanaSwapData";
 import { SolanaTx } from "../../chain/modules/SolanaTransactions";
+import { PublicKey } from "@solana/web3.js";
 import { Buffer } from "buffer";
 import { SolanaSigner } from "../../wallet/SolanaSigner";
 export declare class SwapRefund extends SolanaSwapModule {
@@ -10,6 +11,7 @@ export declare class SwapRefund extends SolanaSwapModule {
     /**
      * Action for generic Refund instruction
      *
+     * @param signer
      * @param swapData
      * @param refundAuthTimeout optional refund authorization timeout (should be 0 for refunding expired swaps)
      * @private
@@ -18,6 +20,7 @@ export declare class SwapRefund extends SolanaSwapModule {
     /**
      * Action for refunding with signature, adds the Ed25519 verify instruction
      *
+     * @param signer
      * @param swapData
      * @param timeout
      * @param prefix
@@ -37,6 +40,7 @@ export declare class SwapRefund extends SolanaSwapModule {
     /**
      * Checks whether we should unwrap the WSOL to SOL when refunding the swap
      *
+     * @param signer
      * @param swapData
      * @private
      */
@@ -50,15 +54,17 @@ export declare class SwapRefund extends SolanaSwapModule {
     /**
      * Creates transactions required for refunding timed out swap, also unwraps WSOL to SOL
      *
+     * @param signer
      * @param swapData swap data to refund
      * @param check whether to check if swap is already expired and refundable
      * @param initAta should initialize ATA if it doesn't exist
      * @param feeRate fee rate to be used for the transactions
      */
-    txsRefund(swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    txsRefund(signer: PublicKey, swapData: SolanaSwapData, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     /**
      * Creates transactions required for refunding the swap with authorization signature, also unwraps WSOL to SOL
      *
+     * @param signer
      * @param swapData swap data to refund
      * @param timeout signature timeout
      * @param prefix signature prefix of the counterparty
@@ -67,7 +73,7 @@ export declare class SwapRefund extends SolanaSwapModule {
      * @param initAta should initialize ATA if it doesn't exist
      * @param feeRate fee rate to be used for the transactions
      */
-    txsRefundWithAuthorization(swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
+    txsRefundWithAuthorization(signer: PublicKey, swapData: SolanaSwapData, timeout: string, prefix: string, signature: string, check?: boolean, initAta?: boolean, feeRate?: string): Promise<SolanaTx[]>;
     getRefundFeeRate(swapData: SolanaSwapData): Promise<string>;
     /**
      * Get the estimated solana transaction fee of the refund transaction, in the worst case scenario in case where the
