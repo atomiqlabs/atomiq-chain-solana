@@ -4,13 +4,15 @@ export const SolanaChains: {[key in BitcoinNetwork]?: {
     addresses: {[version in "v1" | "v2"]?: {swapContract: string, btcRelayContract: string}}
     clusterName: "mainnet-beta" | "devnet" | "testnet"
 }} = {
-    //TODO: Not deployed yet
-    // [BitcoinNetwork.TESTNET4]: {
-    //     addresses: {
-    //         swapContract: "11111111111111111111111111111111",
-    //         btcRelayContract: "11111111111111111111111111111111"
-    //     }
-    // },
+    [BitcoinNetwork.TESTNET4]: {
+        addresses: {
+            v1: {
+                swapContract: "7g6iDybm7XiiPidYwQ5DbuCREro39St52Xn7V3NV2EE4",
+                btcRelayContract: "CBYz9cgBG6v8kF19jhLk46gPRhY858NV1MfngzGzwgdX"
+            }
+        },
+        clusterName: "devnet"
+    },
     [BitcoinNetwork.TESTNET]: {
         addresses: {
             v1: {
