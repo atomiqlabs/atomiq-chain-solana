@@ -3,13 +3,15 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SolanaChains = void 0;
 const base_1 = require("@atomiqlabs/base");
 exports.SolanaChains = {
-    //TODO: Not deployed yet
-    // [BitcoinNetwork.TESTNET4]: {
-    //     addresses: {
-    //         swapContract: "11111111111111111111111111111111",
-    //         btcRelayContract: "11111111111111111111111111111111"
-    //     }
-    // },
+    [base_1.BitcoinNetwork.TESTNET4]: {
+        addresses: {
+            v1: {
+                swapContract: "7g6iDybm7XiiPidYwQ5DbuCREro39St52Xn7V3NV2EE4",
+                btcRelayContract: "CBYz9cgBG6v8kF19jhLk46gPRhY858NV1MfngzGzwgdX"
+            }
+        },
+        clusterName: "devnet"
+    },
     [base_1.BitcoinNetwork.TESTNET]: {
         addresses: {
             v1: {
