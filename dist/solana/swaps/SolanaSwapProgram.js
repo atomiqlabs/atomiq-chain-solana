@@ -18,6 +18,7 @@ const buffer_1 = require("buffer");
 const Utils_1 = require("../../utils/Utils");
 const SolanaTokens_1 = require("../chain/modules/SolanaTokens");
 const BN = require("bn.js");
+const SolanaChains_1 = require("../SolanaChains");
 function isSwapProgramV1(obj) {
     return obj.idl.version === "0.1.0";
 }
@@ -36,7 +37,11 @@ const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
  * @category Swaps
  */
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
-    constructor(chainInterface, btcRelay, storage, programAddress, version = "v1") {
+    constructor(chainInterface, btcRelay, storage, programAddress, bitcoinNetwork, version = "v1") {
+        version ?? (version = "v1");
+        if (bitcoinNetwork != null && programAddress == null) {
+            programAddress = SolanaChains_1.SolanaChains[bitcoinNetwork]?.addresses[version ?? "v1"]?.swapContract;
+        }
         super(chainInterface, version === "v1" ? programIdlV1 : programIdlV2, programAddress);
         this._SwapVaultAuthority = SolanaSwapProgram._SwapVaultAuthority(this.program.programId); // Only necessary for V1 program
         this._SwapVault = SolanaSwapProgram._SwapVault.bind(this, this.program.programId);

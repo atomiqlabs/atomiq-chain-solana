@@ -4,7 +4,7 @@ import { SolanaSwapData } from "./SolanaSwapData";
 import { Program } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 import { SolanaBtcRelay } from "../btcrelay/SolanaBtcRelay";
-import { IStorageManager, SwapContract, ChainSwapType, IntermediaryReputationType, TransactionConfirmationOptions, SignatureData, RelaySynchronizer, SwapCommitState, SwapCommitStateType } from "@atomiqlabs/base";
+import { IStorageManager, SwapContract, ChainSwapType, IntermediaryReputationType, TransactionConfirmationOptions, SignatureData, RelaySynchronizer, SwapCommitState, SwapCommitStateType, BitcoinNetwork } from "@atomiqlabs/base";
 import { SolanaBtcStoredHeader } from "../btcrelay/headers/SolanaBtcStoredHeader";
 import { SwapProgram } from "./v1/programTypes";
 import { SolanaChainInterface } from "../chain/SolanaChainInterface";
@@ -103,7 +103,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram | S
      * @internal
      */
     readonly _DataAccount: SolanaDataAccount;
-    constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string, version?: "v1" | "v2");
+    constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string, bitcoinNetwork?: BitcoinNetwork, version?: "v1" | "v2");
     /**
      * @inheritDoc
      */

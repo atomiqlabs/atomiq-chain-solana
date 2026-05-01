@@ -11,6 +11,7 @@ const SolanaAction_1 = require("../chain/SolanaAction");
 const buffer_1 = require("buffer");
 const BN = require("bn.js");
 const SolanaFees_1 = require("../chain/modules/SolanaFees");
+const SolanaChains_1 = require("../SolanaChains");
 const MAX_CLOSE_IX_PER_TX = 10;
 function serializeBlockHeader(e) {
     return new SolanaBtcHeader_1.SolanaBtcHeader({
@@ -92,8 +93,13 @@ class SolanaBtcRelay extends SolanaProgramBase_1.SolanaProgramBase {
      * @param chainInterface Underlying chain interface to use for the Solana chain operations
      * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
      * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     * @param bitcoinNetwork
+     * @param contractVersion
      */
-    constructor(chainInterface, bitcoinRpc, programAddress) {
+    constructor(chainInterface, bitcoinRpc, programAddress, bitcoinNetwork, contractVersion) {
+        if (bitcoinNetwork != null && programAddress == null) {
+            programAddress = SolanaChains_1.SolanaChains[bitcoinNetwork]?.addresses[contractVersion ?? "v1"]?.btcRelayContract;
+        }
         super(chainInterface, programIdl, programAddress);
         /**
          * PDA of the relay main state account.

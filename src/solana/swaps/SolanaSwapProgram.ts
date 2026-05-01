@@ -18,7 +18,7 @@ import {
     RelaySynchronizer,
     BigIntBufferUtils,
     SwapCommitState,
-    SwapCommitStateType, SwapNotCommitedState, SwapExpiredState, SwapPaidState
+    SwapCommitStateType, SwapNotCommitedState, SwapExpiredState, SwapPaidState, BitcoinNetwork
 } from "@atomiqlabs/base";
 import {SolanaBtcStoredHeader} from "../btcrelay/headers/SolanaBtcStoredHeader";
 import {
@@ -40,6 +40,7 @@ import {SolanaTokens} from "../chain/modules/SolanaTokens";
 import * as BN from "bn.js";
 import {ProgramEvent} from "../program/modules/SolanaProgramEvents";
 import {SwapProgramV2} from "./v2/programTypes";
+import {SolanaChains} from "../SolanaChains";
 
 export function isSwapProgramV1(obj: any): obj is Program<SwapProgram> {
     return obj.idl.version==="0.1.0";
@@ -172,8 +173,13 @@ export class SolanaSwapProgram
         btcRelay: SolanaBtcRelay<any>,
         storage: IStorageManager<StoredDataAccount>,
         programAddress?: string,
+        bitcoinNetwork?: BitcoinNetwork,
         version: "v1" | "v2" = "v1"
     ) {
+        version ??= "v1";
+        if(bitcoinNetwork!=null && programAddress==null) {
+            programAddress = SolanaChains[bitcoinNetwork]?.addresses[version ?? "v1"]?.swapContract;
+        }
         super(chainInterface, version==="v1" ? programIdlV1 : programIdlV2, programAddress);
 
         this.version = version;
