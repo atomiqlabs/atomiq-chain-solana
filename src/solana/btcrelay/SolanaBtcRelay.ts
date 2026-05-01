@@ -7,7 +7,7 @@ import {
 import {SolanaBtcStoredHeader, SolanaBtcStoredHeaderType} from "./headers/SolanaBtcStoredHeader";
 import {SolanaBtcHeader} from "./headers/SolanaBtcHeader";
 import * as programIdl from "./program/programIdl.json";
-import {BitcoinRpc, BtcBlock, BtcRelay, StatePredictorUtils} from "@atomiqlabs/base";
+import {BitcoinNetwork, BitcoinRpc, BtcBlock, BtcRelay, StatePredictorUtils} from "@atomiqlabs/base";
 import {MethodsBuilder} from "@coral-xyz/anchor/dist/cjs/program/namespace/methods";
 import {SolanaProgramBase} from "../program/SolanaProgramBase";
 import {SolanaAction} from "../chain/SolanaAction";
@@ -17,6 +17,7 @@ import {SolanaSigner} from "../wallet/SolanaSigner";
 import * as BN from "bn.js";
 import {SolanaChainInterface} from "../chain/SolanaChainInterface";
 import {SolanaFees} from "../chain/modules/SolanaFees";
+import {SolanaChains} from "../SolanaChains";
 
 const MAX_CLOSE_IX_PER_TX = 10;
 
@@ -172,12 +173,19 @@ export class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBase<any> i
      * @param chainInterface Underlying chain interface to use for the Solana chain operations
      * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
      * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     * @param bitcoinNetwork
+     * @param contractVersion
      */
     constructor(
         chainInterface: SolanaChainInterface,
         bitcoinRpc: BitcoinRpc<B>,
-        programAddress?: string
+        programAddress?: string,
+        bitcoinNetwork?: BitcoinNetwork,
+        contractVersion?: "v1" | "v2"
     ) {
+        if(bitcoinNetwork!=null && programAddress==null) {
+            programAddress = SolanaChains[bitcoinNetwork]?.addresses[contractVersion ?? "v1"]?.btcRelayContract;
+        }
         super(chainInterface, programIdl, programAddress);
         this._bitcoinRpc = bitcoinRpc;
     }

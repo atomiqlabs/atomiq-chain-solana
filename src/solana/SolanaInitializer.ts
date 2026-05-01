@@ -138,6 +138,7 @@ export function initializeSolana(
             btcRelay,
             options.dataAccountStorage || storageCtor("solAccounts"),
             swapContractAddress,
+            network,
             version
         );
 
@@ -162,6 +163,7 @@ export function initializeSolana(
                 btcRelay,
                 options.dataAccountStorage || storageCtor("solAccounts"),
                 solanaChainData.addresses[version]!.swapContract,
+                network,
                 version
             );
 

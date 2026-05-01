@@ -2,7 +2,7 @@
 /// <reference types="node" />
 import { PublicKey, Signer, Transaction } from "@solana/web3.js";
 import { SolanaBtcStoredHeader } from "./headers/SolanaBtcStoredHeader";
-import { BitcoinRpc, BtcBlock, BtcRelay } from "@atomiqlabs/base";
+import { BitcoinNetwork, BitcoinRpc, BtcBlock, BtcRelay } from "@atomiqlabs/base";
 import { SolanaProgramBase } from "../program/SolanaProgramBase";
 import { SolanaAction } from "../chain/SolanaAction";
 import { Buffer } from "buffer";
@@ -81,8 +81,10 @@ export declare class SolanaBtcRelay<B extends BtcBlock> extends SolanaProgramBas
      * @param chainInterface Underlying chain interface to use for the Solana chain operations
      * @param bitcoinRpc Bitcoin RPC instance to use for read access to the bitcoin blockchain
      * @param programAddress Optional Solana on-chain program address, defaults to the cannonical deployment
+     * @param bitcoinNetwork
+     * @param contractVersion
      */
-    constructor(chainInterface: SolanaChainInterface, bitcoinRpc: BitcoinRpc<B>, programAddress?: string);
+    constructor(chainInterface: SolanaChainInterface, bitcoinRpc: BitcoinRpc<B>, programAddress?: string, bitcoinNetwork?: BitcoinNetwork, contractVersion?: "v1" | "v2");
     /**
      * Gets set of block commitments representing current main chain from the mainState
      *
