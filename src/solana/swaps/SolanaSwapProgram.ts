@@ -142,7 +142,7 @@ export class SolanaSwapProgram<Version extends "v1" | "v2" = "v1" | "v2">
      * Authorization grace period in seconds.
      * @internal
      */
-    readonly _authGracePeriod: number = 5*60;
+    readonly _authGracePeriod: number = 30;
 
     ////////////////////////
     //// Services

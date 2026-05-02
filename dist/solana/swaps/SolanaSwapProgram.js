@@ -77,7 +77,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
          * Authorization grace period in seconds.
          * @internal
          */
-        this._authGracePeriod = 5 * 60;
+        this._authGracePeriod = 30;
         this.version = version;
         this.ESCROW_STATE_RENT_EXEMPT = this.version === "v1" ? 2658720 : 2665680;
         this.supportsInitWithoutClaimer = (this.version !== "v1");
