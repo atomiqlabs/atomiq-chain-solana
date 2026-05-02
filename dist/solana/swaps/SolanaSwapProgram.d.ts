@@ -22,13 +22,13 @@ export declare function isSwapProgramV2(obj: any): obj is Program<SwapProgramV2>
  *
  * @category Swaps
  */
-export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram | SwapProgramV2> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
+export declare class SolanaSwapProgram<Version extends "v1" | "v2" = "v1" | "v2"> extends SolanaProgramBase<SwapProgram | SwapProgramV2> implements SwapContract<SolanaSwapData, SolanaTx, SolanaPreFetchData, SolanaPreFetchVerification, SolanaSigner, "SOLANA"> {
     /**
      * Rent-exempt amount (lamports) for escrow state accounts.
      */
     readonly ESCROW_STATE_RENT_EXEMPT: number;
-    readonly version: "v1" | "v2";
-    readonly supportsInitWithoutClaimer: boolean;
+    readonly version: Version;
+    readonly supportsInitWithoutClaimer: Version extends "v1" ? false : true;
     /**
      * PDA of the swap vault authority.
      * @internal
@@ -103,7 +103,7 @@ export declare class SolanaSwapProgram extends SolanaProgramBase<SwapProgram | S
      * @internal
      */
     readonly _DataAccount: SolanaDataAccount;
-    constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string, bitcoinNetwork?: BitcoinNetwork, version?: "v1" | "v2");
+    constructor(chainInterface: SolanaChainInterface, btcRelay: SolanaBtcRelay<any>, storage: IStorageManager<StoredDataAccount>, programAddress?: string, bitcoinNetwork?: BitcoinNetwork, version?: Version);
     /**
      * @inheritDoc
      */

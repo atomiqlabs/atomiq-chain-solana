@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaInitializer = exports.initializeSolana = void 0;
+exports.SolanaInitializerV2 = exports.SolanaInitializer = exports.initializeSolanaV2 = exports.initializeSolana = void 0;
 const base_1 = require("@atomiqlabs/base");
 const web3_js_1 = require("@solana/web3.js");
 const SolanaChainInterface_1 = require("./chain/SolanaChainInterface");
@@ -36,6 +36,7 @@ const SolanaAssets = {
 /**
  * Initialize Solana chain integration
  *
+ * @param version
  * @param options Options for initializing the Solana chain
  * @param bitcoinRpc Bitcoin RPC to use for bitcoin read access
  * @param network Bitcoin network to use - determines Solana program addresses to use by default
@@ -45,14 +46,13 @@ const SolanaAssets = {
  *
  * @category Chain Interface
  */
-function initializeSolana(options, bitcoinRpc, network, storageCtor) {
+function _initializeSolana(version, options, bitcoinRpc, network, storageCtor) {
     const connection = typeof (options.rpcUrl) === "string" ?
         new web3_js_1.Connection(options.rpcUrl) :
         options.rpcUrl;
     const Fees = options.fees ?? new SolanaFees_1.SolanaFees(connection, 200000, 4, 100);
     const chainInterface = new SolanaChainInterface_1.SolanaChainInterface(connection, options.retryPolicy ?? { transactionResendInterval: 1000 }, Fees);
     const versionedContracts = {};
-    const version = options.defaultVersion ?? "v1";
     if (options.btcRelayContract || options.swapContract) {
         // Initialize only that version
         const btcRelayContractAddress = options.btcRelayContract ?? SolanaChains_1.SolanaChains[network]?.addresses[version]?.btcRelayContract;
@@ -65,7 +65,7 @@ function initializeSolana(options, bitcoinRpc, network, storageCtor) {
         const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(chainInterface, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), swapContractAddress, network, version);
         versionedContracts[version] = {
             btcRelay,
-            swapContract,
+            swapContract: swapContract,
             swapDataConstructor: version === "v1" ? SolanaSwapData_1.SolanaSwapDataV1 : SolanaSwapData_1.SolanaSwapDataV2,
             spvVaultContract: null,
             spvVaultDataConstructor: null,
@@ -83,7 +83,7 @@ function initializeSolana(options, bitcoinRpc, network, storageCtor) {
             const swapContract = new SolanaSwapProgram_1.SolanaSwapProgram(chainInterface, btcRelay, options.dataAccountStorage || storageCtor("solAccounts"), solanaChainData.addresses[version].swapContract, network, version);
             versionedContracts[version] = {
                 btcRelay,
-                swapContract,
+                swapContract: swapContract,
                 swapDataConstructor: version === "v1" ? SolanaSwapData_1.SolanaSwapDataV1 : SolanaSwapData_1.SolanaSwapDataV2,
                 spvVaultContract: null,
                 spvVaultDataConstructor: null,
@@ -109,9 +109,44 @@ function initializeSolana(options, bitcoinRpc, network, storageCtor) {
         versions: versionedContracts
     };
 }
+/**
+ * Initialize Solana chain integration using the v1 as the default version of the contracts
+ *
+ * @param options Options for initializing the Solana chain
+ * @param bitcoinRpc Bitcoin RPC to use for bitcoin read access
+ * @param network Bitcoin network to use - determines Solana program addresses to use by default
+ * @param storageCtor Storage constructor used to create storage backend for ephemeral data submission accounts,
+ *  i.e. accounts that are used to submit large amount of data to an instruction that would otherwise be bigger
+ *  than the transaction size limit - used for submitting bitcoin transaction proofs for PrTLC swaps
+ *
+ * @category Chain Interface
+ */
+function initializeSolana(options, bitcoinRpc, network, storageCtor) {
+    return _initializeSolana("v1", options, bitcoinRpc, network, storageCtor);
+}
 exports.initializeSolana = initializeSolana;
 /**
+ * Initialize Solana chain integration using the new v2 version as the default version of the contracts
+ *
+ * @param options Options for initializing the Solana chain
+ * @param bitcoinRpc Bitcoin RPC to use for bitcoin read access
+ * @param network Bitcoin network to use - determines Solana program addresses to use by default
+ * @param storageCtor Storage constructor used to create storage backend for ephemeral data submission accounts,
+ *  i.e. accounts that are used to submit large amount of data to an instruction that would otherwise be bigger
+ *  than the transaction size limit - used for submitting bitcoin transaction proofs for PrTLC swaps
+ *
+ * @category Chain Interface
+ */
+function initializeSolanaV2(options, bitcoinRpc, network, storageCtor) {
+    return _initializeSolana("v2", options, bitcoinRpc, network, storageCtor);
+}
+exports.initializeSolanaV2 = initializeSolanaV2;
+/**
  * Solana chain initializer instance, used in the SwapperFactory constructor in the SDK library
+ *
+ * Uses the legacy v1 version of the contract as the default exported version, this doesn't support the new
+ *  v2 lightning network flow, use the {@link SolanaInitializerV2} to initialize the SDK with the v2
+ *  contracts as the default, which do have an explicit support for new lightning network swap flow
  *
  * @category Chain Interface
  */
@@ -119,6 +154,21 @@ exports.SolanaInitializer = {
     chainId,
     chainType: null,
     initializer: initializeSolana,
+    tokens: SolanaAssets,
+    options: null
+};
+/**
+ * Solana chain initializer instance, used in the SwapperFactory constructor in the SDK library
+ *
+ * Uses the new v2 version of the contracts as default exported version, supported the new lightning network
+ *  swap flow.
+ *
+ * @category Chain Interface
+ */
+exports.SolanaInitializerV2 = {
+    chainId,
+    chainType: null,
+    initializer: initializeSolanaV2,
     tokens: SolanaAssets,
     options: null
 };

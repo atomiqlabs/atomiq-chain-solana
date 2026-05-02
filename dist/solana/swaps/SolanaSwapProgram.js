@@ -37,7 +37,7 @@ const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
  * @category Swaps
  */
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
-    constructor(chainInterface, btcRelay, storage, programAddress, bitcoinNetwork, version = "v1") {
+    constructor(chainInterface, btcRelay, storage, programAddress, bitcoinNetwork, version) {
         version ?? (version = "v1");
         if (bitcoinNetwork != null && programAddress == null) {
             programAddress = SolanaChains_1.SolanaChains[bitcoinNetwork]?.addresses[version ?? "v1"]?.swapContract;
@@ -79,8 +79,8 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
          */
         this._authGracePeriod = 5 * 60;
         this.version = version;
-        this.ESCROW_STATE_RENT_EXEMPT = version === "v1" ? 2658720 : 2665680;
-        this.supportsInitWithoutClaimer = version !== "v1";
+        this.ESCROW_STATE_RENT_EXEMPT = this.version === "v1" ? 2658720 : 2665680;
+        this.supportsInitWithoutClaimer = (this.version !== "v1");
         this.Init = new SwapInit_1.SwapInit(chainInterface, this);
         this.Refund = new SwapRefund_1.SwapRefund(chainInterface, this);
         this.Claim = new SwapClaim_1.SwapClaim(chainInterface, this, btcRelay);
