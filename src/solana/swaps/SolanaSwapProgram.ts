@@ -61,7 +61,7 @@ const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
  *
  * @category Swaps
  */
-export class SolanaSwapProgram
+export class SolanaSwapProgram<Version extends "v1" | "v2" = "v1" | "v2">
     extends SolanaProgramBase<SwapProgram | SwapProgramV2>
     implements SwapContract<
         SolanaSwapData,
@@ -79,9 +79,9 @@ export class SolanaSwapProgram
      */
     public readonly ESCROW_STATE_RENT_EXEMPT: number;
 
-    public readonly version: "v1" | "v2";
+    public readonly version: Version;
 
-    public readonly supportsInitWithoutClaimer: boolean;
+    public readonly supportsInitWithoutClaimer: Version extends "v1" ? false : true;
 
     ////////////////////////
     //// PDA accessors
@@ -174,17 +174,17 @@ export class SolanaSwapProgram
         storage: IStorageManager<StoredDataAccount>,
         programAddress?: string,
         bitcoinNetwork?: BitcoinNetwork,
-        version: "v1" | "v2" = "v1"
+        version?: Version
     ) {
-        version ??= "v1";
+        version ??= "v1" as any;
         if(bitcoinNetwork!=null && programAddress==null) {
             programAddress = SolanaChains[bitcoinNetwork]?.addresses[version ?? "v1"]?.swapContract;
         }
         super(chainInterface, version==="v1" ? programIdlV1 : programIdlV2, programAddress);
 
-        this.version = version;
-        this.ESCROW_STATE_RENT_EXEMPT = version==="v1" ? 2658720 : 2665680;
-        this.supportsInitWithoutClaimer = version!=="v1";
+        this.version = version!;
+        this.ESCROW_STATE_RENT_EXEMPT = this.version==="v1" ? 2658720 : 2665680;
+        this.supportsInitWithoutClaimer = (this.version!=="v1") as any;
 
         this.Init = new SwapInit(chainInterface, this);
         this.Refund = new SwapRefund(chainInterface, this);

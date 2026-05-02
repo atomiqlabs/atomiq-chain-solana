@@ -12,4 +12,4 @@ import { Wallet } from "@coral-xyz/anchor/dist/cjs/provider";
  * Type definition for the Solana chain implementation
  * @category Chain Interface
  */
-export type SolanaChainType = ChainType<"SOLANA", SolanaPreFetchData, SolanaPreFetchVerification, SolanaTx, SignedSolanaTx, SolanaSigner, Wallet, SolanaSwapData, SolanaSwapProgram, SolanaChainInterface, SolanaChainEventsBrowser, SolanaBtcRelay<any>, never, never, never>;
+export type SolanaChainType<Version extends "v1" | "v2" = "v1"> = ChainType<"SOLANA", SolanaPreFetchData, SolanaPreFetchVerification, SolanaTx, SignedSolanaTx, SolanaSigner, Wallet, SolanaSwapData, SolanaSwapProgram<Version>, SolanaChainInterface, SolanaChainEventsBrowser, SolanaBtcRelay<any>, never, never, never>;
