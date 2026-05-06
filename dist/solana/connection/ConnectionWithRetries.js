@@ -63,7 +63,7 @@ class ConnectionWithRetries extends web3_js_1.Connection {
             e?.message !== "Network request timed out" &&
             e?.message !== "Too many requests (429)", init?.signal ?? undefined);
         config.disableRetryOnRateLimit = true;
-        super(endpoint, commitmentOrConfig);
+        super(endpoint, config);
         this.retryPolicy = config?.retryPolicy;
         this.requestTimeout = config?.requestTimeout ?? 15 * 1000;
     }

@@ -88,7 +88,7 @@ export class ConnectionWithRetries extends Connection {
         );
         config.disableRetryOnRateLimit = true;
 
-        super(endpoint, commitmentOrConfig);
+        super(endpoint, config);
         this.retryPolicy = config?.retryPolicy;
         this.requestTimeout = config?.requestTimeout ?? 15*1000;
     }
