@@ -120,6 +120,10 @@ export declare class SolanaChainInterface implements ChainInterface<SolanaTx, Si
     /**
      * @inheritDoc
      */
+    shouldGetNativeTokenDrop(tokenAddress: string): boolean;
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]>;
     /**
      * @inheritDoc

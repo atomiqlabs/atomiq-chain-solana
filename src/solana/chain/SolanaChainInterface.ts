@@ -176,6 +176,14 @@ export class SolanaChainInterface implements ChainInterface<
     /**
      * @inheritDoc
      */
+    shouldGetNativeTokenDrop(tokenAddress: string): boolean {
+        // True for all the tokens, because the contracts don't support native SOL handling yet
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]> {
         return this.Tokens.txsTransfer(new PublicKey(signer), new PublicKey(token), amount, new PublicKey(dstAddress), feeRate);
     }
