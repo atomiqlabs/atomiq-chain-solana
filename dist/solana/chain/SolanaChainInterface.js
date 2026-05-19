@@ -93,6 +93,13 @@ class SolanaChainInterface {
     /**
      * @inheritDoc
      */
+    shouldGetNativeTokenDrop(tokenAddress) {
+        // True for all the tokens, because the contracts don't support native SOL handling yet
+        return true;
+    }
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer, token, amount, dstAddress, feeRate) {
         return this.Tokens.txsTransfer(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, new web3_js_1.PublicKey(dstAddress), feeRate);
     }
