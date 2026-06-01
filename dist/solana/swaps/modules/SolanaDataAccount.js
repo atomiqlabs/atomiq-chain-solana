@@ -35,7 +35,9 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
      * @private
      */
     async InitDataAccount(signer, accountKey, dataLength) {
-        const accountSize = 32 + dataLength;
+        const accountSize = this.program.version === "v2"
+            ? 40 + dataLength
+            : 32 + dataLength;
         const lamportsDeposit = await this.connection.getMinimumBalanceForRentExemption(accountSize);
         return new SolanaAction_1.SolanaAction(signer, this.root, [
             web3_js_1.SystemProgram.createAccount({
