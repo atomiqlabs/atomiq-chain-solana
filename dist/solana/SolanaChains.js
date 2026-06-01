@@ -21,6 +21,10 @@ exports.SolanaChains = {
             v1: {
                 swapContract: "4hfUykhqmD7ZRvNh1HuzVKEY7ToENixtdUKZspNDCrEM",
                 btcRelayContract: "3KHSHFpEK6bsjg3bqcxQ9qssJYtRCMi2S9TYVe4q6CQc"
+            },
+            v2: {
+                swapContract: "atq2FYuvww5EF6qeB28gj9tkao6Ld9mEGUzF4M93cCC",
+                btcRelayContract: "btc2WHkrjoZU9xzFJupDCmMaUTRHyYTzJE25LvEi9Ls"
             }
         },
         clusterName: "devnet"
