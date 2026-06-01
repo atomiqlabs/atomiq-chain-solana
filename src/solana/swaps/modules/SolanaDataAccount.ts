@@ -64,7 +64,7 @@ export class SolanaDataAccount extends SolanaSwapModule {
         accountKey: Signer,
         dataLength: number
     ): Promise<SolanaAction> {
-        const accountSize = 32+dataLength;
+        const accountSize = 40+dataLength;
         const lamportsDeposit = await this.connection.getMinimumBalanceForRentExemption(accountSize);
 
         return new SolanaAction(signer, this.root, [
