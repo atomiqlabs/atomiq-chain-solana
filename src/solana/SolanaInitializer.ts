@@ -16,7 +16,7 @@ import {SolanaBtcRelay} from "./btcrelay/SolanaBtcRelay";
 import {SolanaChains} from "./SolanaChains";
 import {SolanaSwapProgram} from "./swaps/SolanaSwapProgram";
 import {SolanaChainEventsBrowser} from "./events/SolanaChainEventsBrowser";
-import {SolanaSwapData} from "./swaps/SolanaSwapData";
+import {SolanaSwapData, SolanaSwapDataV1, SolanaSwapDataV2} from "./swaps/SolanaSwapData";
 
 const chainId = "SOLANA" as const;
 
@@ -86,6 +86,118 @@ export type SolanaSwapperOptions = {
 /**
  * Initialize Solana chain integration
  *
+ * @param version
+ * @param options Options for initializing the Solana chain
+ * @param bitcoinRpc Bitcoin RPC to use for bitcoin read access
+ * @param network Bitcoin network to use - determines Solana program addresses to use by default
+ * @param storageCtor Storage constructor used to create storage backend for ephemeral data submission accounts,
+ *  i.e. accounts that are used to submit large amount of data to an instruction that would otherwise be bigger
+ *  than the transaction size limit - used for submitting bitcoin transaction proofs for PrTLC swaps
+ *
+ * @category Chain Interface
+ */
+function _initializeSolana<Version extends "v1" | "v2">(
+    version: Version,
+    options: SolanaSwapperOptions,
+    bitcoinRpc: BitcoinRpc<any>,
+    network: BitcoinNetwork,
+    storageCtor: <T extends StorageObject>(name: string) => IStorageManager<T>
+): ChainData<SolanaChainType<Version>> {
+    const connection = typeof(options.rpcUrl)==="string" ?
+        new Connection(options.rpcUrl) :
+        options.rpcUrl;
+
+    const Fees = options.fees ?? new SolanaFees(connection, 200000, 4, 100);
+    const chainInterface = new SolanaChainInterface(connection, options.retryPolicy ?? {transactionResendInterval: 1000}, Fees);
+
+    const versionedContracts: {
+        [version in "v1" | "v2"]?: {
+            btcRelay: SolanaBtcRelay<any>;
+            swapContract: SolanaSwapProgram<Version>;
+            swapDataConstructor: new (data: any) => SolanaSwapData;
+            spvVaultContract: never;
+            spvVaultDataConstructor: never;
+            spvVaultWithdrawalDataConstructor: never;
+        }
+    } = {};
+
+    if(options.btcRelayContract || options.swapContract) {
+        // Initialize only that version
+        const btcRelayContractAddress = options.btcRelayContract ?? SolanaChains[network]?.addresses[version]?.btcRelayContract;
+        const swapContractAddress = options.swapContract ?? SolanaChains[network]?.addresses[version]?.swapContract;
+        if(btcRelayContractAddress==null) throw new Error(`Unsupported bitcoin network for Solana, using default version ${version}: ${BitcoinNetwork[network]}, please pass a custom deployment btc relay program address!`);
+        if(swapContractAddress==null) throw new Error(`Unsupported bitcoin network for Solana, using default version ${version}: ${BitcoinNetwork[network]}, please pass a custom deployment swap program address!`);
+
+        const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, btcRelayContractAddress);
+        const swapContract = new SolanaSwapProgram(
+            chainInterface,
+            btcRelay,
+            options.dataAccountStorage || storageCtor("solAccounts"),
+            swapContractAddress,
+            network,
+            version
+        );
+
+        versionedContracts[version] = {
+            btcRelay,
+            swapContract: swapContract as SolanaSwapProgram<Version>,
+            swapDataConstructor: version==="v1" ? SolanaSwapDataV1 : SolanaSwapDataV2,
+            spvVaultContract: null as never,
+            spvVaultDataConstructor: null as never,
+            spvVaultWithdrawalDataConstructor: null as never
+        };
+    } else {
+        // Initialize all versions
+        const solanaChainData = SolanaChains[network];
+        if(solanaChainData==null) throw new Error(`Unsupported bitcoin network for Solana: ${BitcoinNetwork[network]}, please pass a custom deployment program addresses!`);
+
+        for(let _version in solanaChainData.addresses) {
+            const version = _version as "v1" | "v2";
+            const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, solanaChainData.addresses[version]!.btcRelayContract);
+            const swapContract = new SolanaSwapProgram(
+                chainInterface,
+                btcRelay,
+                options.dataAccountStorage || storageCtor("solAccounts"),
+                solanaChainData.addresses[version]!.swapContract,
+                network,
+                version
+            );
+
+            versionedContracts[version] = {
+                btcRelay,
+                swapContract: swapContract as SolanaSwapProgram<Version>,
+                swapDataConstructor: version==="v1" ? SolanaSwapDataV1 : SolanaSwapDataV2,
+                spvVaultContract: null as never,
+                spvVaultDataConstructor: null as never,
+                spvVaultWithdrawalDataConstructor: null as never
+            }
+        }
+    }
+
+    const chainEvents = new SolanaChainEventsBrowser(connection, versionedContracts);
+
+    const defaults = versionedContracts[version];
+    if(defaults==null) throw new Error(`Unsupported bitcoin network for Solana, using default version ${version}: ${BitcoinNetwork[network]}, please pass a custom deployment program addresses!`);
+
+    return {
+        chainId,
+        chainInterface,
+        btcRelay: defaults.btcRelay,
+        swapContract: defaults.swapContract as SolanaSwapProgram<Version>,
+        chainEvents,
+        swapDataConstructor: defaults.swapDataConstructor,
+        spvVaultContract: defaults.spvVaultContract,
+        spvVaultDataConstructor: defaults.spvVaultDataConstructor,
+        spvVaultWithdrawalDataConstructor: defaults.spvVaultWithdrawalDataConstructor,
+
+        defaultVersion: version,
+        versions: versionedContracts
+    };
+}
+
+/**
+ * Initialize Solana chain integration using the v1 as the default version of the contracts
+ *
  * @param options Options for initializing the Solana chain
  * @param bitcoinRpc Bitcoin RPC to use for bitcoin read access
  * @param network Bitcoin network to use - determines Solana program addresses to use by default
@@ -100,39 +212,29 @@ export function initializeSolana(
     bitcoinRpc: BitcoinRpc<any>,
     network: BitcoinNetwork,
     storageCtor: <T extends StorageObject>(name: string) => IStorageManager<T>
-): ChainData<SolanaChainType> {
-    const connection = typeof(options.rpcUrl)==="string" ?
-        new Connection(options.rpcUrl) :
-        options.rpcUrl;
+): ChainData<SolanaChainType<"v1">> {
+    return _initializeSolana("v1", options, bitcoinRpc, network, storageCtor);
+}
 
-    const solanaChainData = SolanaChains[network];
-    if(solanaChainData==null) throw new Error(`Unsupported bitcoin network for Solana: ${BitcoinNetwork[network]}`);
-
-    const Fees = options.fees ?? new SolanaFees(connection, 200000, 4, 100);
-
-    const chainInterface = new SolanaChainInterface(connection, options.retryPolicy ?? {transactionResendInterval: 1000}, Fees);
-
-    const btcRelay = new SolanaBtcRelay(chainInterface, bitcoinRpc, options.btcRelayContract ?? solanaChainData.addresses.btcRelayContract);
-
-    const swapContract = new SolanaSwapProgram(
-        chainInterface,
-        btcRelay,
-        options.dataAccountStorage || storageCtor("solAccounts"),
-        options.swapContract ?? solanaChainData.addresses.swapContract
-    );
-    const chainEvents = new SolanaChainEventsBrowser(connection, swapContract);
-
-    return {
-        chainId,
-        btcRelay,
-        swapContract,
-        chainEvents,
-        swapDataConstructor: SolanaSwapData,
-        chainInterface,
-        spvVaultContract: null as never,
-        spvVaultDataConstructor: null as never,
-        spvVaultWithdrawalDataConstructor: null as never
-    };
+/**
+ * Initialize Solana chain integration using the new v2 version as the default version of the contracts
+ *
+ * @param options Options for initializing the Solana chain
+ * @param bitcoinRpc Bitcoin RPC to use for bitcoin read access
+ * @param network Bitcoin network to use - determines Solana program addresses to use by default
+ * @param storageCtor Storage constructor used to create storage backend for ephemeral data submission accounts,
+ *  i.e. accounts that are used to submit large amount of data to an instruction that would otherwise be bigger
+ *  than the transaction size limit - used for submitting bitcoin transaction proofs for PrTLC swaps
+ *
+ * @category Chain Interface
+ */
+export function initializeSolanaV2(
+    options: SolanaSwapperOptions,
+    bitcoinRpc: BitcoinRpc<any>,
+    network: BitcoinNetwork,
+    storageCtor: <T extends StorageObject>(name: string) => IStorageManager<T>
+): ChainData<SolanaChainType<"v2">> {
+    return _initializeSolana("v2", options, bitcoinRpc, network, storageCtor);
 }
 
 /**
@@ -140,17 +242,37 @@ export function initializeSolana(
  *
  * @category Chain Interface
  */
-export type SolanaInitializerType = ChainInitializer<SolanaSwapperOptions, SolanaChainType, SolanaAssetsType>;
+export type SolanaInitializerType<Version extends "v1" | "v2" = "v1"> = ChainInitializer<SolanaSwapperOptions, SolanaChainType<Version>, SolanaAssetsType>;
 
 /**
  * Solana chain initializer instance, used in the SwapperFactory constructor in the SDK library
  *
+ * Uses the legacy v1 version of the contract as the default exported version, this doesn't support the new
+ *  v2 lightning network flow, use the {@link SolanaInitializerV2} to initialize the SDK with the v2
+ *  contracts as the default, which do have an explicit support for new lightning network swap flow
+ *
  * @category Chain Interface
  */
-export const SolanaInitializer: SolanaInitializerType = {
+export const SolanaInitializer: SolanaInitializerType<"v1"> = {
     chainId,
-    chainType: null as unknown as SolanaChainType,
+    chainType: null as unknown as SolanaChainType<"v1">,
     initializer: initializeSolana,
+    tokens: SolanaAssets,
+    options: null as unknown as SolanaSwapperOptions
+} as const;
+
+/**
+ * Solana chain initializer instance, used in the SwapperFactory constructor in the SDK library
+ *
+ * Uses the new v2 version of the contracts as default exported version, supported the new lightning network
+ *  swap flow.
+ *
+ * @category Chain Interface
+ */
+export const SolanaInitializerV2: SolanaInitializerType<"v2"> = {
+    chainId,
+    chainType: null as unknown as SolanaChainType<"v2">,
+    initializer: initializeSolanaV2,
     tokens: SolanaAssets,
     options: null as unknown as SolanaSwapperOptions
 } as const;

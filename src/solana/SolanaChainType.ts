@@ -13,7 +13,7 @@ import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
  * Type definition for the Solana chain implementation
  * @category Chain Interface
  */
-export type SolanaChainType = ChainType<
+export type SolanaChainType<Version extends "v1" | "v2" = "v1"> = ChainType<
     "SOLANA",
     SolanaPreFetchData,
     SolanaPreFetchVerification,
@@ -22,7 +22,7 @@ export type SolanaChainType = ChainType<
     SolanaSigner,
     Wallet,
     SolanaSwapData,
-    SolanaSwapProgram,
+    SolanaSwapProgram<Version>,
     SolanaChainInterface,
     SolanaChainEventsBrowser,
     SolanaBtcRelay<any>,

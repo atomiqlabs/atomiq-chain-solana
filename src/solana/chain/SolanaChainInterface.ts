@@ -14,6 +14,8 @@ import {Buffer} from "buffer";
 import {SolanaKeypairWallet} from "../wallet/SolanaKeypairWallet";
 import {Wallet} from "@coral-xyz/anchor/dist/cjs/provider";
 import {SolanaChains} from "../SolanaChains";
+// @ts-ignore
+import * as bs58 from "bs58";
 
 const CLUSTER_BY_GENESIS_HASH: Record<string, "mainnet-beta" | "devnet" | "testnet"> = {
     "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d": "mainnet-beta",
@@ -174,6 +176,14 @@ export class SolanaChainInterface implements ChainInterface<
     /**
      * @inheritDoc
      */
+    shouldGetNativeTokenDrop(tokenAddress: string): boolean {
+        // True for all the tokens, because the contracts don't support native SOL handling yet
+        return true;
+    }
+
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer: string, token: string, amount: bigint, dstAddress: string, feeRate?: string): Promise<SolanaTx[]> {
         return this.Tokens.txsTransfer(new PublicKey(signer), new PublicKey(token), amount, new PublicKey(dstAddress), feeRate);
     }
@@ -257,6 +267,13 @@ export class SolanaChainInterface implements ChainInterface<
      */
     deserializeSignedTx(txData: string): Promise<Transaction> {
         return Promise.resolve(this.Transactions.deserializeSignedTransaction(txData));
+    }
+
+    /**
+     * @inheritDoc
+     */
+    getTxId(signedTX: SignedSolanaTx): Promise<string> {
+        return Promise.resolve(bs58.encode(signedTX.signature));
     }
 
     /**

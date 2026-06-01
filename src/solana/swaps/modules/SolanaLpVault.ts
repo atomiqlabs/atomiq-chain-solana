@@ -37,7 +37,7 @@ export class SolanaLpVault extends SolanaSwapModule {
                     signerAta: ata,
                     userData: this.program._SwapUserVault(signer, token),
                     vault: this.program._SwapVault(token),
-                    vaultAuthority: this.program._SwapVaultAuthority,
+                    vaultAuthority: this.program._SwapVaultAuthority, // Only necessary for V1 program
                     mint: token,
                     tokenProgram: TOKEN_PROGRAM_ID
                 })
@@ -64,7 +64,7 @@ export class SolanaLpVault extends SolanaSwapModule {
                     signerAta: ata,
                     userData: this.program._SwapUserVault(signer, token),
                     vault: this.program._SwapVault(token),
-                    vaultAuthority: this.program._SwapVaultAuthority,
+                    vaultAuthority: this.program._SwapVaultAuthority, // Only necessary for V1 program
                     mint: token,
                     systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID

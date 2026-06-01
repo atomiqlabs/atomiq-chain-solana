@@ -10,7 +10,11 @@ export declare class SolanaChainEvents extends SolanaChainEventsBrowser {
     private readonly logFetchInterval;
     private stopped;
     private timeout?;
-    constructor(directory: string, connection: Connection, solanaSwapProgram: SolanaSwapProgram, logFetchInterval?: number);
+    constructor(directory: string, connection: Connection, contractVersions: SolanaSwapProgram | {
+        [version: string]: {
+            swapContract: SolanaSwapProgram;
+        };
+    }, logFetchInterval?: number);
     /**
      * Retrieves last signature & slot from filesystem
      *

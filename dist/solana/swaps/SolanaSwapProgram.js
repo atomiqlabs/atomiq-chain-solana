@@ -1,10 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaSwapProgram = void 0;
+exports.SolanaSwapProgram = exports.isSwapProgramV2 = exports.isSwapProgramV1 = void 0;
 const SolanaSwapData_1 = require("./SolanaSwapData");
 const web3_js_1 = require("@solana/web3.js");
 const sha2_1 = require("@noble/hashes/sha2");
-const programIdl = require("./programIdl.json");
+const programIdlV1 = require("./v1/programIdl.json");
+const programIdlV2 = require("./v2/programIdl.json");
 const base_1 = require("@atomiqlabs/base");
 const spl_token_1 = require("@solana/spl-token");
 const SolanaProgramBase_1 = require("../program/SolanaProgramBase");
@@ -17,6 +18,15 @@ const buffer_1 = require("buffer");
 const Utils_1 = require("../../utils/Utils");
 const SolanaTokens_1 = require("../chain/modules/SolanaTokens");
 const BN = require("bn.js");
+const SolanaChains_1 = require("../SolanaChains");
+function isSwapProgramV1(obj) {
+    return obj.idl.version === "0.1.0";
+}
+exports.isSwapProgramV1 = isSwapProgramV1;
+function isSwapProgramV2(obj) {
+    return obj.idl.version === "0.2.0";
+}
+exports.isSwapProgramV2 = isSwapProgramV2;
 function toPublicKeyOrNull(str) {
     return str == null ? undefined : new web3_js_1.PublicKey(str);
 }
@@ -27,15 +37,13 @@ const MAX_PARALLEL_COMMIT_STATUS_CHECKS = 5;
  * @category Swaps
  */
 class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
-    constructor(chainInterface, btcRelay, storage, programAddress) {
-        super(chainInterface, programIdl, programAddress);
-        ////////////////////////
-        //// Constants
-        /**
-         * Rent-exempt amount (lamports) for escrow state accounts.
-         */
-        this.ESCROW_STATE_RENT_EXEMPT = 2658720;
-        this._SwapVaultAuthority = SolanaSwapProgram._SwapVaultAuthority(this.program.programId);
+    constructor(chainInterface, btcRelay, storage, programAddress, bitcoinNetwork, version) {
+        version ?? (version = "v1");
+        if (bitcoinNetwork != null && programAddress == null) {
+            programAddress = SolanaChains_1.SolanaChains[bitcoinNetwork]?.addresses[version ?? "v1"]?.swapContract;
+        }
+        super(chainInterface, version === "v1" ? programIdlV1 : programIdlV2, programAddress);
+        this._SwapVaultAuthority = SolanaSwapProgram._SwapVaultAuthority(this.program.programId); // Only necessary for V1 program
         this._SwapVault = SolanaSwapProgram._SwapVault.bind(this, this.program.programId);
         this._SwapUserVault = SolanaSwapProgram._SwapUserVault.bind(this, this.program.programId);
         this._SwapEscrowState = SolanaSwapProgram._SwapEscrowState.bind(this, this.program.programId);
@@ -69,7 +77,10 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
          * Authorization grace period in seconds.
          * @internal
          */
-        this._authGracePeriod = 5 * 60;
+        this._authGracePeriod = 30;
+        this.version = version;
+        this.ESCROW_STATE_RENT_EXEMPT = this.version === "v1" ? 2658720 : 2665680;
+        this.supportsInitWithoutClaimer = (this.version !== "v1");
         this.Init = new SwapInit_1.SwapInit(chainInterface, this);
         this.Refund = new SwapRefund_1.SwapRefund(chainInterface, this);
         this.Claim = new SwapClaim_1.SwapClaim(chainInterface, this, btcRelay);
@@ -118,7 +129,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      * @inheritDoc
      */
     isValidInitAuthorization(signer, swapData, sig, feeRate, preFetchedData) {
-        return this.Init.isSignatureValid(signer, swapData, sig.timeout, sig.prefix, sig.signature, feeRate, preFetchedData);
+        return this.Init.isSignatureValid(new web3_js_1.PublicKey(signer), swapData, sig.timeout, sig.prefix, sig.signature, feeRate, preFetchedData);
     }
     /**
      * @inheritDoc
@@ -181,22 +192,24 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
     /**
      * @inheritDoc
      */
-    isExpired(signer, data) {
+    isExpired(signer, data, refundSide) {
         let currentTimestamp = new BN(Math.floor(Date.now() / 1000));
-        if (data.isClaimer(signer))
+        if (data.isClaimer(signer) && !refundSide) {
             currentTimestamp = currentTimestamp.add(new BN(this.claimGracePeriod));
-        if (data.isOfferer(signer))
+        }
+        else {
             currentTimestamp = currentTimestamp.sub(new BN(this.refundGracePeriod));
+        }
         return Promise.resolve(data.expiry.lt(currentTimestamp));
     }
     /**
      * @inheritDoc
      */
     async isRequestRefundable(signer, data) {
-        //Swap can only be refunded by the offerer
-        if (!data.isOfferer(signer))
+        //V1 Swap can only be refunded by the offerer
+        if (isSwapProgramV1(this.program) && !data.isOfferer(signer))
             return false;
-        if (!(await this.isExpired(signer, data)))
+        if (!(await this.isExpired(signer, data, true)))
             return false;
         return await this.isCommited(data);
     }
@@ -235,11 +248,26 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             this.program.account.escrowState.fetchNullable(escrowStateKey),
             this.isExpired(signer, data)
         ]);
+        const getInitTxId = (0, Utils_1.onceAsync)(async () => {
+            const txId = await this._Events.findInEvents(escrowStateKey, async (event, tx) => {
+                if (event.name === "InitializeEvent") {
+                    const paymentHash = buffer_1.Buffer.from(event.data.hash).toString("hex");
+                    if (paymentHash !== data.paymentHash)
+                        return null;
+                    if (!event.data.sequence.eq(data.sequence))
+                        return null;
+                    return tx.transaction.signatures[0];
+                }
+            });
+            if (txId == null)
+                throw new Error("Initialize event not found!");
+            return txId;
+        });
         if (escrowState != null) {
             if (data.correctPDA(escrowState)) {
                 if (data.isOfferer(signer) && isExpired)
-                    return { type: base_1.SwapCommitStateType.REFUNDABLE };
-                return { type: base_1.SwapCommitStateType.COMMITED };
+                    return { type: base_1.SwapCommitStateType.REFUNDABLE, getInitTxId };
+                return { type: base_1.SwapCommitStateType.COMMITED, getInitTxId };
             }
             if (data.isOfferer(signer) && isExpired)
                 return { type: base_1.SwapCommitStateType.EXPIRED };
@@ -255,6 +283,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     return null;
                 return {
                     type: base_1.SwapCommitStateType.PAID,
+                    getInitTxId,
                     getClaimTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getClaimResult: () => Promise.resolve(buffer_1.Buffer.from(event.data.secret).toString("hex")),
                     getTxBlock: () => Promise.resolve({
@@ -271,6 +300,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     return null;
                 return {
                     type: isExpired ? base_1.SwapCommitStateType.EXPIRED : base_1.SwapCommitStateType.NOT_COMMITED,
+                    getInitTxId,
                     getRefundTxId: () => Promise.resolve(tx.transaction.signatures[0]),
                     getTxBlock: () => Promise.resolve({
                         blockHeight: tx.slot,
@@ -342,7 +372,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const account = await this.program.account.escrowState.fetchNullable(this._SwapEscrowState(paymentHashBuffer));
         if (account == null)
             return null;
-        return SolanaSwapData_1.SolanaSwapData.fromEscrowState(this.program.programId, account);
+        return SolanaSwapData_1.SolanaSwapData.fromEscrowState(this.program.programId, this.version, account);
     }
     /**
      * @inheritDoc
@@ -377,7 +407,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     continue;
                 }
                 swapsOpened[escrowHash] = {
-                    data: SolanaSwapData_1.SolanaSwapData.fromInstruction(this.program.programId, initIx, txoHash),
+                    data: SolanaSwapData_1.SolanaSwapData.fromInstruction(this.program.programId, this.version, initIx, txoHash),
                     getInitTxId: () => Promise.resolve(txSignature),
                     getTxBlock: () => Promise.resolve({
                         blockHeight: tx.slot,
@@ -392,6 +422,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     init: foundSwapData,
                     state: {
                         type: base_1.SwapCommitStateType.PAID,
+                        getInitTxId: foundSwapData?.getInitTxId,
                         getClaimTxId: () => Promise.resolve(txSignature),
                         getClaimResult: () => Promise.resolve(buffer_1.Buffer.from(event.data.secret).toString("hex")),
                         getTxBlock: () => Promise.resolve({
@@ -409,6 +440,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
                     init: foundSwapData,
                     state: {
                         type: isExpired ? base_1.SwapCommitStateType.EXPIRED : base_1.SwapCommitStateType.NOT_COMMITED,
+                        getInitTxId: foundSwapData?.getInitTxId,
                         getRefundTxId: () => Promise.resolve(txSignature),
                         getTxBlock: () => Promise.resolve({
                             blockHeight: tx.slot,
@@ -426,8 +458,8 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
             resultingSwaps[escrowHash] = {
                 init: foundSwapData,
                 state: foundSwapData.data.isOfferer(signer) && isExpired
-                    ? { type: base_1.SwapCommitStateType.REFUNDABLE }
-                    : { type: base_1.SwapCommitStateType.COMMITED }
+                    ? { type: base_1.SwapCommitStateType.REFUNDABLE, getInitTxId: foundSwapData.getInitTxId }
+                    : { type: base_1.SwapCommitStateType.COMMITED, getInitTxId: foundSwapData.getInitTxId }
             };
         }
         return {
@@ -451,6 +483,7 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         const { paymentHash, nonce, confirmations } = (0, Utils_1.fromClaimHash)(claimHash);
         const swapData = new SolanaSwapData_1.SolanaSwapData({
             programId: this.program.programId,
+            version: this.version,
             offerer: offererKey,
             claimer: claimerKey,
             token: tokenAddr,
@@ -525,31 +558,23 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      * @inheritDoc
      */
     txsRefund(signer, swapData, check, initAta, feeRate) {
-        if (!swapData.isOfferer(signer))
-            throw new Error("Only offerer can refund on Solana");
-        return this.Refund.txsRefund(swapData, check, initAta, feeRate);
+        return this.Refund.txsRefund(new web3_js_1.PublicKey(signer), swapData, check, initAta, feeRate);
     }
     /**
      * @inheritDoc
      */
     txsRefundWithAuthorization(signer, swapData, sig, check, initAta, feeRate) {
-        if (!swapData.isOfferer(signer))
-            throw new Error("Only offerer can refund on Solana");
-        return this.Refund.txsRefundWithAuthorization(swapData, sig.timeout, sig.prefix, sig.signature, check, initAta, feeRate);
+        return this.Refund.txsRefundWithAuthorization(new web3_js_1.PublicKey(signer), swapData, sig.timeout, sig.prefix, sig.signature, check, initAta, feeRate);
     }
     /**
      * @inheritDoc
      */
     txsInit(sender, swapData, sig, skipChecks, feeRate) {
         if (swapData.isPayIn()) {
-            if (!swapData.isOfferer(sender))
-                throw new Error("Only offerer can create payIn=true swap");
-            return this.Init.txsInitPayIn(swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
+            return this.Init.txsInitPayIn(new web3_js_1.PublicKey(sender), swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
         }
         else {
-            if (!swapData.isClaimer(sender))
-                throw new Error("Only claimer can create payIn=false swap");
-            return this.Init.txsInit(swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
+            return this.Init.txsInit(new web3_js_1.PublicKey(sender), swapData, sig.timeout, sig.prefix, sig.signature, skipChecks, feeRate);
         }
     }
     /**
@@ -605,14 +630,6 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
      * @inheritDoc
      */
     async init(signer, swapData, signature, skipChecks, txOptions) {
-        if (swapData.isPayIn()) {
-            if (!signer.getPublicKey().equals(swapData.offerer))
-                throw new Error("Invalid signer provided!");
-        }
-        else {
-            if (!signer.getPublicKey().equals(swapData.claimer))
-                throw new Error("Invalid signer provided!");
-        }
         const result = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
         const signatures = await this._Chain.sendAndConfirm(signer, result, txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return signatures[signatures.length - 1];
@@ -624,7 +641,16 @@ class SolanaSwapProgram extends SolanaProgramBase_1.SolanaProgramBase {
         if (!signer.getPublicKey().equals(swapData.claimer))
             throw new Error("Invalid signer provided!");
         const txsCommit = await this.txsInit(signer.getAddress(), swapData, signature, skipChecks, txOptions?.feeRate);
-        const txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, false, txOptions?.feeRate, true);
+        let txsClaim;
+        if (isSwapProgramV1(this.program)) {
+            // In V1 the initialize instruction has to contain the ATA initialization, hence we can skip checking it in claim
+            txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, false, txOptions?.feeRate, true);
+        }
+        else {
+            // In V2 the initialize instruction doesn't necessarily contain the ATA initialization, hence the claim instruction needs to
+            //  check and initialize the ATA if needed
+            txsClaim = await this.Claim.txsClaimWithSecret(signer.getPublicKey(), swapData, secret, true, true, txOptions?.feeRate, false);
+        }
         const signatures = await this._Chain.sendAndConfirm(signer, txsCommit.concat(txsClaim), txOptions?.waitForConfirmation, txOptions?.abortSignal);
         return [signatures[txsCommit.length - 1], signatures[signatures.length - 1]];
     }
@@ -725,7 +751,7 @@ exports.SolanaSwapProgram = SolanaSwapProgram;
  * PDA of the swap vault authority.
  * @internal
  */
-SolanaSwapProgram._SwapVaultAuthority = SolanaProgramBase_1.SolanaProgramBase._pda("authority");
+SolanaSwapProgram._SwapVaultAuthority = SolanaProgramBase_1.SolanaProgramBase._pda("authority"); // Only necessary for V1 program
 /**
  * PDA helper for global token vault accounts.
  * @internal

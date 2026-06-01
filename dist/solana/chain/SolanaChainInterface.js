@@ -15,6 +15,8 @@ const SolanaAddresses_1 = require("./modules/SolanaAddresses");
 const SolanaSigner_1 = require("../wallet/SolanaSigner");
 const SolanaKeypairWallet_1 = require("../wallet/SolanaKeypairWallet");
 const SolanaChains_1 = require("../SolanaChains");
+// @ts-ignore
+const bs58 = require("bs58");
 const CLUSTER_BY_GENESIS_HASH = {
     "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d": "mainnet-beta",
     "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG": "devnet",
@@ -91,6 +93,13 @@ class SolanaChainInterface {
     /**
      * @inheritDoc
      */
+    shouldGetNativeTokenDrop(tokenAddress) {
+        // True for all the tokens, because the contracts don't support native SOL handling yet
+        return true;
+    }
+    /**
+     * @inheritDoc
+     */
     txsTransfer(signer, token, amount, dstAddress, feeRate) {
         return this.Tokens.txsTransfer(new web3_js_1.PublicKey(signer), new web3_js_1.PublicKey(token), amount, new web3_js_1.PublicKey(dstAddress), feeRate);
     }
@@ -146,6 +155,12 @@ class SolanaChainInterface {
      */
     deserializeSignedTx(txData) {
         return Promise.resolve(this.Transactions.deserializeSignedTransaction(txData));
+    }
+    /**
+     * @inheritDoc
+     */
+    getTxId(signedTX) {
+        return Promise.resolve(bs58.encode(signedTX.signature));
     }
     /**
      * @inheritDoc

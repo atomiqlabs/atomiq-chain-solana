@@ -9,6 +9,8 @@ const SolanaSwapModule_1 = require("../SolanaSwapModule");
 const Utils_1 = require("../../../utils/Utils");
 const buffer_1 = require("buffer");
 const SolanaTokens_1 = require("../../chain/modules/SolanaTokens");
+const SolanaSwapProgram_1 = require("../SolanaSwapProgram");
+const BN = require("bn.js");
 class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     constructor() {
         super(...arguments);
@@ -18,14 +20,16 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     /**
      * bare Init action based on the data passed in swapData
      *
+     * @param sender
      * @param swapData
      * @param timeout
      * @private
      */
-    async Init(swapData, timeout) {
+    async Init(sender, swapData, timeout) {
         const claimerAta = (0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.claimer);
         const paymentHash = buffer_1.Buffer.from(swapData.paymentHash, "hex");
         const accounts = {
+            initializer: sender,
             claimer: swapData.claimer,
             offerer: swapData.offerer,
             escrowState: this.program._SwapEscrowState(paymentHash),
@@ -36,58 +40,116 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         };
         if (swapData.payIn) {
             const ata = (0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.offerer);
-            return new SolanaAction_1.SolanaAction(swapData.offerer, this.root, await this.swapProgram.methods
-                .offererInitializePayIn(swapData.toSwapDataStruct(), [...buffer_1.Buffer.alloc(32, 0)], (0, Utils_1.toBN)(timeout))
-                .accounts({
-                ...accounts,
-                offererAta: ata,
-                vault: this.program._SwapVault(swapData.token),
-                vaultAuthority: this.program._SwapVaultAuthority,
-                tokenProgram: spl_token_1.TOKEN_PROGRAM_ID,
-            })
-                .instruction(), SwapInit.CUCosts.INIT_PAY_IN);
+            let instruction;
+            const program = this.swapProgram;
+            if ((0, SolanaSwapProgram_1.isSwapProgramV1)(program)) {
+                if (!swapData.securityDeposit.eq(new BN(0)))
+                    throw new Error("Swap data for V1 payIn=true swaps cannot have any security deposit!");
+                if (!swapData.claimerBounty.eq(new BN(0)))
+                    throw new Error("Swap data for V1 payIn=true swaps cannot have any claimer bounty!");
+                instruction = await program.methods
+                    .offererInitializePayIn(swapData.toSwapDataStruct(), [...buffer_1.Buffer.alloc(32, 0)], (0, Utils_1.toBN)(timeout))
+                    .accounts({
+                    ...accounts,
+                    offererAta: ata,
+                    vault: this.program._SwapVault(swapData.token),
+                    vaultAuthority: this.program._SwapVaultAuthority,
+                    tokenProgram: spl_token_1.TOKEN_PROGRAM_ID,
+                })
+                    .instruction();
+            }
+            else if ((0, SolanaSwapProgram_1.isSwapProgramV2)(program)) {
+                instruction = await program.methods
+                    .offererInitializePayIn(swapData.toSwapDataStruct(), swapData.securityDeposit, swapData.claimerBounty, [...(swapData.txoHash != null ? buffer_1.Buffer.from(swapData.txoHash, "hex") : buffer_1.Buffer.alloc(32, 0))], (0, Utils_1.toBN)(timeout))
+                    .accounts({
+                    ...accounts,
+                    offererAta: ata,
+                    vault: this.program._SwapVault(swapData.token),
+                    vaultAuthority: this.program._SwapVaultAuthority,
+                    tokenProgram: spl_token_1.TOKEN_PROGRAM_ID,
+                })
+                    .instruction();
+                // Mark the claimer as signer for non payOut swaps
+                if (!swapData.isPayOut()) {
+                    instruction.keys.forEach(key => {
+                        if (key.pubkey.equals(swapData.claimer))
+                            key.isSigner = true;
+                    });
+                }
+            }
+            else
+                throw new Error("Invalid swap program version!");
+            return new SolanaAction_1.SolanaAction(sender, this.root, instruction, SwapInit.CUCosts.INIT_PAY_IN);
         }
         else {
-            return new SolanaAction_1.SolanaAction(swapData.claimer, this.root, await this.swapProgram.methods
+            const instruction = await this.swapProgram.methods
                 .offererInitialize(swapData.toSwapDataStruct(), swapData.securityDeposit, swapData.claimerBounty, [...(swapData.txoHash != null ? buffer_1.Buffer.from(swapData.txoHash, "hex") : buffer_1.Buffer.alloc(32, 0))], (0, Utils_1.toBN)(timeout))
                 .accounts({
                 ...accounts,
                 offererUserData: this.program._SwapUserVault(swapData.offerer, swapData.token),
             })
-                .instruction(), SwapInit.CUCosts.INIT);
+                .instruction();
+            // Mark the claimer as signer for non payOut swaps
+            if ((0, SolanaSwapProgram_1.isSwapProgramV2)(this.swapProgram) && !swapData.isPayOut()) {
+                instruction.keys.forEach(key => {
+                    if (key.pubkey.equals(swapData.claimer))
+                        key.isSigner = true;
+                });
+            }
+            return new SolanaAction_1.SolanaAction(sender, this.root, instruction, SwapInit.CUCosts.INIT);
         }
     }
     /**
      * InitPayIn action which includes SOL to WSOL wrapping if indicated by the fee rate
      *
+     * @param signer
      * @param swapData
      * @param timeout
      * @param feeRate
      * @private
      */
-    async InitPayIn(swapData, timeout, feeRate) {
+    async InitPayIn(sender, swapData, timeout, feeRate) {
         if (!swapData.isPayIn())
             throw new Error("Must be payIn==true");
-        const action = new SolanaAction_1.SolanaAction(swapData.offerer, this.root);
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            if (!sender.equals(swapData.offerer))
+                throw new Error("Transaction signer must be offerer for payIn=true escrows!");
+        }
+        else {
+            if (!sender.equals(swapData.offerer) && !sender.equals(swapData.claimer))
+                throw new Error("Transaction signer must be either offerer or claimer claimer!");
+        }
+        const action = new SolanaAction_1.SolanaAction(sender, this.root);
         if (this.shouldWrapOnInit(swapData, feeRate))
-            action.addAction(this.Wrap(swapData, feeRate));
-        action.addAction(await this.Init(swapData, timeout));
+            action.addAction(this.Wrap(swapData, feeRate), undefined, true);
+        action.addAction(await this.Init(sender, swapData, timeout));
         return action;
     }
     /**
      * InitNotPayIn action with additional createAssociatedTokenAccountIdempotentInstruction instruction, such that
      *  a recipient ATA is created if it doesn't exist
      *
+     * @param sender
      * @param swapData
      * @param timeout
      * @private
      */
-    async InitNotPayIn(swapData, timeout) {
+    async InitNotPayIn(sender, swapData, timeout) {
         if (swapData.isPayIn())
             throw new Error("Must be payIn==false");
-        const action = new SolanaAction_1.SolanaAction(swapData.claimer, this.root);
-        action.addIx((0, spl_token_1.createAssociatedTokenAccountIdempotentInstruction)(swapData.claimer, swapData.claimerAta ?? await (0, spl_token_1.getAssociatedTokenAddress)(swapData.token, swapData.claimer), swapData.claimer, swapData.token));
-        action.addAction(await this.Init(swapData, timeout));
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            if (!sender.equals(swapData.claimer))
+                throw new Error("Transaction signer must be claimer for payIn=false escrows!");
+        }
+        else {
+            if (!sender.equals(swapData.offerer) && !sender.equals(swapData.claimer))
+                throw new Error("Transaction signer must be either offerer or claimer claimer!");
+        }
+        const action = new SolanaAction_1.SolanaAction(sender, this.root);
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            action.addIx((0, spl_token_1.createAssociatedTokenAccountIdempotentInstruction)(sender, swapData.claimerAta ?? await (0, spl_token_1.getAssociatedTokenAddress)(swapData.token, swapData.claimer), swapData.claimer, swapData.token));
+        } // V2 doesn't explicitly check the token account on initialization, no need to open it
+        action.addAction(await this.Init(sender, swapData, timeout));
         return action;
     }
     Wrap(swapData, feeRate) {
@@ -139,10 +201,19 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @param feeRate
      * @private
      */
-    async getTxToSign(swapData, timeout, feeRate) {
+    async getTxToSign(signer, swapData, timeout, feeRate) {
+        let txSender;
+        if (signer.equals(swapData.offerer)) {
+            txSender = swapData.claimer;
+        }
+        else if (signer.equals(swapData.claimer)) {
+            txSender = swapData.offerer;
+        }
+        else
+            throw new Error("Signer needs to be either claimer or offerer of the swap!");
         const action = swapData.isPayIn() ?
-            await this.InitPayIn(swapData, BigInt(timeout), feeRate) :
-            await this.InitNotPayIn(swapData, BigInt(timeout));
+            await this.InitPayIn(txSender, swapData, BigInt(timeout), feeRate) :
+            await this.InitNotPayIn(txSender, swapData, BigInt(timeout));
         const tx = (await action.tx(feeRate)).tx;
         return tx;
     }
@@ -234,14 +305,20 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     async signSwapInitialization(signer, swapData, authorizationTimeout, preFetchedBlockData, feeRate) {
         if (signer.keypair == null)
             throw new Error("Unsupported");
-        if (!signer.getPublicKey().equals(swapData.isPayIn() ? swapData.claimer : swapData.offerer))
-            throw new Error("Invalid signer, wrong public key!");
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            if (!signer.getPublicKey().equals(swapData.isPayIn() ? swapData.claimer : swapData.offerer))
+                throw new Error("Invalid signer, wrong public key!");
+        }
+        else {
+            if (!signer.getPublicKey().equals(swapData.offerer) && !signer.getPublicKey().equals(swapData.claimer))
+                throw new Error("Invalid signer, must be either offerer or claimer claimer!");
+        }
         if (preFetchedBlockData != null && Date.now() - preFetchedBlockData.timestamp > this.SIGNATURE_PREFETCH_DATA_VALIDITY)
             preFetchedBlockData = undefined;
         const { block: latestBlock, slot: latestSlot } = preFetchedBlockData || await this.root.Blocks.findLatestParsedBlock("finalized");
         const authTimeout = Math.floor(Date.now() / 1000) + authorizationTimeout;
-        const txToSign = await this.getTxToSign(swapData, authTimeout.toString(10), feeRate);
-        txToSign.feePayer = swapData.isPayIn() ? swapData.offerer : swapData.claimer;
+        const txToSign = await this.getTxToSign(signer.getPublicKey(), swapData, authTimeout.toString(10), feeRate);
+        txToSign.feePayer = signer.getPublicKey().equals(swapData.offerer) ? swapData.claimer : swapData.offerer;
         txToSign.recentBlockhash = latestBlock.blockhash;
         txToSign.sign(signer.keypair);
         // this.logger.debug("signSwapInitialization(): Signed tx: ",txToSign);
@@ -267,15 +344,25 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @public
      */
     async isSignatureValid(sender, swapData, timeout, prefix, signature, feeRate, preFetchedData) {
-        if (swapData.isPayIn()) {
-            if (!swapData.isOfferer(sender))
-                throw new base_1.SignatureVerificationError("Sender needs to be offerer in payIn=true swaps");
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            if (swapData.isPayIn()) {
+                if (!swapData.offerer.equals(sender))
+                    throw new base_1.SignatureVerificationError("Sender needs to be offerer in payIn=true swaps");
+            }
+            else {
+                if (!swapData.claimer.equals(sender))
+                    throw new base_1.SignatureVerificationError("Sender needs to be claimer in payIn=false swaps");
+            }
         }
-        else {
-            if (!swapData.isClaimer(sender))
-                throw new base_1.SignatureVerificationError("Sender needs to be claimer in payIn=false swaps");
+        let signer;
+        if (sender.equals(swapData.offerer)) {
+            signer = swapData.claimer;
         }
-        const signer = swapData.isPayIn() ? swapData.claimer : swapData.offerer;
+        else if (sender.equals(swapData.claimer)) {
+            signer = swapData.offerer;
+        }
+        else
+            throw new Error("Signer needs to be either claimer or offerer of the swap!");
         if (!swapData.isPayIn() && await this.program.isExpired(sender.toString(), swapData)) {
             throw new base_1.SignatureVerificationError("Swap will expire too soon!");
         }
@@ -285,25 +372,31 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
         const isExpired = (BigInt(timeout) - currentTimestamp) < BigInt(this.program._authGracePeriod);
         if (isExpired)
             throw new base_1.SignatureVerificationError("Authorization expired!");
-        const [transactionSlot, signatureString] = signature.split(";");
-        const txSlot = parseInt(transactionSlot);
-        const [latestSlot, blockhash] = await Promise.all([
-            this.getSlotForSignature(preFetchedData),
-            this.getBlockhashForSignature(txSlot, preFetchedData)
-        ]);
-        const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
-        const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
-        if (slotsLeft < 0)
-            throw new base_1.SignatureVerificationError("Authorization expired!");
-        const txToSign = await this.getTxToSign(swapData, timeout, feeRate);
-        txToSign.feePayer = new web3_js_1.PublicKey(sender);
-        txToSign.recentBlockhash = blockhash;
-        txToSign.addSignature(signer, buffer_1.Buffer.from(signatureString, "hex"));
-        // this.logger.debug("isSignatureValid(): Signed tx: ",txToSign);
-        const valid = txToSign.verifySignatures(false);
-        if (!valid)
-            throw new base_1.SignatureVerificationError("Invalid signature!");
-        return buffer_1.Buffer.from(blockhash);
+        const requiresCounterpartySignature = (0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram) || !swapData.isPayOut() || sender.equals(swapData.claimer);
+        if (requiresCounterpartySignature) {
+            if (signature == null)
+                throw new base_1.SignatureVerificationError("Counterparty signature is required to initiate the swap!");
+            const [transactionSlot, signatureString] = signature.split(";");
+            const txSlot = parseInt(transactionSlot);
+            const [latestSlot, blockhash] = await Promise.all([
+                this.getSlotForSignature(preFetchedData),
+                this.getBlockhashForSignature(txSlot, preFetchedData)
+            ]);
+            const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
+            const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
+            if (slotsLeft < 0)
+                throw new base_1.SignatureVerificationError("Authorization expired!");
+            const txToSign = await this.getTxToSign(signer, swapData, timeout, feeRate);
+            txToSign.feePayer = sender;
+            txToSign.recentBlockhash = blockhash;
+            txToSign.addSignature(signer, buffer_1.Buffer.from(signatureString, "hex"));
+            // this.logger.debug("isSignatureValid(): Signed tx: ",txToSign);
+            const valid = txToSign.verifySignatures(false);
+            if (!valid)
+                throw new base_1.SignatureVerificationError("Invalid signature!");
+            return buffer_1.Buffer.from(blockhash);
+        }
+        return buffer_1.Buffer.alloc(32, 0);
     }
     /**
      * Gets expiry of the provided signature data, this is a minimum of slot expiry & swap signature expiry
@@ -314,16 +407,18 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @public
      */
     async getSignatureExpiry(timeout, signature, preFetchedData) {
-        const [transactionSlotStr, signatureString] = signature.split(";");
-        const txSlot = parseInt(transactionSlotStr);
-        const latestSlot = await this.getSlotForSignature(preFetchedData);
-        const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
-        const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
-        const now = Date.now();
-        const slotExpiryTime = now + (slotsLeft * this.root._SLOT_TIME);
-        const timeoutExpiryTime = (parseInt(timeout) - this.program._authGracePeriod) * 1000;
-        const expiry = Math.min(slotExpiryTime, timeoutExpiryTime);
-        if (expiry < now)
+        let expiry = (parseInt(timeout) - this.program._authGracePeriod) * 1000;
+        if (signature != null) {
+            const [transactionSlotStr, signatureString] = signature.split(";");
+            const txSlot = parseInt(transactionSlotStr);
+            const latestSlot = await this.getSlotForSignature(preFetchedData);
+            const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
+            const slotsLeft = lastValidTransactionSlot - latestSlot - this.SIGNATURE_SLOT_BUFFER;
+            const slotExpiryTime = Date.now() + (slotsLeft * this.root._SLOT_TIME);
+            if (slotExpiryTime < expiry)
+                expiry = slotExpiryTime;
+        }
+        if (expiry < Date.now())
             return 0;
         return expiry;
     }
@@ -335,13 +430,15 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @public
      */
     async isSignatureExpired(signature, timeout) {
-        const [transactionSlotStr, signatureString] = signature.split(";");
-        const txSlot = parseInt(transactionSlotStr);
-        const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
-        const latestSlot = await this.root.Slots.getSlot("finalized");
-        const slotsLeft = lastValidTransactionSlot - latestSlot + this.SIGNATURE_SLOT_BUFFER;
-        if (slotsLeft < 0)
-            return true;
+        if (signature != null) {
+            const [transactionSlotStr, signatureString] = signature.split(";");
+            const txSlot = parseInt(transactionSlotStr);
+            const lastValidTransactionSlot = txSlot + this.root._TX_SLOT_VALIDITY;
+            const latestSlot = await this.root.Slots.getSlot("finalized");
+            const slotsLeft = lastValidTransactionSlot - latestSlot + this.SIGNATURE_SLOT_BUFFER;
+            if (slotsLeft < 0)
+                return true;
+        }
         if ((parseInt(timeout) + this.program._authGracePeriod) * 1000 < Date.now())
             return true;
         return false;
@@ -351,6 +448,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      *  the init transaction (if indicated by the fee rate) or adds the wrapping in a separate transaction (if no
      *  indication in the fee rate)
      *
+     * @param sender
      * @param swapData swap to initialize
      * @param timeout init signature timeout
      * @param prefix init signature prefix
@@ -358,20 +456,37 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @param skipChecks whether to skip signature validity checks
      * @param feeRate fee rate to use for the transaction
      */
-    async txsInitPayIn(swapData, timeout, prefix, signature, skipChecks, feeRate) {
+    async txsInitPayIn(sender, swapData, timeout, prefix, signature, skipChecks, feeRate) {
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            if (!sender.equals(swapData.offerer))
+                throw new Error("Transaction sender has to be the offerer!");
+        }
+        let signer;
+        if (sender.equals(swapData.offerer)) {
+            signer = swapData.claimer;
+        }
+        else if (sender.equals(swapData.claimer)) {
+            signer = swapData.offerer;
+        }
+        else
+            throw new Error("Signer needs to be either claimer or offerer of the swap!");
         if (swapData.offererAta == undefined)
             throw new base_1.SwapDataVerificationError("No offererAta specified for payIn swap!");
         const offererAta = swapData.offererAta;
+        const requiresCounterpartySignature = (0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram) || !swapData.isPayOut() || sender.equals(swapData.claimer);
         if (!skipChecks) {
             const [_, payStatus] = await Promise.all([
-                this.isSignatureValid(swapData.getOfferer(), swapData, timeout, prefix, signature, feeRate),
+                requiresCounterpartySignature ? this.isSignatureValid(sender, swapData, timeout, prefix, signature, feeRate) : Promise.resolve(),
                 this.program.getClaimHashStatus(swapData.getClaimHash())
             ]);
             if (payStatus !== base_1.SwapCommitStateType.NOT_COMMITED)
                 throw new base_1.SwapDataVerificationError("Invoice already being paid for or paid");
         }
-        const [slotNumber, signatureStr] = signature.split(";");
-        const block = await (0, Utils_1.tryWithRetries)(() => this.root.Blocks.getParsedBlock(parseInt(slotNumber)), { maxRetries: 3, delay: 100, exponential: true });
+        let block;
+        if (requiresCounterpartySignature) {
+            const slotNumber = signature.split(";")[0];
+            block = await (0, Utils_1.tryWithRetries)(() => this.root.Blocks.getParsedBlock(parseInt(slotNumber)), { maxRetries: 3, delay: 100, exponential: true });
+        }
         const txs = [];
         let isWrapping = false;
         const isWrappedInSignedTx = feeRate != null && feeRate.split("#").length > 1;
@@ -379,14 +494,17 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             const ataAcc = await this.root.Tokens.getATAOrNull(offererAta);
             const balance = ataAcc?.amount ?? 0n;
             if (balance < swapData.getAmount()) {
+                if (!swapData.offerer.equals(sender))
+                    throw new Error("Additional SOL needs to be wrapped but the sender is not offerer!");
                 //Need to wrap more SOL to WSOL
                 await this.root.Tokens.Wrap(swapData.offerer, swapData.getAmount() - balance, ataAcc == null)
                     .addToTxs(txs, feeRate, block);
                 isWrapping = true;
             }
         }
-        const initTx = await (await this.InitPayIn(swapData, BigInt(timeout), feeRate)).tx(feeRate, block);
-        initTx.tx.addSignature(swapData.claimer, buffer_1.Buffer.from(signatureStr, "hex"));
+        const initTx = await (await this.InitPayIn(sender, swapData, BigInt(timeout), feeRate)).tx(feeRate, block);
+        if (requiresCounterpartySignature)
+            initTx.tx.addSignature(signer, buffer_1.Buffer.from(signature.split(";")[1], "hex"));
         txs.push(initTx);
         this.logger.debug("txsInitPayIn(): create swap init TX, swap: " + swapData.getClaimHash() +
             " wrapping client-side: " + isWrapping + " feerate: " + feeRate);
@@ -395,6 +513,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
     /**
      * Creates init transactions (InitNotPayIn) with a valid signature from an intermediary
      *
+     * @param sender
      * @param swapData swap to initialize
      * @param timeout init signature timeout
      * @param prefix init signature prefix
@@ -402,14 +521,32 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
      * @param skipChecks whether to skip signature validity checks
      * @param feeRate fee rate to use for the transaction
      */
-    async txsInit(swapData, timeout, prefix, signature, skipChecks, feeRate) {
-        if (!skipChecks) {
-            await this.isSignatureValid(swapData.getClaimer(), swapData, timeout, prefix, signature, feeRate);
+    async txsInit(sender, swapData, timeout, prefix, signature, skipChecks, feeRate) {
+        if ((0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram)) {
+            if (!sender.equals(swapData.claimer))
+                throw new Error("Transaction sender has to be the claimer!");
         }
-        const [slotNumber, signatureStr] = signature.split(";");
-        const block = await (0, Utils_1.tryWithRetries)(() => this.root.Blocks.getParsedBlock(parseInt(slotNumber)), { maxRetries: 3, delay: 100, exponential: true });
-        const initTx = await (await this.InitNotPayIn(swapData, BigInt(timeout))).tx(feeRate, block);
-        initTx.tx.addSignature(swapData.offerer, buffer_1.Buffer.from(signatureStr, "hex"));
+        let signer;
+        if (sender.equals(swapData.offerer)) {
+            signer = swapData.claimer;
+        }
+        else if (sender.equals(swapData.claimer)) {
+            signer = swapData.offerer;
+        }
+        else
+            throw new Error("Signer needs to be either claimer or offerer of the swap!");
+        const requiresCounterpartySignature = (0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram) || !swapData.isPayOut() || sender.equals(swapData.claimer);
+        let block;
+        if (requiresCounterpartySignature) {
+            if (!skipChecks) {
+                await this.isSignatureValid(sender, swapData, timeout, prefix, signature, feeRate);
+            }
+            const slotNumber = signature.split(";")[0];
+            block = await (0, Utils_1.tryWithRetries)(() => this.root.Blocks.getParsedBlock(parseInt(slotNumber)), { maxRetries: 3, delay: 100, exponential: true });
+        }
+        const initTx = await (await this.InitNotPayIn(sender, swapData, BigInt(timeout))).tx(feeRate, block);
+        if (requiresCounterpartySignature)
+            initTx.tx.addSignature(signer, buffer_1.Buffer.from(signature.split(";")[1], "hex"));
         this.logger.debug("txsInit(): create swap init TX, swap: " + swapData.getClaimHash() + " feerate: " + feeRate);
         return [initTx];
     }
@@ -481,7 +618,7 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
                 : await this.getInitFeeRate(swapData.offerer, swapData.claimer, swapData.token, swapData.paymentHash));
         const [rawFee, initAta] = await Promise.all([
             this.getRawInitFee(swapData, feeRate),
-            swapData != null && swapData.payOut ?
+            (0, SolanaSwapProgram_1.isSwapProgramV1)(this.swapProgram) && swapData != null && swapData.payOut ?
                 this.root.Tokens.getATAOrNull((0, spl_token_1.getAssociatedTokenAddressSync)(swapData.token, swapData.claimer)).then(acc => acc == null) :
                 Promise.resolve(null)
         ]);

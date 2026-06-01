@@ -13,7 +13,7 @@ export declare class SolanaAction {
     private estimateFee;
     addIx(instruction: TransactionInstruction, computeBudget?: number, signers?: Signer[]): void;
     add(action: SolanaAction): this;
-    addAction(action: SolanaAction, index?: number): this;
+    addAction(action: SolanaAction, index?: number, noSignerCheck?: boolean): this;
     tx(feeRate?: string, block?: {
         blockhash: string;
         blockHeight: number;

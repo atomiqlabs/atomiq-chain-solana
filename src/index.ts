@@ -42,11 +42,11 @@
  * Initialize the Atomiq SDK with Solana network support:
  *
  * ```ts
- * import {SolanaInitializer} from "@atomiqlabs/chain-solana";
+ * import {SolanaInitializerV2} from "@atomiqlabs/chain-solana";
  * import {BitcoinNetwork, SwapperFactory, TypedSwapper} from "@atomiqlabs/sdk";
  *
  * // Define chains that you want to support here
- * const chains = [SolanaInitializer] as const;
+ * const chains = [SolanaInitializerV2] as const;
  * type SupportedChains = typeof chains;
  *
  * const Factory = new SwapperFactory<SupportedChains>(chains);

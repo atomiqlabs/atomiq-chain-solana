@@ -55,7 +55,7 @@ export class SolanaAction {
         return this.addAction(action);
     }
 
-    public addAction(action: SolanaAction, index: number = this.instructions.length): this {
+    public addAction(action: SolanaAction, index: number = this.instructions.length, noSignerCheck?: boolean): this {
         if(action.firstIxBeforeComputeBudget) {
             if(this.instructions.length>0)
                 throw new Error("Tried to add firstIxBeforeComputeBudget action to existing action with instructions");
@@ -63,7 +63,7 @@ export class SolanaAction {
         }
         if(this.firstIxBeforeComputeBudget && this.instructions.length>0 && index===0)
             throw new Error("Tried adding to firstIxBeforeComputeBudget action on 0th index");
-        if(!action.mainSigner.equals(this.mainSigner)) throw new Error("Actions need to have the same signer!");
+        if(!noSignerCheck && !action.mainSigner.equals(this.mainSigner)) throw new Error("Actions need to have the same signer!");
         if(this.computeBudget==null && action.computeBudget!=null) this.computeBudget = action.computeBudget;
         if(this.computeBudget!=null && action.computeBudget!=null) this.computeBudget += action.computeBudget;
         this.instructions.splice(index, 0, ...action.instructions);
