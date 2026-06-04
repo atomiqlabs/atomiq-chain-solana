@@ -137,7 +137,7 @@ class SolanaDataAccount extends SolanaSwapModule_1.SolanaSwapModule {
                 continue;
             try {
                 const fetchedDataAccount = await this.connection.getAccountInfo(accountKey);
-                if (fetchedDataAccount == null) {
+                if (fetchedDataAccount == null || fetchedDataAccount.lamports === 0 || fetchedDataAccount.data.length === 0) {
                     await this.removeDataAccount(accountKey);
                     continue;
                 }
