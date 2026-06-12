@@ -24,44 +24,59 @@ class ConnectionWithRetries extends web3_js_1.Connection {
             config = commitmentOrConfig ?? {};
         }
         config.fetch = (input, init) => (0, Utils_1.tryWithRetries)(async () => {
-            let timedOut = false;
+            if (init?.signal?.aborted) {
+                throw init.signal.reason instanceof Error
+                    ? init.signal.reason
+                    : new Error("Aborted");
+            }
             const abortController = new AbortController();
             const timeoutHandle = setTimeout(() => {
-                timedOut = true;
-                abortController.abort('Timed out');
+                abortController.abort(new Error('Network request timed out'));
             }, this.requestTimeout);
             let originalSignal;
+            let originalSignalListener;
             if (init?.signal != null) {
                 originalSignal = init.signal;
-                init.signal.addEventListener('abort', (reason) => {
+                originalSignal.addEventListener('abort', originalSignalListener = () => {
                     clearTimeout(timeoutHandle);
-                    abortController.abort(reason);
+                    abortController.abort(originalSignal?.reason instanceof Error
+                        ? originalSignal?.reason
+                        : new Error("Aborted"));
                 });
             }
-            const result = await fetch(input, {
-                ...init,
-                signal: abortController.signal
-            }).catch((e) => {
-                console.error('SolanaWalletProvider: fetchWithTimeout(' + typeof e + '): ', e);
-                if (e.name === 'AbortError' &&
-                    (originalSignal == null || !originalSignal.aborted) &&
-                    timedOut) {
-                    throw new Error('Network request timed out');
+            try {
+                const result = await fetch(input, {
+                    ...init,
+                    signal: abortController.signal
+                });
+                if (Math.floor(result.status / 100) === 5) {
+                    throw new Error(`Internal server error: ${result.status}`);
                 }
-                else {
-                    throw e;
+                if (result.status === 429) {
+                    throw new Error(`Too many requests (429)`);
                 }
-            });
-            if (Math.floor(result.status / 100) === 5) {
-                throw new Error(`Internal server error: ${result.status}`);
+                try {
+                    const textResult = await result.text();
+                    return new Response(textResult, {
+                        status: result.status,
+                        statusText: result.statusText,
+                        headers: result.headers,
+                    });
+                }
+                catch (e) {
+                    console.error(`ConnectionWithRetries: fetch(): Failed to read response body: `, e);
+                    throw new Error("Error reading response body");
+                }
             }
-            if (result.status === 429) {
-                throw new Error(`Too many requests (429)`);
+            finally {
+                clearTimeout(timeoutHandle);
+                if (originalSignal != null && originalSignalListener != null)
+                    originalSignal.removeEventListener("abort", originalSignalListener);
             }
-            return result;
         }, this.retryPolicy, (e) => !e?.message?.startsWith?.("Internal server error: ") &&
             e?.message !== "Network request timed out" &&
-            e?.message !== "Too many requests (429)", init?.signal ?? undefined);
+            e?.message !== "Too many requests (429)" &&
+            e?.message !== "Error reading response body", init?.signal ?? undefined);
         config.disableRetryOnRateLimit = true;
         super(endpoint, config);
         this.retryPolicy = config?.retryPolicy;
