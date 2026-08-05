@@ -443,7 +443,8 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
                 return true;
         }
         else {
-            if ((parseInt(timeout) + this.program._authGracePeriod) * 1000 < Date.now())
+            const latestBlock = await this.root.Blocks.findLatestParsedBlock("finalized");
+            if ((parseInt(timeout) + this.program._authGracePeriod) < latestBlock.block.blockTime)
                 return true;
         }
         return false;

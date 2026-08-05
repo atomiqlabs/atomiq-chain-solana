@@ -547,7 +547,8 @@ export class SwapInit extends SolanaSwapModule {
             const latestBlock = await this.root.Blocks.getParsedBlock(latestSlot);
             if((parseInt(timeout)+this.program._authGracePeriod) < latestBlock.blockTime) return true;
         } else {
-            if((parseInt(timeout)+this.program._authGracePeriod)*1000 < Date.now()) return true;
+            const latestBlock = await this.root.Blocks.findLatestParsedBlock("finalized");
+            if((parseInt(timeout)+this.program._authGracePeriod) < latestBlock.block.blockTime) return true;
         }
         return false;
     }
