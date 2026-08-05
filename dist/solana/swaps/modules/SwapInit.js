@@ -438,9 +438,14 @@ class SwapInit extends SolanaSwapModule_1.SolanaSwapModule {
             const slotsLeft = lastValidTransactionSlot - latestSlot + this.SIGNATURE_SLOT_BUFFER;
             if (slotsLeft < 0)
                 return true;
+            const latestBlock = await this.root.Blocks.getParsedBlock(latestSlot);
+            if ((parseInt(timeout) + this.program._authGracePeriod) < latestBlock.blockTime)
+                return true;
         }
-        if ((parseInt(timeout) + this.program._authGracePeriod) * 1000 < Date.now())
-            return true;
+        else {
+            if ((parseInt(timeout) + this.program._authGracePeriod) * 1000 < Date.now())
+                return true;
+        }
         return false;
     }
     /**
