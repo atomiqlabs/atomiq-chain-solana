@@ -462,8 +462,6 @@ export class SolanaSwapData extends SwapData {
             if(!this.offererAta.equals(other.offererAta)) return false;
         }
 
-        if(this.offererInitializer==null && other.offererInitializer!=null) return false;
-        if(this.offererInitializer!=null && other.offererInitializer==null) return false;
         if(this.offererInitializer!=null && other.offererInitializer!=null) {
             if(this.offererInitializer!==other.offererInitializer) return false;
         }
@@ -481,7 +479,9 @@ export class SolanaSwapData extends SwapData {
             other.amount.eq(this.amount) &&
             other.securityDeposit.eq(this.securityDeposit) &&
             other.claimerBounty.eq(this.claimerBounty) &&
-            other.token.equals(this.token)
+            other.token.equals(this.token) &&
+            other.version===this.version &&
+            other.programId.equals(this.programId)
     }
 
     /**
