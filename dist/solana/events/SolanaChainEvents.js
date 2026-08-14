@@ -30,7 +30,10 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
             return null;
         }
         try {
-            return JSON.parse(txt);
+            const parsed = JSON.parse(txt);
+            if ((0, SolanaChainEventsBrowser_1.isSolanaLegacyEventListenerState)(parsed) || (0, SolanaChainEventsBrowser_1.isSolanaEventListenerState)(parsed))
+                return parsed;
+            return null;
         }
         catch (e) { }
         try {
@@ -54,8 +57,25 @@ class SolanaChainEvents extends SolanaChainEventsBrowser_1.SolanaChainEventsBrow
      *
      * @private
      */
-    saveLastSignature(lastState) {
-        return fs.writeFile(this.directory + BLOCKHEIGHT_FILENAME, JSON.stringify(lastState));
+    async saveLastSignature(lastState) {
+        const filename = this.directory + BLOCKHEIGHT_FILENAME;
+        const tmp = `${filename}.${Math.floor(Math.random() * 2 ** 32)}.tmp`;
+        try {
+            await fs.writeFile(tmp, JSON.stringify(lastState), {
+                flag: 'wx',
+                flush: true, //fsync
+            });
+            //Rename atomically
+            await fs.rename(tmp, filename);
+        }
+        catch (e) {
+            //Remove tmp file on failure
+            try {
+                await fs.unlink(tmp);
+            }
+            catch (e) { }
+            throw e;
+        }
     }
     /**
      * Polls for new events & processes them

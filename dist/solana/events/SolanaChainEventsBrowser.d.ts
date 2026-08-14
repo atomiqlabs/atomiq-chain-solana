@@ -32,6 +32,12 @@ export type SolanaLegacyEventListenerState = {
     slot: number;
 };
 /**
+ * Typeguard for the legacy current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
+export declare function isSolanaLegacyEventListenerState(val: any): val is SolanaLegacyEventListenerState;
+/**
  * Current cursor of Solana event listener state.
  *
  * @category Events
@@ -39,6 +45,12 @@ export type SolanaLegacyEventListenerState = {
 export type SolanaEventListenerState = {
     [version: string]: SolanaLegacyEventListenerState | null;
 };
+/**
+ * Typeguard for the current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
+export declare function isSolanaEventListenerState(val: any): val is SolanaEventListenerState;
 /**
  * Solana on-chain event handler for front-end systems without access to fs, uses pure WS to subscribe, might lose
  *  out on some events if the network is unreliable, front-end systems should take this into consideration and not

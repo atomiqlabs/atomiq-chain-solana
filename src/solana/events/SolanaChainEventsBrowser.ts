@@ -47,6 +47,17 @@ export type SolanaLegacyEventListenerState = {
 };
 
 /**
+ * Typeguard for the legacy current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
+export function isSolanaLegacyEventListenerState(val: any): val is SolanaLegacyEventListenerState {
+    return val!=null &&
+        typeof(val.signature)==="string" &&
+        typeof(val.slot)==="number";
+}
+
+/**
  * Current cursor of Solana event listener state.
  *
  * @category Events
@@ -54,6 +65,19 @@ export type SolanaLegacyEventListenerState = {
 export type SolanaEventListenerState = {
     [version: string]: SolanaLegacyEventListenerState | null
 };
+
+/**
+ * Typeguard for the current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
+export function isSolanaEventListenerState(val: any): val is SolanaEventListenerState {
+    if(val==null || typeof(val)!=="object" || Array.isArray(val)) return false;
+    for(let version in val) {
+        if(val[version]!=null && !isSolanaLegacyEventListenerState(val[version])) return false;
+    }
+    return true;
+}
 
 function toNewEventListenerState(obj: SolanaLegacyEventListenerState | SolanaEventListenerState | undefined): SolanaEventListenerState | undefined {
     if(obj==null) return undefined;

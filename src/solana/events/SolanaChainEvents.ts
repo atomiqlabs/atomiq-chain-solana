@@ -2,6 +2,8 @@ import {Connection} from "@solana/web3.js";
 import * as fs from "fs/promises";
 import {SolanaSwapProgram} from "../swaps/SolanaSwapProgram";
 import {
+    isSolanaEventListenerState,
+    isSolanaLegacyEventListenerState,
     SolanaChainEventsBrowser,
     SolanaEventListenerState,
     SolanaLegacyEventListenerState
@@ -47,7 +49,9 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
         }
 
         try {
-            return JSON.parse(txt);
+            const parsed = JSON.parse(txt);
+            if(isSolanaLegacyEventListenerState(parsed) || isSolanaEventListenerState(parsed)) return parsed;
+            return null;
         } catch (e) {}
 
         try {
@@ -70,8 +74,25 @@ export class SolanaChainEvents extends SolanaChainEventsBrowser {
      *
      * @private
      */
-    private saveLastSignature(lastState: SolanaEventListenerState): Promise<void> {
-        return fs.writeFile(this.directory+BLOCKHEIGHT_FILENAME, JSON.stringify(lastState));
+    private async saveLastSignature(lastState: SolanaEventListenerState): Promise<void> {
+        const filename = this.directory+BLOCKHEIGHT_FILENAME;
+        const tmp = `${filename}.${Math.floor(Math.random() * 2**32)}.tmp`;
+
+        try {
+            await fs.writeFile(tmp, JSON.stringify(lastState), {
+                flag: 'wx',
+                flush: true, //fsync
+            });
+
+            //Rename atomically
+            await fs.rename(tmp, filename);
+        } catch (e) {
+            //Remove tmp file on failure
+            try {
+                await fs.unlink(tmp)
+            } catch (e) {}
+            throw e;
+        }
     }
 
     /**
