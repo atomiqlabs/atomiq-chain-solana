@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SolanaChainEventsBrowser = void 0;
+exports.SolanaChainEventsBrowser = exports.isSolanaEventListenerState = exports.isSolanaLegacyEventListenerState = void 0;
 const base_1 = require("@atomiqlabs/base");
 const SolanaSwapData_1 = require("../swaps/SolanaSwapData");
 const SolanaSwapProgram_1 = require("../swaps/SolanaSwapProgram");
@@ -9,6 +9,32 @@ const SwapTypeEnum_1 = require("../swaps/SwapTypeEnum");
 const buffer_1 = require("buffer");
 const LOG_FETCH_LIMIT = 500;
 const PROCESSED_SIGNATURES_BACKLOG = 500;
+/**
+ * Typeguard for the legacy current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
+function isSolanaLegacyEventListenerState(val) {
+    return val != null &&
+        typeof (val.signature) === "string" &&
+        typeof (val.slot) === "number";
+}
+exports.isSolanaLegacyEventListenerState = isSolanaLegacyEventListenerState;
+/**
+ * Typeguard for the current cursor of Solana event listener state.
+ *
+ * @category Events
+ */
+function isSolanaEventListenerState(val) {
+    if (val == null || typeof (val) !== "object" || Array.isArray(val))
+        return false;
+    for (let version in val) {
+        if (val[version] != null && !isSolanaLegacyEventListenerState(val[version]))
+            return false;
+    }
+    return true;
+}
+exports.isSolanaEventListenerState = isSolanaEventListenerState;
 function toNewEventListenerState(obj) {
     if (obj == null)
         return undefined;

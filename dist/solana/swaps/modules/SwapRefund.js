@@ -288,6 +288,6 @@ class SwapRefund extends SolanaSwapModule_1.SolanaSwapModule {
 }
 exports.SwapRefund = SwapRefund;
 SwapRefund.CUCosts = {
-    REFUND: 15000,
+    REFUND: 50000,
     REFUND_PAY_OUT: 50000
 };

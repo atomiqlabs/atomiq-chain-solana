@@ -24,7 +24,7 @@ import {isSwapProgramV1} from "../SolanaSwapProgram";
 export class SwapRefund extends SolanaSwapModule {
 
     private static readonly CUCosts = {
-        REFUND: 15000,
+        REFUND: 50000,
         REFUND_PAY_OUT: 50000
     };
 

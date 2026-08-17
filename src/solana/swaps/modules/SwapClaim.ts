@@ -176,15 +176,34 @@ export class SwapClaim extends SolanaSwapModule {
         //Need to synchronize
         if(synchronizer==null) return null;
 
-        //TODO: We don't have to synchronize to tip, only to our required blockheight
-        const resp = await synchronizer.syncToLatestTxs(signer.toString());
+        //We don't have to synchronize to tip, only to our required blockheight
+        const resp = await synchronizer.syncToLatestTxs(signer.toString(), undefined, requiredBlockheight);
+        const syncedToBlockheight = resp.targetCommitedHeader.getBlockheight();
+        if(syncedToBlockheight < requiredBlockheight) {
+            this.logger.warn("getCommitedHeaderAndSynchronize(): BTC Relay cannot be synced to required blockheight, "+
+              "required height: "+requiredBlockheight+" syncable blockheight: "+syncedToBlockheight);
+            return null;
+        }
+        let computedHeader = resp.computedHeaderMap[txBlockheight];
+        if(computedHeader==null) {
+            //If it is not part of the synchronized headers it must surely be already synchronized
+            const result = await this.btcRelay.retrieveLogAndBlockheight({
+                blockhash: blockhash
+            });
+            if(result==null) {
+                this.logger.error("getCommitedHeaderAndSynchronize(): cannot retrieve already synced blockheader with"+
+                  " blockhash: "+blockhash);
+                return null;
+            }
+            computedHeader = result.header;
+        }
+
         this.logger.debug("getCommitedHeaderAndSynchronize(): BTC Relay not synchronized to required blockheight, "+
             "synchronizing ourselves in "+resp.txs.length+" txs");
         this.logger.debug("getCommitedHeaderAndSynchronize(): BTC Relay computed header map: ",resp.computedHeaderMap);
         resp.txs.forEach(tx => txs.push(tx));
 
-        //Retrieve computed header
-        return resp.computedHeaderMap[txBlockheight];
+        return computedHeader;
     }
 
     /**
